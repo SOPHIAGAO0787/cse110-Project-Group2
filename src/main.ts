@@ -57,17 +57,36 @@ layer.add(
   })
 );
 
-// Scale the whole map to fit the browser window, centered
+// Placeholder for the shop column on the right
+const SHOP_WIDTH = 260;
+const MARGIN = 32; // gap between the map and the window edges / shop
+
+const shopLayer = new Konva.Layer();
+const shopPanel = new Konva.Rect({ fill: "#262637", stroke: "#3a3a52" });
+const shopTitle = new Konva.Text({ text: "Shop", fontSize: 22, fill: "white" });
+shopLayer.add(shopPanel, shopTitle);
+stage.add(shopLayer);
+
+// Scale the map to fit the space left of the shop, centered in that space
 const mapWidth = tiles[0].length * TILE;
 const mapHeight = tiles.length * TILE;
 
 function fitToWindow() {
-  const scale = Math.min(window.innerWidth / mapWidth, window.innerHeight / mapHeight);
-  stage.size({ width: window.innerWidth, height: window.innerHeight });
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  stage.size({ width: w, height: h });
+
+  shopPanel.position({ x: w - SHOP_WIDTH, y: 0 });
+  shopPanel.size({ width: SHOP_WIDTH, height: h });
+  shopTitle.position({ x: w - SHOP_WIDTH + 20, y: 20 });
+
+  const areaWidth = w - SHOP_WIDTH - 2 * MARGIN;
+  const areaHeight = h - 2 * MARGIN;
+  const scale = Math.min(areaWidth / mapWidth, areaHeight / mapHeight);
   layer.scale({ x: scale, y: scale });
   layer.position({
-    x: (window.innerWidth - mapWidth * scale) / 2,
-    y: (window.innerHeight - mapHeight * scale) / 2,
+    x: MARGIN + (areaWidth - mapWidth * scale) / 2,
+    y: MARGIN + (areaHeight - mapHeight * scale) / 2,
   });
 }
 
