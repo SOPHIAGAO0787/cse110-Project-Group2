@@ -42,7 +42,7 @@ tiles.forEach((row, y) => {
         height: TILE,
         fill: colors[ch],
         stroke: "#00000022",
-      })
+      }),
     );
   });
 });
@@ -54,7 +54,7 @@ layer.add(
     stroke: "#f4e9c8",
     strokeWidth: 2,
     dash: [6, 6],
-  })
+  }),
 );
 
 // Placeholder for the shop column on the right
