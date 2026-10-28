@@ -55,11 +55,11 @@ Each Sprint 1 task already has a file with `TODO(<task id>)` comments and a test
 | R3 Tower targeting            | `src/model/Tower.ts`                                                        |
 | N1 Waves + HUD                | `src/model/WaveManager.ts`                                                  |
 | N2 Lives                      | `src/model/Lives.ts`                                                        |
-| S1 Victory / defeat           | step 5 in `GameModel.tick`, `src/screens/ResultScreen.ts`                   |
-| S2 Buy towers                 | `WIRE(S2)` in `GameScreenController.ts`                                     |
-| W1 Coins                      | `src/model/Wallet.ts`                                                       |
-| W2 Grid                       | `src/model/Grid.ts`                                                         |
-| W3 Integration tests          | `src/model/integration.test.ts`                                             |
+| So1 Victory / defeat          | step 5 in `GameModel.tick`, `src/screens/ResultScreen.ts`                   |
+| So2 Buy towers                | `WIRE(So2)` in `GameScreenController.ts`                                    |
+| St1 Coins                     | `src/model/Wallet.ts`                                                       |
+| St2 Grid                      | `src/model/Grid.ts`                                                         |
+| St3 Integration tests         | `src/model/integration.test.ts`                                             |
 | J1 Shop cards                 | `shopGroup` in `src/screens/game/GameScreenView.ts`, `src/data/towers.json` |
 | J2 "Not enough coins" message | `WIRE(J2)` in `GameScreenController.ts`                                     |
 | M1, M2 Questions              | `src/model/questions/QuestionService.ts`, `src/data/questions.json`         |

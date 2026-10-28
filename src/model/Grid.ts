@@ -1,7 +1,7 @@
 import type { MapConfig, Vec } from "./types";
 
 // Which tiles can hold a tower.
-// TODO(W2): a tile is buildable if it is '#', inside the map, and not occupied.
+// TODO(St2): a tile is buildable if it is '#', inside the map, and not occupied.
 export class Grid {
   private map: MapConfig;
 
@@ -10,14 +10,14 @@ export class Grid {
   }
 
   isBuildable(tile: Vec): boolean {
-    return false; // TODO(W2)
+    return false; // TODO(St2)
   }
 
   isOccupied(tile: Vec): boolean {
-    return false; // TODO(W2)
+    return false; // TODO(St2)
   }
 
   occupy(tile: Vec): void {
-    // TODO(W2)
+    // TODO(St2)
   }
 }
