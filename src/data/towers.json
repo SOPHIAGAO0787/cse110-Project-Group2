@@ -1,0 +1,11 @@
+[
+  {
+    "id": "circle",
+    "name": "Circle Tower",
+    "description": "Hits enemies inside a circle around it.",
+    "cost": 50,
+    "damage": 5,
+    "fireRatePerSec": 1,
+    "range": { "kind": "circle", "radius": 2.5 }
+  }
+]
