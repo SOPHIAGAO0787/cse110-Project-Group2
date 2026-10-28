@@ -54,17 +54,17 @@ export class GameModel {
     // 4. TODO(R2): remove dead enemies (emit "enemyKilled" with the reward)
     //    and enemies that reached the end (emit "enemyLeaked")
 
-    // 5. TODO(N3): emit "gameOver" when lives reach 0 or the last wave is cleared
+    // 5. TODO(S1): emit "gameOver" when lives reach 0 or the last wave is cleared
   }
 
   startNextWave(): void {
     this.waves.start();
   }
 
-  // TODO(B2): check the grid and the wallet, then create the Tower, occupy the tile,
+  // TODO(B1): check the grid and the wallet, then create the Tower, occupy the tile,
   // spend the cost, and emit "towerPlaced".
   tryPlaceTower(defId: string, tile: Vec): PlaceResult {
-    return "blocked"; // TODO(B2)
+    return "blocked"; // TODO(B1)
   }
 
   // Adds one enemy of the given kind (an id from enemies.json, e.g. "basic") at the start of the path.
