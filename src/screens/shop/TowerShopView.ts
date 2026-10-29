@@ -192,6 +192,7 @@ export class TowerShopView {
       );
     }
   }
+
   //pop up message for not enough money
   showPopup(message: string): void {
     this.popup.destroyChildren();
@@ -221,4 +222,65 @@ export class TowerShopView {
     this.popup.visible(true);
     this.popup.moveToTop();
   }
+
+  //close pop up
+  closePopup(): void {
+    this.popup.visible(false);
+    this.popup.destroyChildren();
+  }
+
+  //helper functions
+  //resize : resize the scene width and height
+  resize(width: number, height: number): void {
+    const scale = Math.max(
+      0.01,
+      Math.min(width / WIDTH, height / HEIGHT),
+    );
+
+    this.scene.scale({ x: scale, y: scale });
+    this.scene.position({
+      x: (width - WIDTH * scale) / 2,
+      y: (height - HEIGHT * scale) / 2,
+    });
+  }
+
+  //create text with text details
+  private text(
+    parent: Konva.Group,
+    value: string,
+    x: number,
+    y: number,
+    fontSize: number,
+    width = 510,
+  ): void {
+    parent.add(
+      new Konva.Text({
+        x,
+        y,
+        width,
+        text: value,
+        fontSize,
+        fill: "white",
+        lineHeight: 1.35,
+        listening: false,
+      }),
+    );
+  }
+
+  //make button
+  private button(
+    parent: Konva.Group,
+    label: string,
+    x: number,
+    y: number,
+    onClick: () => void,
+  ): void {
+    const button = makeButton(label, onClick);
+
+    // Fit longer shop labels inside the existing shared button.
+    button.findOne<Konva.Text>("Text")?.fontSize(14);
+    button.position({ x, y });
+    parent.add(button);
+  }
+}
 
