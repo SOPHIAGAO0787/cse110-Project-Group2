@@ -37,9 +37,17 @@ export class GameScreenView {
     this.group.add(this.mapGroup, this.hudText, this.shopGroup, this.startWaveButton);
   }
 
-  // TODO(St1, N1, M3): call this when coins, lives, or the wave change
-  setHud(coins: number, lives: number, wave: number, totalWaves: number): void {
-    this.hudText.text(`Coins ${coins}   ·   Lives ${lives}   ·   Wave ${wave}/${totalWaves}`);
+  // TODO(St1, N1, M3): call this when coins, lives, wave number, or remaining enemies changes
+  setHud(
+    coins: number,
+    lives: number,
+    wave: number,
+    totalWaves: number,
+    enemiesRemaining: number,
+  ): void {
+    this.hudText.text(
+      `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
+    );
   }
 
   resize(width: number, height: number): void {
