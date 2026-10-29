@@ -57,6 +57,21 @@ describe("Wallet (St1)", () => {
     expect(wallet.coins).toBe(115);
   });
 
+  it("canAfford() is true for a cost below the coins", () => {
+    const wallet = new Wallet(100, new EventBus());
+    expect(wallet.canAfford(30)).toBe(true);
+  });
+
+  it("canAfford() is true for a cost equal to the coins", () => {
+    const wallet = new Wallet(100, new EventBus());
+    expect(wallet.canAfford(100)).toBe(true);
+  });
+
+  it("canAfford() is false for a cost above the coins", () => {
+    const wallet = new Wallet(100, new EventBus());
+    expect(wallet.canAfford(101)).toBe(false);
+  });
+
   it.todo("spend() with enough coins returns true and lowers coins");
   it.todo("spend() with too few coins returns false and leaves coins unchanged");
 });

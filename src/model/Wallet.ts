@@ -1,7 +1,7 @@
 import type { EventBus } from "../core/EventBus";
 
 // The player's coins.
-// TODO(St1): implement canAfford/spend.
+// TODO(St1): implement spend.
 // Coins never go below 0.
 export class Wallet {
   coins: number;
@@ -15,8 +15,9 @@ export class Wallet {
     events.on("enemyKilled", (e) => this.add(e.reward));
   }
 
+  // True if the player has at least `cost` coins.
   canAfford(cost: number): boolean {
-    return false; // TODO(St1)
+    return this.coins >= cost;
   }
 
   // Returns true and removes the coins if affordable, otherwise returns false and changes nothing.
