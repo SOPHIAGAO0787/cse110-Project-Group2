@@ -34,7 +34,9 @@ export class GameScreenController implements Screen {
     this.model = new GameModel(this.map);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
     this.view.mapGroup.destroyChildren();
-    this.view.mapGroup.add(new GridView(this.map).group);
+    this.view.mapGroup.add(
+      new GridView(this.map, (tile) => this.model.grid.isBuildable(tile)).group,
+    );
     this.view.setHud(
       this.model.wallet.coins,
       this.model.lives.remaining,
