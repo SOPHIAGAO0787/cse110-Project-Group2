@@ -72,6 +72,49 @@ describe("Wallet (St1)", () => {
     expect(wallet.canAfford(101)).toBe(false);
   });
 
-  it.todo("spend() with enough coins returns true and lowers coins");
-  it.todo("spend() with too few coins returns false and leaves coins unchanged");
+  it("spend() with enough coins returns true and lowers coins", () => {
+    const wallet = new Wallet(100, new EventBus());
+    expect(wallet.spend(30)).toBe(true);
+    expect(wallet.coins).toBe(70);
+  });
+
+  it("spend() emits coinsChanged once with the new total", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+    const totals: number[] = [];
+    events.on("coinsChanged", (e) => totals.push(e.coins));
+
+    wallet.spend(30);
+
+    expect(totals).toEqual([70]);
+  });
+
+  it("spend() of all the coins leaves 0", () => {
+    const wallet = new Wallet(100, new EventBus());
+    expect(wallet.spend(100)).toBe(true);
+    expect(wallet.coins).toBe(0);
+  });
+
+  it("spend() with too few coins returns false, leaves coins unchanged and emits nothing", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+    const totals: number[] = [];
+    events.on("coinsChanged", (e) => totals.push(e.coins));
+
+    expect(wallet.spend(500)).toBe(false);
+    expect(wallet.coins).toBe(100);
+    expect(totals).toEqual([]);
+  });
+
+  it("spend() with 0 or less returns false, changes nothing and emits nothing", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+    const totals: number[] = [];
+    events.on("coinsChanged", (e) => totals.push(e.coins));
+
+    expect(wallet.spend(0)).toBe(false);
+    expect(wallet.spend(-5)).toBe(false);
+    expect(wallet.coins).toBe(100);
+    expect(totals).toEqual([]);
+  });
 });

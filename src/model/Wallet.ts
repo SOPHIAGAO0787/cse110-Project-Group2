@@ -1,8 +1,6 @@
 import type { EventBus } from "../core/EventBus";
 
-// The player's coins.
-// TODO(St1): implement spend.
-// Coins never go below 0.
+// The player's coins. Coins never go below 0.
 export class Wallet {
   coins: number;
   private events: EventBus;
@@ -21,8 +19,18 @@ export class Wallet {
   }
 
   // Returns true and removes the coins if affordable, otherwise returns false and changes nothing.
+  // A cost of 0 or less is always refused, so a free tower would need this rule changed.
   spend(cost: number): boolean {
-    return false; // TODO(St1)
+    // Spending 0 or less is not a real cost, so it is refused like an unaffordable one
+    if (cost <= 0) {
+      return false;
+    }
+    if (!this.canAfford(cost)) {
+      return false;
+    }
+    this.coins = this.coins - cost;
+    this.events.emit("coinsChanged", { coins: this.coins });
+    return true;
   }
 
   // Adds coins and tells listeners the new total.
