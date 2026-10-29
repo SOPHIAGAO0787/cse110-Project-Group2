@@ -25,23 +25,40 @@ describe("Grid (St2)", () => {
     expect(grid.isBuildable({ x: 0, y: 0 })).toBe(true);
     expect(grid.isBuildable({ x: 2, y: 1 })).toBe(true);
   });
+
   it("'P' and '.' tiles are not buildable", () => {
     const grid = new Grid(map);
     expect(grid.isBuildable({ x: 1, y: 0 })).toBe(false);
     expect(grid.isBuildable({ x: 2, y: 0 })).toBe(false);
   });
+
   it("tiles outside the map are not buildable", () => {
     const grid = new Grid(map);
-    expect(grid.isBuildable({ x: 0, y: 5 })).toBe(false);
+    expect(grid.isBuildable({ x: -1, y: 0 })).toBe(false);
+    expect(grid.isBuildable({ x: 0, y: -1 })).toBe(false);
     expect(grid.isBuildable({ x: 5, y: 0 })).toBe(false);
-    expect(grid.isBuildable({ x: 8, y: 5 })).toBe(false);
-    expect(grid.isBuildable({ x: 0, y: -5 })).toBe(false);
+    expect(grid.isBuildable({ x: 0, y: 5 })).toBe(false);
   });
+
+  it("the last row and column are inside the map", () => {
+    const grid = new Grid(map);
+    expect(grid.isBuildable({ x: 2, y: 2 })).toBe(true);
+    expect(grid.isBuildable({ x: 3, y: 2 })).toBe(false);
+    expect(grid.isBuildable({ x: 2, y: 3 })).toBe(false);
+  });
+
   it("an occupied tile is not buildable", () => {
     const grid = new Grid(map);
-    expect(grid.isBuildable({ x: 1, y: 0 })).toBe(false);
     expect(grid.isBuildable({ x: 0, y: 0 })).toBe(true);
     grid.occupy({ x: 0, y: 0 });
+    expect(grid.isOccupied({ x: 0, y: 0 })).toBe(true);
     expect(grid.isBuildable({ x: 0, y: 0 })).toBe(false);
+  });
+
+  it("occupying one tile leaves the others free", () => {
+    const grid = new Grid(map);
+    grid.occupy({ x: 0, y: 0 });
+    expect(grid.isOccupied({ x: 0, y: 1 })).toBe(false);
+    expect(grid.isBuildable({ x: 0, y: 1 })).toBe(true);
   });
 });
