@@ -37,15 +37,27 @@ export class GameScreenController implements Screen {
     this.view.mapGroup.add(
       new GridView(this.map, (tile) => this.model.grid.isBuildable(tile)).group,
     );
-    this.view.setHud(
-      this.model.wallet.coins,
-      this.model.lives.remaining,
-      this.model.waves.currentWave,
-      this.model.waves.totalWaves,
-    );
+    const refreshHud = () => {
+      this.view.setHud(
+        this.model.wallet.coins,
+        this.model.lives.remaining,
+        this.model.waves.currentWave,
+        this.model.waves.totalWaves,
+        this.model.waves.enemiesLeft,
+      );
+    };
+
+    refreshHud();
 
     const events = this.model.events;
     events.on("gameOver", (e) => this.app.switchTo("result", { won: e.won }));
+
+    events.on("coinsChanged", refreshHud);
+    events.on("livesChanged", refreshHud);
+    events.on("waveStarted", refreshHud);
+    events.on("waveCleared", refreshHud);
+    events.on("enemyKilled", refreshHud);
+    events.on("enemyLeaked", refreshHud);
 
     // WIRE(St1): update the HUD on "coinsChanged"
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
