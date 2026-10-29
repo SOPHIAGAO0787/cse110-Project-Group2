@@ -26,6 +26,7 @@ export class TowerShopView {
   private content = new Konva.Group();
   private popup = new Konva.Group({ visible: false });
 
+  //add content and pop up in one scnene
   constructor(private callbacks: ShopCallbacks) {
     this.scene.add(this.content, this.popup);
     this.group.add(this.scene);
@@ -41,7 +42,8 @@ export class TowerShopView {
                 fill: "#1e1e2e",
             }),
         );
-
+        
+        //put text about basic shop info
         this.text(this.content, "Tower Shop", 28, 24, 34);
         this.text(this.content, `Coins: ${state.coins}`, 650, 30, 24);
         this.text(
@@ -51,6 +53,8 @@ export class TowerShopView {
             75,
             18,
         );
+
+        //for each towers get the level and upgrade price
         state.towers.forEach((tower, index) => {
             const level = state.levels.get(tower.def.id) ?? -1;
             const status = level < 0 ? "Locked" : `Level ${level + 1}`;
@@ -74,6 +78,7 @@ export class TowerShopView {
             );
         });
 
+        //redner the currently selected tower detail
         const tower = state.towers.find(
             (item) => item.def.id === state.selectedId,
         );
@@ -82,6 +87,7 @@ export class TowerShopView {
             this.renderDetails(tower, state.levels.get(tower.def.id) ?? -1);
         }
 
+        //back to menu button
         this.button(
             this.content,
             "Back to Menu",
@@ -99,7 +105,7 @@ export class TowerShopView {
             840,
         );
     }
-    
+
     private renderDetails(tower: ShopTower, levelIndex: number): void {
     const locked = levelIndex < 0;
     const current = tower.levels[Math.max(0, levelIndex)];
@@ -117,6 +123,7 @@ export class TowerShopView {
       }),
     );
 
+    //show current level
     this.text(this.content, tower.def.name, 334, 135, 28);
     this.text(
       this.content,
@@ -126,6 +133,7 @@ export class TowerShopView {
       18,
     );
 
+    //tower description
     this.text(
       this.content,
       tower.def.description,
@@ -134,6 +142,7 @@ export class TowerShopView {
       18,
     );
 
+    //show current tower detials
     this.text(
       this.content,
       [
@@ -146,6 +155,7 @@ export class TowerShopView {
       20,
     );
 
+    //show upgrade cost for each abilities
     if (next) {
       this.text(
         this.content,
@@ -181,5 +191,34 @@ export class TowerShopView {
         this.callbacks.onAction,
       );
     }
+  }
+  //pop up message for not enough money
+  showPopup(message: string): void {
+    this.popup.destroyChildren();
+
+    // This overlay blocks clicks on the shop behind the popup.
+    this.popup.add(
+      new Konva.Rect({
+        width: WIDTH,
+        height: HEIGHT,
+        fill: "rgba(0, 0, 0, 0.7)",
+      }),
+      new Konva.Rect({
+        x: 220,
+        y: 205,
+        width: 460,
+        height: 230,
+        fill: "#303044",
+        stroke: "#f38ba8",
+        cornerRadius: 12,
+      }),
+    );
+
+    this.text(this.popup, "Not enough coins", 244, 230, 28, 410);
+    this.text(this.popup, message, 244, 280, 20, 410);
+    this.button(this.popup, "OK", 350, 365, () => this.closePopup());
+
+    this.popup.visible(true);
+    this.popup.moveToTop();
   }
 
