@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 
-describe("Wallet (W1)", () => {
+describe("Wallet (St1)", () => {
   it.todo("starts with startingCoins");
   it.todo("adds the reward when enemyKilled is emitted");
   it.todo("spend() with enough coins returns true and lowers coins");
