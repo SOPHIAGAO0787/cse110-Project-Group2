@@ -1,7 +1,7 @@
 import type { EventBus } from "../core/EventBus";
 
 // The player's coins.
-// TODO(St1): listen for "enemyKilled" and add its reward; implement canAfford/spend.
+// TODO(St1): implement canAfford/spend.
 // Coins never go below 0.
 export class Wallet {
   coins: number;
@@ -10,6 +10,9 @@ export class Wallet {
   constructor(startingCoins: number, events: EventBus) {
     this.events = events;
     this.coins = startingCoins;
+
+    // Killing an enemy earns its reward
+    events.on("enemyKilled", (e) => this.add(e.reward));
   }
 
   canAfford(cost: number): boolean {

@@ -38,7 +38,25 @@ describe("Wallet (St1)", () => {
     expect(totals).toEqual([]);
   });
 
-  it.todo("adds the reward when enemyKilled is emitted");
+  it("adds the reward when enemyKilled is emitted", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+
+    events.emit("enemyKilled", { enemyId: 1, reward: 5 });
+
+    expect(wallet.coins).toBe(105);
+  });
+
+  it("adds the reward of every enemy killed", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+
+    events.emit("enemyKilled", { enemyId: 1, reward: 5 });
+    events.emit("enemyKilled", { enemyId: 2, reward: 10 });
+
+    expect(wallet.coins).toBe(115);
+  });
+
   it.todo("spend() with enough coins returns true and lowers coins");
   it.todo("spend() with too few coins returns false and leaves coins unchanged");
 });
