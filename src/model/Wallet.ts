@@ -1,8 +1,8 @@
 import type { EventBus } from "../core/EventBus";
 
 // The player's coins.
-// TODO(St1): listen for "enemyKilled" and add its reward; implement canAfford/spend/add;
-// emit "coinsChanged" with the new total whenever coins change. Coins never go below 0.
+// TODO(St1): listen for "enemyKilled" and add its reward; implement canAfford/spend.
+// Coins never go below 0.
 export class Wallet {
   coins: number;
   private events: EventBus;
@@ -21,7 +21,13 @@ export class Wallet {
     return false; // TODO(St1)
   }
 
+  // Adds coins and tells listeners the new total.
   add(amount: number): void {
-    // TODO(St1)
+    // Adding 0 or less is not a change, so it must not emit "coinsChanged"
+    if (amount <= 0) {
+      return;
+    }
+    this.coins = this.coins + amount;
+    this.events.emit("coinsChanged", { coins: this.coins });
   }
 }
