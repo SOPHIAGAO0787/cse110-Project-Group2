@@ -2,11 +2,15 @@ import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { GameModel } from "../../model/GameModel";
 import { loadMap } from "../../model/loadContent";
-import type { MapConfig } from "../../model/types";
+import type { MapConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import map1 from "../../data/maps/map1.json";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
+import { PlacementModel } from "../../model/PlacementModel";
+import { PlacementView } from "../../ui/PlacementView";
+
+const PLACE_RADIUS = 2; //change later once we vary radius
 
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
@@ -17,7 +21,8 @@ export class GameScreenController implements Screen {
   private view: GameScreenView;
   private model: GameModel;
   private loop: GameLoop;
-
+  private cleanupPlacement: (() => void) | null = null;
+  
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
@@ -34,9 +39,11 @@ export class GameScreenController implements Screen {
     this.model = new GameModel(this.map);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
     this.view.mapGroup.destroyChildren();
-    this.view.mapGroup.add(
-      new GridView(this.map, (tile) => this.model.grid.isBuildable(tile)).group,
-    );
+
+    const gridView = new GridView(this.map, (t) => this.model.grid.isBuildable(t));
+    this.view.mapGroup.add(gridView.group);
+    this.cleanupPlacement = this.wirePlacement(gridView);
+    
     this.view.setHud(
       this.model.wallet.coins,
       this.model.lives.remaining,
@@ -64,12 +71,75 @@ export class GameScreenController implements Screen {
   }
 
   hide(): void {
+    this.cleanupPlacement?.();
+    this.cleanupPlacement = null;
     this.loop.stop();
     this.model.events.clear();
     this.group.visible(false);
   }
 
+
   resize(width: number, height: number): void {
     this.view.resize(width, height);
   }
+
+  private wirePlacement(gridView: GridView): () => void {
+  const placement = new PlacementModel();
+  const pv = new PlacementView(PLACE_RADIUS);
+  this.view.mapGroup.add(pv.group);       // after the grid, so it draws on top
+  this.view.shopGroup.add(pv.menuCircle);
+
+  const stage = this.group.getStage();
+  const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
+
+  const onDown = () => {
+    const tile = gridView.tileUnderMouse();
+    if (tile) placement.startDrag(tile);
+  };
+
+  const onMove = () => {
+    if (placement.state.kind !== "dragging") return;
+    const tile = gridView.tileUnderMouse();
+    if (tile) pv.show(tile, canPlace(tile));
+  };
+
+  const onUp = () => {
+    if (placement.state.kind !== "dragging") return;
+    const tile = gridView.tileUnderMouse();
+    if (tile && canPlace(tile)) {
+      placement.endDrag(tile, true);   // state: placed, ghost stays
+      pv.show(tile, true);
+    } else {
+      placement.cancel();
+      pv.hide();
+    }
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const tile = placement.confirm();
+      pv.hide();
+      if (tile) this.commitTower(tile);
+    } else if (e.key === "Escape") {
+      placement.cancel();
+      pv.hide();
+    }
+  };
+
+  pv.menuCircle.on("pointerdown", onDown);
+  stage?.on("pointermove.placement", onMove);
+  window.addEventListener("pointerup", onUp);
+  window.addEventListener("keydown", onKey);
+
+  return () => {                          // called from hide()
+    stage?.off(".placement");
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("keydown", onKey);
+    pv.menuCircle.destroy();
+  };
+}
+
+private commitTower(tile: Vec): void {
+  // TODO: call the model's real place method here (coins, Tower, towerPlaced event)
+}
 }
