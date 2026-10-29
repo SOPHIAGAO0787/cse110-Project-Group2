@@ -38,8 +38,16 @@ export class GameScreenView {
   }
 
   // TODO(St1, N1, M3): call this when coins, lives, wave number, or remaining enemies changes
-  setHud(coins: number, lives: number, wave: number, totalWaves: number, enemiesRemaining: number): void {
-    this.hudText.text(`Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`);
+  setHud(
+    coins: number,
+    lives: number,
+    wave: number,
+    totalWaves: number,
+    enemiesRemaining: number,
+  ): void {
+    this.hudText.text(
+      `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
+    );
   }
 
   resize(width: number, height: number): void {

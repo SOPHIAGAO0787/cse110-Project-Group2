@@ -46,7 +46,7 @@ export class GameScreenController implements Screen {
         this.model.waves.enemiesLeft,
       );
     };
-    
+
     refreshHud();
 
     const events = this.model.events;
