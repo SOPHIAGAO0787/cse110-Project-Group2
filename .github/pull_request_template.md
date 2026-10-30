@@ -1,6 +1,6 @@
 ## What and why
 
-Closes #
+Part of #
 
 ## How to test it manually
 

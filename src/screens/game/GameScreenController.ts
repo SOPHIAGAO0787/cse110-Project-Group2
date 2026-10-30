@@ -34,24 +34,41 @@ export class GameScreenController implements Screen {
     this.model = new GameModel(this.map);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
     this.view.mapGroup.destroyChildren();
-    this.view.mapGroup.add(new GridView(this.map).group);
-    this.view.setHud(
-      this.model.wallet.coins,
-      this.model.lives.remaining,
-      this.model.waves.currentWave,
-      this.model.waves.totalWaves,
+    this.view.mapGroup.add(
+      new GridView(this.map, (tile) => this.model.grid.isBuildable(tile)).group,
     );
+    const refreshHud = () => {
+      this.view.setHud(
+        this.model.wallet.coins,
+        this.model.lives.remaining,
+        this.model.waves.currentWave,
+        this.model.waves.totalWaves,
+        this.model.waves.enemiesLeft,
+      );
+    };
+
+    refreshHud();
 
     const events = this.model.events;
     events.on("gameOver", (e) => this.app.switchTo("result", { won: e.won }));
 
-    // WIRE(W1): update the HUD on "coinsChanged"
+    events.on("coinsChanged", refreshHud);
+    events.on("livesChanged", refreshHud);
+    events.on("waveStarted", refreshHud);
+    events.on("waveCleared", refreshHud);
+    events.on("enemyKilled", refreshHud);
+    events.on("enemyLeaked", refreshHud);
+
+    // WIRE(St1): update the HUD on "coinsChanged"
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
-    // WIRE(N2): update the HUD on "livesChanged"
+    // WIRE(M3): update the HUD on "livesChanged"
     // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
     // WIRE(R3): add TowersView to this.view.mapGroup
-    // WIRE(B2): hover preview + click to place a tower on the map
-    // WIRE(J1, J2): shop cards in this.view.shopGroup, select a tower to place
+    // WIRE(B1): click to place a tower on the map
+    // WIRE(B2): show the tower's range under the mouse before it is placed
+    // WIRE(J1): shop cards in this.view.shopGroup
+    // WIRE(So2): click a shop card to choose the tower to place
+    // WIRE(J2): show a message when the player can't afford a tower
     // WIRE(M2): ask a question before a tower is placed
 
     this.group.visible(true);
