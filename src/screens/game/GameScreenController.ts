@@ -1,7 +1,7 @@
 import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { GameModel } from "../../model/GameModel";
-import { loadMap } from "../../model/loadContent";
+import { loadMap, TOWERS } from "../../model/loadContent";
 import type { MapConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import map1 from "../../data/maps/map1.json";
@@ -9,7 +9,6 @@ import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
-import { TOWERS } from "../../model/loadContent"; //import loadMAP once we start working on stages
 
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
@@ -151,17 +150,6 @@ export class GameScreenController implements Screen {
         pv.hide();
       }
     };
-    // Click to confirm functionality, waiting on other implementation before using/deleting
-    // const onMapClick = () => {
-    //   const s = placement.state;
-    //   const tile = gridView.tileUnderMouse();
-    //   // clicking the dropped ghost's tile confirms it
-    //   if (s.kind === "placed" && tile && tile.x === s.pos.x && tile.y === s.pos.y) {
-    //     void requestPlace();
-    //   }
-    // };
-
-    // gridView.group.on("click", onMapClick);
 
     pv.menuCircle.on("pointerdown", onDown);
     stage?.on("pointermove.placement", onMove);

@@ -1,9 +1,9 @@
-import type { Vec } from "../model/types";
+import type { Vec } from "./types";
 
 type PlacementState =
   //StateMachine tracking what process of placement user is in
   | { kind: "idle" } // nothing being placed
-  | { kind: "dragging"; pos: Vec | null } // ghost following the pointer
+  | { kind: "dragging"; pos: Vec } // ghost following the pointer
   | { kind: "placed"; pos: Vec }; // ghost dropped, waiting to confirm
 
 export class PlacementModel {
