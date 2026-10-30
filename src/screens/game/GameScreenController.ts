@@ -22,7 +22,7 @@ export class GameScreenController implements Screen {
   private model: GameModel;
   private loop: GameLoop;
   private cleanupPlacement: (() => void) | null = null;
-  
+
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
@@ -89,68 +89,68 @@ export class GameScreenController implements Screen {
     this.group.visible(false);
   }
 
-
   resize(width: number, height: number): void {
     this.view.resize(width, height);
   }
 
   private wirePlacement(gridView: GridView): () => void {
-  const placement = new PlacementModel();
-  const pv = new PlacementView(PLACE_RADIUS);
-  this.view.mapGroup.add(pv.group);       // after the grid, so it draws on top
-  this.view.shopGroup.add(pv.menuCircle);
+    const placement = new PlacementModel();
+    const pv = new PlacementView(PLACE_RADIUS);
+    this.view.mapGroup.add(pv.group); // after the grid, so it draws on top
+    this.view.shopGroup.add(pv.menuCircle);
 
-  const stage = this.group.getStage();
-  const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
+    const stage = this.group.getStage();
+    const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
 
-  const onDown = () => {
-    const tile = gridView.tileUnderMouse();
-    if (tile) placement.startDrag(tile);
-  };
+    const onDown = () => {
+      const tile = gridView.tileUnderMouse();
+      if (tile) placement.startDrag(tile);
+    };
 
-  const onMove = () => {
-    if (placement.state.kind !== "dragging") return;
-    const tile = gridView.tileUnderMouse();
-    if (tile) pv.show(tile, canPlace(tile));
-  };
+    const onMove = () => {
+      if (placement.state.kind !== "dragging") return;
+      const tile = gridView.tileUnderMouse();
+      if (tile) pv.show(tile, canPlace(tile));
+    };
 
-  const onUp = () => {
-    if (placement.state.kind !== "dragging") return;
-    const tile = gridView.tileUnderMouse();
-    if (tile && canPlace(tile)) {
-      placement.endDrag(tile, true);   // state: placed, ghost stays
-      pv.show(tile, true);
-    } else {
-      placement.cancel();
-      pv.hide();
-    }
-  };
+    const onUp = () => {
+      if (placement.state.kind !== "dragging") return;
+      const tile = gridView.tileUnderMouse();
+      if (tile && canPlace(tile)) {
+        placement.endDrag(tile, true); // state: placed, ghost stays
+        pv.show(tile, true);
+      } else {
+        placement.cancel();
+        pv.hide();
+      }
+    };
 
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
-      const tile = placement.confirm();
-      pv.hide();
-      if (tile) this.commitTower(tile);
-    } else if (e.key === "Escape") {
-      placement.cancel();
-      pv.hide();
-    }
-  };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        const tile = placement.confirm();
+        pv.hide();
+        if (tile) this.commitTower(tile);
+      } else if (e.key === "Escape") {
+        placement.cancel();
+        pv.hide();
+      }
+    };
 
-  pv.menuCircle.on("pointerdown", onDown);
-  stage?.on("pointermove.placement", onMove);
-  window.addEventListener("pointerup", onUp);
-  window.addEventListener("keydown", onKey);
+    pv.menuCircle.on("pointerdown", onDown);
+    stage?.on("pointermove.placement", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("keydown", onKey);
 
-  return () => {                          // called from hide()
-    stage?.off(".placement");
-    window.removeEventListener("pointerup", onUp);
-    window.removeEventListener("keydown", onKey);
-    pv.menuCircle.destroy();
-  };
-}
+    return () => {
+      // called from hide()
+      stage?.off(".placement");
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("keydown", onKey);
+      pv.menuCircle.destroy();
+    };
+  }
 
-private commitTower(tile: Vec): void {
-  // TODO: call the model's real place method here (coins, Tower, towerPlaced event)
-}
+  private commitTower(tile: Vec): void {
+    // TODO: call the model's real place method here (coins, Tower, towerPlaced event)
+  }
 }

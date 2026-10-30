@@ -18,7 +18,10 @@ export class PlacementView {
 
   show(tile: Vec, valid: boolean): void {
     const px = tileToPixel(tile, TILE); // map pixels; mapGroup scales it for you
-    this.ghost.position(px).fill(valid ? "#4a90d9" : "#d94a4a").visible(true);
+    this.ghost
+      .position(px)
+      .fill(valid ? "#4a90d9" : "#d94a4a")
+      .visible(true);
     this.range.position(px).visible(true);
   }
 

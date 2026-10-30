@@ -1,15 +1,16 @@
 import type { Vec } from "../model/types";
 
-type PlacementState =                       //StateMachine tracking what process of placement user is in
-  | { kind: "idle" }                        // nothing being placed
-  | { kind: "dragging"; pos: Vec | null }  // ghost following the pointer
-  | { kind: "placed"; pos: Vec };          // ghost dropped, waiting to confirm
+type PlacementState =
+  //StateMachine tracking what process of placement user is in
+  | { kind: "idle" } // nothing being placed
+  | { kind: "dragging"; pos: Vec | null } // ghost following the pointer
+  | { kind: "placed"; pos: Vec }; // ghost dropped, waiting to confirm
 
 export class PlacementModel {
   state: PlacementState = { kind: "idle" };
 
   startDrag(pos: Vec) {
-    this.state = { kind: "dragging", pos};
+    this.state = { kind: "dragging", pos };
   }
 
   endDrag(pos: Vec, valid: boolean) {
