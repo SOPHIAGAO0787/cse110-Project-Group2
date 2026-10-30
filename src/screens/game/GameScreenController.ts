@@ -21,7 +21,7 @@ export class GameScreenController implements Screen {
   private model: GameModel;
   private loop: GameLoop;
   private cleanupPlacement: (() => void) | null = null;
-  
+
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
