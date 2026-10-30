@@ -13,7 +13,19 @@ export class PlacementView {
 
   constructor(radiusTiles: number) {
     this.range.radius(radiusTiles * TILE);
-    this.group.add(this.range, this.ghost);
+    this.group.add(this.towers, this.range, this.ghost);
+  }
+
+  private towers = new Konva.Group(); // holds the placed-tower markers
+
+  addTower(tile: Vec): void {
+    this.towers.add(
+      new Konva.Circle({
+        ...tileToPixel(tile, TILE),
+        radius: TILE / 2,
+        fill: "#2a5d99",
+      }),
+    );
   }
 
   show(tile: Vec, valid: boolean): void {

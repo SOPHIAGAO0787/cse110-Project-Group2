@@ -1,25 +1,14 @@
-import { CircleRange } from "./geometry/CircleRange";
-import type { Enemy } from "./Enemy";
-import type { RangeShape, TowerDef, Vec } from "./types";
+import type { TowerDef } from "../model/types";
 
-// A placed tower that shoots enemies inside its range.
-// TODO(R3): every 1 / fireRatePerSec seconds, pick the enemy in range that is furthest
-// along the path (tie: lowest id) and call takeDamage(def.damage) on it.
-export class Tower {
-  id: number;
-  def: TowerDef;
-  tile: Vec;
-  range: RangeShape;
+export const circleTowerDef: TowerDef = {
+  id: "circle",
+  name: "Circle Tower",
+  description: "Hits enemies inside a circle around it.",
+  cost: 50,
+  damage: 5,
+  fireRatePerSec: 1,
+  range: { kind: "circle", radius: 2.5 },
+};
 
-  constructor(id: number, def: TowerDef, tile: Vec) {
-    this.id = id;
-    this.def = def;
-    this.tile = tile;
-    // Only circle towers exist in Sprint 1. New shapes will check def.range.kind here.
-    this.range = new CircleRange(tile, def.range.radius);
-  }
-
-  update(dt: number, enemies: Enemy[]): void {
-    // TODO(R3)
-  }
-}
+// If other code expects a list of all defs, export one too:
+export const towerDefs: TowerDef[] = [circleTowerDef];

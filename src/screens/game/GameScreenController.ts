@@ -9,9 +9,8 @@ import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
-
-const PLACE_RADIUS = 2; //change later once we vary radius
-
+import { circleTowerDef } from "../../model/Tower";
+const def = circleTowerDef;
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
 export class GameScreenController implements Screen {
@@ -22,7 +21,7 @@ export class GameScreenController implements Screen {
   private model: GameModel;
   private loop: GameLoop;
   private cleanupPlacement: (() => void) | null = null;
-
+  
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
@@ -95,12 +94,30 @@ export class GameScreenController implements Screen {
 
   private wirePlacement(gridView: GridView): () => void {
     const placement = new PlacementModel();
-    const pv = new PlacementView(PLACE_RADIUS);
+    const pv = new PlacementView(def.range.radius);
     this.view.mapGroup.add(pv.group); // after the grid, so it draws on top
     this.view.shopGroup.add(pv.menuCircle);
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
+    const beforeCommit = async (_tile: Vec): Promise<boolean> => true;
+    let pending = false; // blocks double-triggers while a question is open
+    const requestPlace = async () => {
+      const s = placement.state;
+      if (s.kind !== "placed" || pending) return;
+      const tile = s.pos;
+
+      pending = true;
+      const ok = await beforeCommit(tile);
+      pending = false;
+
+      const now = placement.state;
+      if (!ok || now.kind !== "placed" || now.pos.x !== tile.x || now.pos.y !== tile.y) return;
+
+      placement.confirm(); // state: idle
+      pv.hide();
+      if (this.commitTower(tile)) pv.addTower(tile);
+    };
 
     const onDown = () => {
       const tile = gridView.tileUnderMouse();
@@ -127,14 +144,23 @@ export class GameScreenController implements Screen {
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
-        const tile = placement.confirm();
-        pv.hide();
-        if (tile) this.commitTower(tile);
+        void requestPlace();
       } else if (e.key === "Escape") {
         placement.cancel();
         pv.hide();
       }
     };
+    // Click to confirm functionality, waiting on other implementation before using/deleting
+    // const onMapClick = () => {
+    //   const s = placement.state;
+    //   const tile = gridView.tileUnderMouse();
+    //   // clicking the dropped ghost's tile confirms it
+    //   if (s.kind === "placed" && tile && tile.x === s.pos.x && tile.y === s.pos.y) {
+    //     void requestPlace();
+    //   }
+    // };
+
+    // gridView.group.on("click", onMapClick);
 
     pv.menuCircle.on("pointerdown", onDown);
     stage?.on("pointermove.placement", onMove);
@@ -150,7 +176,9 @@ export class GameScreenController implements Screen {
     };
   }
 
-  private commitTower(tile: Vec): void {
-    // TODO: call the model's real place method here (coins, Tower, towerPlaced event)
+  private commitTower(tile: Vec): boolean {
+    if (!this.model.grid.isBuildable(tile)) return false;
+    this.model.grid.occupy(tile);
+    return true;
   }
 }
