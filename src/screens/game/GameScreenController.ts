@@ -9,8 +9,8 @@ import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
-import { circleTowerDef } from "../../model/Tower";
-const def = circleTowerDef;
+import { TOWERS } from "../../model/loadContent"; //import loadMAP once we start working on stages
+
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
 export class GameScreenController implements Screen {
@@ -94,6 +94,7 @@ export class GameScreenController implements Screen {
 
   private wirePlacement(gridView: GridView): () => void {
     const placement = new PlacementModel();
+    const def = TOWERS.find((d) => d.id === "circle")!;
     const pv = new PlacementView(def.range.radius);
     this.view.mapGroup.add(pv.group); // after the grid, so it draws on top
     this.view.shopGroup.add(pv.menuCircle);
