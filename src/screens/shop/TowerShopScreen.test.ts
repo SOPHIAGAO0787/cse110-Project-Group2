@@ -40,14 +40,10 @@ describe("Tower shop UI interactions", () => {
 
   it("provides the tower's cost and abilities to the view", () => {
     const state = displayedState();
-    const tower = state.towers.find(
-      (item) => item.def.id === "circle",
-    )!;
+    const tower = state.towers.find((item) => item.def.id === "circle")!;
 
     expect(tower.def.name).toBe("Circle Tower");
-    expect(tower.def.description).toBe(
-      "Hits enemies inside a circle around it.",
-    );
+    expect(tower.def.description).toBe("Hits enemies inside a circle around it.");
     expect(tower.unlockCost).toBe(50);
     expect(tower.levels[0].damage).toBe(5);
     expect(tower.levels[0].attackSpeed).toBe(1);
@@ -55,9 +51,7 @@ describe("Tower shop UI interactions", () => {
   });
 
   it("provides the next upgrade's cost and improved abilities", () => {
-    const tower = displayedState().towers.find(
-      (item) => item.def.id === "circle",
-    )!;
+    const tower = displayedState().towers.find((item) => item.def.id === "circle")!;
 
     const current = tower.levels[0];
     const next = tower.levels[1];

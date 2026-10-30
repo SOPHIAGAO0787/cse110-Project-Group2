@@ -42,7 +42,7 @@ export class App implements ScreenSwitcher {
       this.current = this.game;
     } else if (name === "shop") {
       this.current = this.shop;
-    }else {
+    } else {
       this.current = this.result;
     }
     this.current.show(data);

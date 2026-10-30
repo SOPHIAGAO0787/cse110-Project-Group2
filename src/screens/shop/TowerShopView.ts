@@ -32,81 +32,67 @@ export class TowerShopView {
     this.group.add(this.scene);
   }
 
-    render(state: ShopViewState): void {
-        this.content.destroyChildren();
+  render(state: ShopViewState): void {
+    this.content.destroyChildren();
 
-        this.content.add(
-            new Konva.Rect({
-                width: WIDTH,
-                height: HEIGHT,
-                fill: "#1e1e2e",
-            }),
-        );
-        
-        //put text about basic shop info
-        this.text(this.content, "Tower Shop", 28, 24, 34);
-        this.text(this.content, `Coins: ${state.coins}`, 650, 30, 24);
-        this.text(
-            this.content,
-            "Select a tower to view its abilities and upgrades.",
-            28,
-            75,
-            18,
-        );
+    this.content.add(
+      new Konva.Rect({
+        width: WIDTH,
+        height: HEIGHT,
+        fill: "#1e1e2e",
+      }),
+    );
 
-        //for each towers get the level and upgrade price
-        state.towers.forEach((tower, index) => {
-            const level = state.levels.get(tower.def.id) ?? -1;
-            const status = level < 0 ? "Locked" : `Level ${level + 1}`;
-            const selected = tower.def.id === state.selectedId;
+    //put text about basic shop info
+    this.text(this.content, "Tower Shop", 28, 24, 34);
+    this.text(this.content, `Coins: ${state.coins}`, 650, 30, 24);
+    this.text(this.content, "Select a tower to view its abilities and upgrades.", 28, 75, 18);
 
-            this.text(
-                this.content,
-                `${selected ? "► " : ""}${tower.def.name} · ${status}`,
-                28,
-                120 + index * 100,
-                18,
-                260,
-            );
+    //for each towers get the level and upgrade price
+    state.towers.forEach((tower, index) => {
+      const level = state.levels.get(tower.def.id) ?? -1;
+      const status = level < 0 ? "Locked" : `Level ${level + 1}`;
+      const selected = tower.def.id === state.selectedId;
 
-            this.button(
-                this.content,
-                `View · ${tower.unlockCost} coins to unlock`,
-                28,
-                150 + index * 100,
-                () => this.callbacks.onSelect(tower.def.id),
-            );
-        });
+      this.text(
+        this.content,
+        `${selected ? "► " : ""}${tower.def.name} · ${status}`,
+        28,
+        120 + index * 100,
+        18,
+        260,
+      );
 
-        //redner the currently selected tower detail
-        const tower = state.towers.find(
-            (item) => item.def.id === state.selectedId,
-        );
+      this.button(
+        this.content,
+        `View · ${tower.unlockCost} coins to unlock`,
+        28,
+        150 + index * 100,
+        () => this.callbacks.onSelect(tower.def.id),
+      );
+    });
 
-        if (tower) {
-            this.renderDetails(tower, state.levels.get(tower.def.id) ?? -1);
-        }
+    //redner the currently selected tower detail
+    const tower = state.towers.find((item) => item.def.id === state.selectedId);
 
-        //back to menu button
-        this.button(
-            this.content,
-            "Back to Menu",
-            28,
-            550,
-            this.callbacks.onBack,
-        );
-
-        this.text(
-            this.content,
-            "UI demo: sample coins and upgrades. Progress resets on refresh.",
-            28,
-            610,
-            15,
-            840,
-        );
+    if (tower) {
+      this.renderDetails(tower, state.levels.get(tower.def.id) ?? -1);
     }
 
-    private renderDetails(tower: ShopTower, levelIndex: number): void {
+    //back to menu button
+    this.button(this.content, "Back to Menu", 28, 550, this.callbacks.onBack);
+
+    this.text(
+      this.content,
+      "UI demo: sample coins and upgrades. Progress resets on refresh.",
+      28,
+      610,
+      15,
+      840,
+    );
+  }
+
+  private renderDetails(tower: ShopTower, levelIndex: number): void {
     const locked = levelIndex < 0;
     const current = tower.levels[Math.max(0, levelIndex)];
     const next = tower.levels[Math.max(0, levelIndex) + 1];
@@ -134,13 +120,7 @@ export class TowerShopView {
     );
 
     //tower description
-    this.text(
-      this.content,
-      tower.def.description,
-      334,
-      211,
-      18,
-    );
+    this.text(this.content, tower.def.description, 334, 211, 18);
 
     //show current tower detials
     this.text(
@@ -171,13 +151,7 @@ export class TowerShopView {
         18,
       );
     } else {
-      this.text(
-        this.content,
-        "Maximum level reached",
-        334,
-        390,
-        22,
-      );
+      this.text(this.content, "Maximum level reached", 334, 390, 22);
     }
 
     if (locked || next) {
@@ -232,10 +206,7 @@ export class TowerShopView {
   //helper functions
   //resize : resize the scene width and height
   resize(width: number, height: number): void {
-    const scale = Math.max(
-      0.01,
-      Math.min(width / WIDTH, height / HEIGHT),
-    );
+    const scale = Math.max(0.01, Math.min(width / WIDTH, height / HEIGHT));
 
     this.scene.scale({ x: scale, y: scale });
     this.scene.position({
@@ -283,4 +254,3 @@ export class TowerShopView {
     parent.add(button);
   }
 }
-

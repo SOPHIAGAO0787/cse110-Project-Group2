@@ -51,9 +51,7 @@ export class TowerShopScreen implements Screen {
   }
 
   private handleAction(): void {
-    const tower = SHOP_TOWERS.find(
-      (item) => item.def.id === this.selectedId,
-    );
+    const tower = SHOP_TOWERS.find((item) => item.def.id === this.selectedId);
     if (!tower) return;
 
     //get the level, check locked or not, get cur level
