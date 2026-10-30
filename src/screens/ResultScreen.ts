@@ -23,6 +23,12 @@ export class ResultScreen implements Screen {
 
   // data.won says whether the player won (unused until So1)
   show(data?: { won: boolean }): void {
+    if(data){
+      this.message.text(data.won ? "Victory!" : "Defeat!");
+      this.message.fill(data.won ? "#a5e3a1" : "#f0b5b5");
+    } else {
+      this.message.text("Game over");
+    }
     this.group.visible(true);
   }
 
