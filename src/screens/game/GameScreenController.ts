@@ -59,7 +59,6 @@ export class GameScreenController implements Screen {
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
 
-    // WIRE(St1): update the HUD on "coinsChanged"
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
     // WIRE(M3): update the HUD on "livesChanged"
     // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame

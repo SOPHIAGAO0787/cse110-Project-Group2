@@ -37,7 +37,7 @@ export class GameScreenView {
     this.group.add(this.mapGroup, this.hudText, this.shopGroup, this.startWaveButton);
   }
 
-  // TODO(St1, N1, M3): call this when coins, lives, wave number, or remaining enemies changes
+  // TODO(N1, M3): call this when lives, wave number, or remaining enemies changes
   setHud(
     coins: number,
     lives: number,
