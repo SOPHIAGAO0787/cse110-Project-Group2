@@ -165,6 +165,5 @@ export class GameScreenController implements Screen {
 
   private commitTower(tile: Vec): boolean {
     return this.model.tryPlaceTower("circle", tile) === "ok";
-
   }
 }
