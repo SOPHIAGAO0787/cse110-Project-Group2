@@ -84,3 +84,106 @@ describe("GameModel.tryPlaceTower", () => {
     expect(() => model.tryPlaceTower("nope", buildTile)).toThrow();
   });
 });
+
+describe("Game Result", () => {
+  it("emits defeat when remaining lives reach zero", () => {
+    const game = new GameModel(loadMap(map1));
+    const results: boolean[] = [];
+
+    game.events.on("gameOver", ({ won }) => {
+      results.push(won);
+    });
+
+    // Simulate the state after all lives are lost.
+    game.lives.remaining = 0;
+    game.tick(0.016);
+
+    expect(results).toEqual([false]);
+  });
+
+  it("emits victory when the final wave is cleared", () => {
+    const game = new GameModel(loadMap(map1));
+    const results: boolean[] = [];
+
+    game.events.on("gameOver", ({ won }) => {
+      results.push(won);
+    });
+
+    game.events.emit("waveCleared", {
+      wave: game.waves.totalWaves,
+    });
+
+    game.tick(0.016);
+
+    expect(results).toEqual([true]);
+  });
+
+  it("does not finish after an earlier wave", () => {
+    const game = new GameModel(loadMap(map1));
+    const results: boolean[] = [];
+
+    game.events.on("gameOver", ({ won }) => {
+      results.push(won);
+    });
+
+    game.events.emit("waveCleared", { wave: 1 });
+    game.tick(0.016);
+
+    expect(results).toEqual([]);
+  });
+
+  it("prioritizes defeat when no lives remain", () => {
+    const game = new GameModel(loadMap(map1));
+    const results: boolean[] = [];
+
+    game.events.on("gameOver", ({ won }) => {
+      results.push(won);
+    });
+
+    game.lives.remaining = 0;
+
+    game.events.emit("waveCleared", {
+      wave: game.waves.totalWaves,
+    });
+
+    game.tick(0.016);
+
+    expect(results).toEqual([false]);
+  });
+
+  it("emits gameOver only once", () => {
+    const game = new GameModel(loadMap(map1));
+    const results: boolean[] = [];
+
+    game.events.on("gameOver", ({ won }) => {
+      results.push(won);
+    });
+
+    game.lives.remaining = 0;
+
+    game.tick(0.016);
+    game.tick(0.016);
+    game.tick(0.016);
+
+    expect(results).toEqual([false]);
+  });
+
+  it("tracks elapsed time and stops after game over", () => {
+    const game = new GameModel(loadMap(map1));
+
+    game.tick(0.1);
+    game.tick(0.2);
+
+    expect(game.elapsedSeconds).toBeCloseTo(0.3);
+
+    game.lives.remaining = 0;
+    game.tick(0.1);
+
+    expect(game.elapsedSeconds).toBeCloseTo(0.4);
+
+    // Game time should not increase after game over.
+    game.tick(1);
+
+    expect(game.elapsedSeconds).toBeCloseTo(0.4);
+  });
+});
