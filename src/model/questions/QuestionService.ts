@@ -6,7 +6,8 @@ import type { Question, TowerDef } from "../types";
 // (e.g. radius 2.5 -> "What is the diameter?"); check() parses the typed answer and
 // accepts it within the question's tolerance. Bad input (empty, "abc") counts as wrong.
 export class QuestionService {
-  questionFor(tower: TowerDef): Question { // tower details will be used in questions in the future
+  questionFor(tower: TowerDef): Question {
+    // tower details will be used in questions in the future
     if (QUESTIONS.length === 0) {
       throw new Error("questions.json has no questions");
     }

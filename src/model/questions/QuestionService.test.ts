@@ -5,7 +5,6 @@ describe("QuestionService (M1)", () => {
   it.todo("treats empty or non-number input as wrong");
 });
 
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QuestionService } from "./QuestionService";
 import { QUESTIONS, TOWERS } from "../loadContent";

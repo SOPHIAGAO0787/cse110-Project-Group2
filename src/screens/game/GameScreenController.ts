@@ -27,7 +27,12 @@ export class GameScreenController implements Screen {
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
-    this.view = new GameScreenView(this.map.cols, this.map.rows, () => this.model.startNextWave(), this.questions);
+    this.view = new GameScreenView(
+      this.map.cols,
+      this.map.rows,
+      () => this.model.startNextWave(),
+      this.questions,
+    );
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
@@ -104,7 +109,7 @@ export class GameScreenController implements Screen {
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
-    
+
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);

@@ -33,13 +33,24 @@ export class GameScreenView {
   private shopTitle = new Konva.Text({ x: 20, y: 20, text: "Shop", fontSize: 22, fill: "white" });
 
   // onStartWave runs when the player clicks the Start Wave button.
-  constructor(mapCols: number, mapRows: number, onStartWave: () => void, questions: QuestionService) {
+  constructor(
+    mapCols: number,
+    mapRows: number,
+    onStartWave: () => void,
+    questions: QuestionService,
+  ) {
     this.mapCols = mapCols;
     this.mapRows = mapRows;
     this.startWaveButton = makeButton("Start Wave", onStartWave);
     this.prompt = new QuestionPrompt(questions);
     this.shopGroup.add(this.shopBackground, this.shopTitle);
-    this.group.add(this.mapGroup, this.hudText, this.shopGroup, this.startWaveButton, this.prompt.group);
+    this.group.add(
+      this.mapGroup,
+      this.hudText,
+      this.shopGroup,
+      this.startWaveButton,
+      this.prompt.group,
+    );
   }
 
   // TODO(St1, N1, M3): call this when coins, lives, wave number, or remaining enemies changes
