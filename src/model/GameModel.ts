@@ -1,10 +1,10 @@
 import { EventBus } from "../core/EventBus";
 import { Enemy } from "./Enemy";
 import { Grid } from "./Grid";
-import { ENEMIES } from "./loadContent";
+import { ENEMIES, TOWERS } from "./loadContent";
 import { Lives } from "./Lives";
 import { Path } from "./Path";
-import type { Tower } from "./Tower";
+import { Tower } from "./Tower";
 import type { MapConfig, PlaceResult, Vec } from "./types";
 import { Wallet } from "./Wallet";
 import { WaveManager } from "./WaveManager";
@@ -24,6 +24,7 @@ export class GameModel {
   waves: WaveManager;
 
   private nextId = 1; // every enemy gets its own number, so events can say which one
+  private nextTowerId = 1; //every tower gets its own id
 
   constructor(map: MapConfig) {
     this.map = map;
@@ -64,7 +65,17 @@ export class GameModel {
   // TODO(B1): check the grid and the wallet, then create the Tower, occupy the tile,
   // spend the cost, and emit "towerPlaced".
   tryPlaceTower(defId: string, tile: Vec): PlaceResult {
-    return "blocked"; // TODO(B1)
+    const def = TOWERS.find((d) => d.id === defId);
+    if (!def) throw new Error(`Unknown tower "${defId}"`);
+
+    if (this.grid.isOccupied(tile)) return "occupied"; // check first: isBuildable is also false when occupied
+    if (!this.grid.isBuildable(tile)) return "blocked";
+
+    this.grid.occupy(tile);
+    const tower = new Tower(this.nextTowerId++, def, tile);
+    this.towers.push(tower);
+    this.events.emit("towerPlaced", { towerId: tower.id, defId: def.id, tile });
+    return "ok";
   }
 
   // Adds one enemy of the given kind (an id from enemies.json, e.g. "basic") at the start of the path.
