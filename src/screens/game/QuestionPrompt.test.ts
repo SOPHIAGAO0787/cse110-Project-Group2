@@ -35,6 +35,7 @@ const type = (text: string) => {
 };
 
 const inputShown = () => (prompt.group.find("Text")[1] as Konva.Text).text();
+const feedbackShown = () => (prompt.group.find("Text")[2] as Konva.Text).text();
 
 // Lets us check "has the promise settled yet?" without awaiting forever
 function track(promise: Promise<boolean>) {
@@ -87,7 +88,6 @@ describe("QuestionPrompt", () => {
     type("a");
     type("5");
     press("Shift");
-    press("Escape");
     press("Enter");
     expect(await result).toBe(true);
   });
@@ -118,10 +118,12 @@ describe("QuestionPrompt", () => {
     expect(inputShown()).toBe("5|");
   });
 
-  it("does not resolve on a wrong answer until the player dismisses it", async () => {
+  it("does not resolve until dismissed after the last wrong answer", async () => {
     const state = track(prompt.ask(question, anchor));
     type("4");
-    press("Enter"); // wrong: shows the hint, stays open
+    press("Enter"); // wrong, one try left
+    type("3");
+    press("Enter"); // wrong again, out of tries
     await flush();
 
     expect(state.done).toBe(false);
@@ -143,24 +145,62 @@ describe("QuestionPrompt", () => {
     expect(prompt.group.visible()).toBe(false);
   });
 
-  it("does not accept more typing after a wrong answer", async () => {
+  it("resolves false when Continue is clicked after the last wrong answer", async () => {
+    const result = prompt.ask(question, anchor);
+    type("4");
+    handlers["Submit"]();
+    type("3");
+    handlers["Submit"]();
+    handlers["Continue"]();
+    expect(await result).toBe(false);
+  });
+
+  it("does not accept more typing after the last wrong answer", async () => {
     const state = track(prompt.ask(question, anchor));
     type("4");
-    press("Enter"); // wrong
-    type("5"); // should be ignored: the prompt is in the "wrong" phase
+    press("Enter");
+    type("3");
+    press("Enter"); // out of tries
+    type("5"); // ignored: the prompt is in the "wrong" phase
     press("Enter"); // dismisses
     await flush();
     expect(state.value).toBe(false);
   });
 
-  it("treats an empty submit as a wrong answer", async () => {
+  it("treats two empty submits as two wrong answers", async () => {
     const state = track(prompt.ask(question, anchor));
     press("Enter");
+    press("Enter");
     await flush();
-    expect(state.done).toBe(false); // wrong phase, waiting for dismiss
+    expect(state.done).toBe(false); // out of tries, waiting for dismiss
     press("Enter");
     await flush();
     expect(state.value).toBe(false);
+  });
+
+  it("Escape closes the popup and resolves false", async () => {
+    const result = prompt.ask(question, anchor);
+    press("Escape");
+    expect(await result).toBe(false);
+    expect(prompt.group.visible()).toBe(false);
+  });
+
+  it("Escape does not submit a correct answer that was typed", async () => {
+    const result = prompt.ask(question, anchor);
+    type("5");
+    press("Escape");
+    expect(await result).toBe(false);
+  });
+
+  it("Escape also closes the popup after the last wrong answer", async () => {
+    const result = prompt.ask(question, anchor);
+    type("4");
+    press("Enter");
+    type("3");
+    press("Enter"); // out of tries, Continue is showing
+    press("Escape");
+    expect(await result).toBe(false);
+    expect(prompt.group.visible()).toBe(false);
   });
 
   it("cancel() resolves false and hides the popup", async () => {
@@ -193,26 +233,62 @@ describe("QuestionPrompt", () => {
     expect(remove).toHaveBeenCalledWith("keydown", expect.any(Function));
   });
 
-  describe("placement", () => {
-    it("puts the popup to the right of the anchor when there is room", () => {
-      void prompt.ask(question, { x: 100, y: 300 });
-      const panel = prompt.group.getChildren()[1]; // [dim, panelGroup]
-      expect(panel.x()).toBe(100 + 16);
-    });
+  it("gives a second chance after a wrong answer", async () => {
+    const result = prompt.ask(question, anchor);
+    type("4");
+    press("Enter"); // wrong, but one try left
 
-    it("flips to the left when it would run off the right edge", () => {
-      void prompt.ask(question, { x: 700, y: 300 });
-      const panel = prompt.group.getChildren()[1];
-      expect(panel.x()).toBe(700 - 16 - 320);
-    });
+    expect(prompt.group.visible()).toBe(true);
+    expect(inputShown()).toBe("|"); // input cleared
+    expect(feedbackShown()).toContain("1 try left");
 
-    it("keeps the popup inside the screen vertically", () => {
-      void prompt.ask(question, { x: 100, y: 0 });
-      const panel = prompt.group.getChildren()[1];
-      expect(panel.y()).toBe(0);
+    type("5");
+    press("Enter");
+    expect(await result).toBe(true);
+  });
 
-      void prompt.ask(question, { x: 100, y: 600 });
-      expect(prompt.group.getChildren()[1].y()).toBe(600 - 240);
-    });
+  it("shows the hint on the first wrong answer", () => {
+    void prompt.ask(question, anchor);
+    type("4");
+    press("Enter");
+    expect(feedbackShown()).toContain("Add them.");
+  });
+
+  it("starts with full tries when a new question is asked", async () => {
+    const first = prompt.ask(question, anchor);
+    type("4");
+    press("Enter"); // uses one try
+    prompt.cancel();
+    await first;
+
+    const state = track(prompt.ask(question, anchor));
+    type("4");
+    press("Enter"); // should be wrong with a try left, not final
+    await flush();
+    expect(state.done).toBe(false);
+    expect(feedbackShown()).toContain("1 try left");
+  });
+});
+
+describe("placement", () => {
+  it("puts the popup to the right of the anchor when there is room", () => {
+    void prompt.ask(question, { x: 100, y: 300 });
+    const panel = prompt.group.getChildren()[1]; // [dim, panelGroup]
+    expect(panel.x()).toBe(100 + 16);
+  });
+
+  it("flips to the left when it would run off the right edge", () => {
+    void prompt.ask(question, { x: 700, y: 300 });
+    const panel = prompt.group.getChildren()[1];
+    expect(panel.x()).toBe(700 - 16 - 320);
+  });
+
+  it("keeps the popup inside the screen vertically", () => {
+    void prompt.ask(question, { x: 100, y: 0 });
+    const panel = prompt.group.getChildren()[1];
+    expect(panel.y()).toBe(0);
+
+    void prompt.ask(question, { x: 100, y: 600 });
+    expect(prompt.group.getChildren()[1].y()).toBe(600 - 240);
   });
 });

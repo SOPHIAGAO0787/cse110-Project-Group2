@@ -7,6 +7,7 @@ const PANEL_W = 320;
 const PANEL_H = 240;
 const GAP = 16; // space between the tower tile and the popup
 const DIM_OPACITY = 0.3; // set to 0 if you don't want the screen dimmed
+const MAX_ATTEMPTS = 2; // total tries per question
 
 export class QuestionPrompt {
   group = new Konva.Group({ visible: false });
@@ -62,6 +63,7 @@ export class QuestionPrompt {
   private typed = "";
   private phase: "typing" | "wrong" = "typing";
   private resolve: ((correct: boolean) => void) | null = null;
+  private attemptsLeft = 0;
   private width = 0;
   private height = 0;
 
@@ -94,6 +96,7 @@ export class QuestionPrompt {
     this.question = question;
     this.typed = "";
     this.phase = "typing";
+    this.attemptsLeft = MAX_ATTEMPTS;
     this.promptText.text(question.prompt);
     this.feedback.text("");
     this.submitButton.visible(true);
@@ -134,6 +137,11 @@ export class QuestionPrompt {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this.finish(false); // close without placing the tower
+      return;
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       if (this.phase === "typing") this.submit();
@@ -156,9 +164,18 @@ export class QuestionPrompt {
   private submit(): void {
     if (this.question === null || this.phase !== "typing") return;
 
+    this.attemptsLeft -= 1;
+
     if (this.service.check(this.question, this.typed)) {
       this.finish(true);
+    } else if (this.attemptsLeft > 0) {
+      // wrong, but the player gets another try: show the hint and clear the input
+      const left = this.attemptsLeft === 1 ? "1 try left" : `${this.attemptsLeft} tries left`;
+      this.feedback.text(`Not quite. ${this.question.hint} (${left})`);
+      this.typed = "";
+      this.refreshInput(); // also redraws
     } else {
+      // out of tries: the player can only dismiss the popup
       this.phase = "wrong";
       this.feedback.text(`Not quite. ${this.question.hint}`);
       this.submitButton.visible(false);
