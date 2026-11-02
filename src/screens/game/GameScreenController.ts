@@ -1,12 +1,15 @@
 import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { GameModel } from "../../model/GameModel";
-import { loadMap } from "../../model/loadContent";
-import type { MapConfig } from "../../model/types";
+import { loadMap, TOWERS } from "../../model/loadContent";
+import type { MapConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import map1 from "../../data/maps/map1.json";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
+import { PlacementModel } from "../../model/PlacementModel";
+import { PlacementView } from "../../ui/PlacementView";
+import { QuestionService } from "../../model/questions/QuestionService";
 
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
@@ -17,11 +20,19 @@ export class GameScreenController implements Screen {
   private view: GameScreenView;
   private model: GameModel;
   private loop: GameLoop;
+  private cleanupPlacement: (() => void) | null = null;
+  private questions = new QuestionService();
+  private active = false; // false while the screen is hidden
 
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
-    this.view = new GameScreenView(this.map.cols, this.map.rows, () => this.model.startNextWave());
+    this.view = new GameScreenView(
+      this.map.cols,
+      this.map.rows,
+      () => this.model.startNextWave(),
+      this.questions,
+    );
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
@@ -34,9 +45,11 @@ export class GameScreenController implements Screen {
     this.model = new GameModel(this.map);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
     this.view.mapGroup.destroyChildren();
-    this.view.mapGroup.add(
-      new GridView(this.map, (tile) => this.model.grid.isBuildable(tile)).group,
-    );
+
+    const gridView = new GridView(this.map, (tile) => this.model.grid.isBuildable(tile));
+    this.view.mapGroup.add(gridView.group);
+    this.cleanupPlacement = this.wirePlacement(gridView);
+
     const refreshHud = () => {
       this.view.setHud(
         this.model.wallet.coins,
@@ -48,7 +61,6 @@ export class GameScreenController implements Screen {
     };
 
     refreshHud();
-
     const events = this.model.events;
     events.on("gameOver", (e) => this.app.switchTo("result", { won: e.won }));
 
@@ -59,23 +71,25 @@ export class GameScreenController implements Screen {
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
 
-    // WIRE(St1): update the HUD on "coinsChanged"
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
     // WIRE(M3): update the HUD on "livesChanged"
     // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
     // WIRE(R3): add TowersView to this.view.mapGroup
-    // WIRE(B1): click to place a tower on the map
-    // WIRE(B2): show the tower's range under the mouse before it is placed
     // WIRE(J1): shop cards in this.view.shopGroup
     // WIRE(So2): click a shop card to choose the tower to place
     // WIRE(J2): show a message when the player can't afford a tower
     // WIRE(M2): ask a question before a tower is placed
 
+    this.active = true;
     this.group.visible(true);
     this.loop.start();
   }
 
   hide(): void {
+    this.active = false;
+    this.view.prompt.cancel(); // closes the popup and removes its key listener
+    this.cleanupPlacement?.();
+    this.cleanupPlacement = null;
     this.loop.stop();
     this.model.events.clear();
     this.group.visible(false);
@@ -83,5 +97,103 @@ export class GameScreenController implements Screen {
 
   resize(width: number, height: number): void {
     this.view.resize(width, height);
+  }
+
+  private wirePlacement(gridView: GridView): () => void {
+    const placement = new PlacementModel();
+    const def = TOWERS.find((d) => d.id === "circle")!;
+    const pv = new PlacementView(def.range.radius);
+    this.view.mapGroup.add(pv.group); // after the grid, so it draws on top
+    this.view.shopGroup.add(pv.menuCircle);
+
+    const stage = this.group.getStage();
+    const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
+
+    // Asks the question and returns true only if the player answered correctly.
+    const beforeCommit = async (tile: Vec): Promise<boolean> => {
+      const question = this.questions.questionFor(def);
+      this.loop.stop(); // pause the game while the question is open
+      const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
+      if (this.active) this.loop.start(); // don't restart if the player left the screen
+      return correct;
+    };
+
+    let pending = false; // blocks double-triggers while a question is open
+    const requestPlace = async () => {
+      const s = placement.state;
+      if (s.kind !== "placed" || pending) return;
+      const tile = s.pos;
+
+      pending = true;
+      let ok = false;
+      try {
+        ok = await beforeCommit(tile);
+      } finally {
+        pending = false;
+      }
+
+      if (!ok) {
+        placement.cancel();
+        pv.hide();
+        return;
+      }
+
+      const now = placement.state;
+      if (now.kind !== "placed" || now.pos.x !== tile.x || now.pos.y !== tile.y) return;
+
+      placement.confirm(); // state: idle
+      pv.hide();
+      if (this.commitTower(tile)) pv.addTower(tile);
+    };
+
+    const onDown = () => {
+      const tile = gridView.tileUnderMouse();
+      if (tile) placement.startDrag(tile);
+    };
+
+    const onMove = () => {
+      if (placement.state.kind !== "dragging") return;
+      const tile = gridView.tileUnderMouse();
+      if (tile) pv.show(tile, canPlace(tile));
+    };
+
+    const onUp = () => {
+      if (placement.state.kind !== "dragging") return;
+      const tile = gridView.tileUnderMouse();
+      if (tile && canPlace(tile)) {
+        placement.endDrag(tile, true); // state: placed, ghost stays
+        pv.show(tile, true);
+      } else {
+        placement.cancel();
+        pv.hide();
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (pending) return; // while a question is open, the prompt owns the keyboard
+      if (e.key === "Enter") {
+        void requestPlace();
+      } else if (e.key === "Escape") {
+        placement.cancel();
+        pv.hide();
+      }
+    };
+
+    pv.menuCircle.on("pointerdown", onDown);
+    stage?.on("pointermove.placement", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      // called from hide()
+      stage?.off(".placement");
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("keydown", onKey);
+      pv.menuCircle.destroy();
+    };
+  }
+
+  private commitTower(tile: Vec): boolean {
+    return this.model.tryPlaceTower("circle", tile) === "ok";
   }
 }

@@ -1,5 +1,8 @@
 import Konva from "konva";
 import { makeButton } from "../button";
+import { QuestionPrompt } from "./QuestionPrompt";
+import type { QuestionService } from "../../model/questions/QuestionService";
+import type { Vec } from "../../model/types";
 
 export const TILE = 48; // pixels per tile, before the map is scaled to fit the window
 const SHOP_WIDTH = 260;
@@ -21,6 +24,7 @@ export class GameScreenView {
   mapGroup = new Konva.Group();
   shopGroup = new Konva.Group(); // TODO(J1): add tower cards here
   startWaveButton: Konva.Group;
+  readonly prompt: QuestionPrompt;
 
   private mapCols: number;
   private mapRows: number;
@@ -29,15 +33,27 @@ export class GameScreenView {
   private shopTitle = new Konva.Text({ x: 20, y: 20, text: "Shop", fontSize: 22, fill: "white" });
 
   // onStartWave runs when the player clicks the Start Wave button.
-  constructor(mapCols: number, mapRows: number, onStartWave: () => void) {
+  constructor(
+    mapCols: number,
+    mapRows: number,
+    onStartWave: () => void,
+    questions: QuestionService,
+  ) {
     this.mapCols = mapCols;
     this.mapRows = mapRows;
     this.startWaveButton = makeButton("Start Wave", onStartWave);
+    this.prompt = new QuestionPrompt(questions);
     this.shopGroup.add(this.shopBackground, this.shopTitle);
-    this.group.add(this.mapGroup, this.hudText, this.shopGroup, this.startWaveButton);
+    this.group.add(
+      this.mapGroup,
+      this.hudText,
+      this.shopGroup,
+      this.startWaveButton,
+      this.prompt.group,
+    );
   }
 
-  // TODO(St1, N1, M3): call this when coins, lives, wave number, or remaining enemies changes
+  // TODO(N1, M3): call this when lives, wave number, or remaining enemies changes
   setHud(
     coins: number,
     lives: number,
@@ -48,6 +64,15 @@ export class GameScreenView {
     this.hudText.text(
       `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
     );
+  }
+
+  /* Converts a tile to a screen position (right edge, vertical middle),
+  accounting for the map's scale and offset. Used to place the question popup. */
+  tileToScreen(tile: Vec): Vec {
+    return this.mapGroup.getAbsoluteTransform().point({
+      x: (tile.x + 1) * TILE,
+      y: (tile.y + 0.5) * TILE,
+    });
   }
 
   resize(width: number, height: number): void {
@@ -64,5 +89,6 @@ export class GameScreenView {
       x: MARGIN + (areaWidth - this.mapCols * TILE * scale) / 2,
       y: HUD_HEIGHT + MARGIN + (areaHeight - this.mapRows * TILE * scale) / 2,
     });
+    this.prompt.resize(width, height);
   }
 }
