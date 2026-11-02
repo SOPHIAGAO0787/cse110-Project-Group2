@@ -77,7 +77,6 @@ export class GameModel {
     } else if (this.finalWaveCleared) {
       this.finishGame(true);
     }
-
   }
 
   private finishGame(won: boolean): void {

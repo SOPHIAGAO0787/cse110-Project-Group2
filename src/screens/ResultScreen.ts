@@ -1,9 +1,5 @@
 import Konva from "konva";
-import type {
-  GameResultData,
-  Screen,
-  ScreenSwitcher,
-} from "../app/types";
+import type { GameResultData, Screen, ScreenSwitcher } from "../app/types";
 import { makeButton } from "./button";
 
 // Shown when the game ends.
@@ -38,12 +34,7 @@ export class ResultScreen implements Screen {
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.menuButton = makeButton("Back to menu", () => this.app.switchTo("menu"));
-    this.group.add(
-      this.message,
-      this.subtitle,
-      this.stats,
-      this.menuButton,
-    );
+    this.group.add(this.message, this.subtitle, this.stats, this.menuButton);
   }
 
   // data.won says whether the player won (unused until So1)
@@ -60,23 +51,15 @@ export class ResultScreen implements Screen {
     // Show the game outcome.
     this.message.text(data.won ? "Victory!" : "Defeat!");
 
-    this.message.fill(
-      data.won ? "#86efac" : "#fca5a5"
-    );
+    this.message.fill(data.won ? "#86efac" : "#fca5a5");
 
-    this.subtitle.text(
-      data.won
-        ? "You cleared all waves!"
-        : "Your base has fallen!"
-    );
+    this.subtitle.text(data.won ? "You cleared all waves!" : "Your base has fallen!");
 
     // Build the statistics using available data.
     const lines: string[] = [];
 
     if (data.elapsedSeconds !== undefined) {
-      const totalSeconds = Math.floor(
-        Math.max(0, data.elapsedSeconds)
-      );
+      const totalSeconds = Math.floor(Math.max(0, data.elapsedSeconds));
 
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = String(totalSeconds % 60).padStart(2, "0");

@@ -2,12 +2,7 @@ import Konva from "konva";
 import { GameScreenController } from "../screens/game/GameScreenController";
 import { MenuScreen } from "../screens/MenuScreen";
 import { ResultScreen } from "../screens/ResultScreen";
-import type {
-  GameResultData,
-  Screen,
-  ScreenName,
-  ScreenSwitcher,
-} from "./types";
+import type { GameResultData, Screen, ScreenName, ScreenSwitcher } from "./types";
 
 // Owns the Konva stage and switches between screens.
 export class App implements ScreenSwitcher {
