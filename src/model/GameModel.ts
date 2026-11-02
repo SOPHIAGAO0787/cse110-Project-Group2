@@ -24,7 +24,7 @@ export class GameModel {
   waves: WaveManager;
 
   private nextId = 1; // every enemy gets its own number, so events can say which one
-  private nextTowerId = 1; //every tower gets its own id
+  private nextTowerId = 1; // every tower gets its own id
 
   constructor(map: MapConfig) {
     this.map = map;
