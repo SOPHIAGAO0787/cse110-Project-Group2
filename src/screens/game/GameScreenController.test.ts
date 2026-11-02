@@ -93,7 +93,7 @@ describe("GameScreenController HUD event wiring", () => {
     model.waves.enemiesLeft = 2;
     model.events.emit("waveStarted", { wave: 1, totalWaves: map.waves.length });
     for (const enemies of [1, 0]) {
-      // WaveManager is still unfinished; simulate its count before emitting.
+      // Set the count by hand so this test only checks the HUD.
       // The real Wallet handles the reward and emits coinsChanged.
       model.waves.enemiesLeft = enemies;
       model.events.emit("enemyKilled", { enemyId: 2 - enemies, reward: 5 });
