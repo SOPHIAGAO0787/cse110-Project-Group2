@@ -62,7 +62,7 @@ export class TowerShopScreen implements Screen {
 
     if (!locked && !tower.levels[levelIndex + 1]) return;
 
-    //check the coin, check if use can buy
+    // Check whether the user has enough coins to unlock or upgrade.
     const cost = locked ? tower.unlockCost : current.upgradeCost;
     if (cost === null) return;
 

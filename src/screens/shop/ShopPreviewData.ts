@@ -18,7 +18,7 @@ export interface ShopTower {
 // upgradeCost is the price to move from this level to the next.
 export const SHOP_TOWERS: ShopTower[] = TOWERS.map((def) => ({
   def,
-  unlockCost: 50,
+  unlockCost: def.cost,
   levels: [
     {
       damage: def.damage,

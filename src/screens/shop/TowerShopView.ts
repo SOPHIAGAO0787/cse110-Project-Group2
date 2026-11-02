@@ -26,7 +26,7 @@ export class TowerShopView {
   private content = new Konva.Group();
   private popup = new Konva.Group({ visible: false });
 
-  //add content and pop up in one scnene
+  // Add content and popup to one scene.
   constructor(private callbacks: ShopCallbacks) {
     this.scene.add(this.content, this.popup);
     this.group.add(this.scene);
@@ -65,14 +65,14 @@ export class TowerShopView {
 
       this.button(
         this.content,
-        `View · ${tower.unlockCost} coins to unlock`,
+        level < 0 ? `View · ${tower.unlockCost} coins to unlock` : "View",
         28,
         150 + index * 100,
         () => this.callbacks.onSelect(tower.def.id),
       );
     });
 
-    //redner the currently selected tower detail
+    // Render the currently selected tower details.
     const tower = state.towers.find((item) => item.def.id === state.selectedId);
 
     if (tower) {
@@ -122,7 +122,7 @@ export class TowerShopView {
     //tower description
     this.text(this.content, tower.def.description, 334, 211, 18);
 
-    //show current tower detials
+    // Show current tower details.
     this.text(
       this.content,
       [
