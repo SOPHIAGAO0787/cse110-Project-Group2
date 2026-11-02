@@ -1,5 +1,5 @@
 import type { Screen, ScreenSwitcher } from "../../app/types";
-import { SHOP_TOWERS } from "./ShopPreviewData";
+import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 import { TowerShopView } from "./TowerShopView";
 
 export class TowerShopScreen implements Screen {

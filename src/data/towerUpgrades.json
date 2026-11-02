@@ -1,0 +1,19 @@
+[
+  {
+    "towerId": "circle",
+    "upgrades": [
+      {
+        "cost": 75,
+        "damage": 8,
+        "attackSpeed": 1.2,
+        "radius": 2.8
+      },
+      {
+        "cost": 125,
+        "damage": 10,
+        "attackSpeed": 1.5,
+        "radius": 3
+      }
+    ]
+  }
+]
