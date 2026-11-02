@@ -11,6 +11,7 @@ import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
+import { InGameTowerCard } from "./InGameTowerCard";
 
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
@@ -114,8 +115,10 @@ export class GameScreenController implements Screen {
     const placement = new PlacementModel();
     const def = TOWERS.find((d) => d.id === "circle")!;
     const pv = new PlacementView(def.range.radius);
-    this.view.mapGroup.add(pv.group); // after the grid, so it draws on top
-    this.view.shopGroup.add(pv.menuCircle);
+    this.view.mapGroup.add(pv.group);
+
+    const card = new InGameTowerCard(def, pv.menuCircle);
+    this.view.shopGroup.add(card.group);
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
@@ -199,7 +202,7 @@ export class GameScreenController implements Screen {
       }
     };
 
-    pv.menuCircle.on("pointerdown", onDown);
+    card.group.on("pointerdown", onDown);
     stage?.on("pointermove.placement", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
@@ -209,7 +212,7 @@ export class GameScreenController implements Screen {
       stage?.off(".placement");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
-      pv.menuCircle.destroy();
+      card.group.destroy();
     };
   }
 
