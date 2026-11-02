@@ -71,14 +71,9 @@ export class GameScreenController implements Screen {
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
 
-    // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
-    // WIRE(M3): update the HUD on "livesChanged"
     // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
     // WIRE(R3): add TowersView to this.view.mapGroup
-    // WIRE(J1): shop cards in this.view.shopGroup
     // WIRE(So2): click a shop card to choose the tower to place
-    // WIRE(J2): show a message when the player can't afford a tower
-    // WIRE(M2): ask a question before a tower is placed
 
     this.active = true;
     this.group.visible(true);
