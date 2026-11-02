@@ -75,15 +75,7 @@ export class InGameTowerCard {
       listening: false,
     });
 
-    this.group.add(
-      background,
-      title,
-      icon,
-      cost,
-      description,
-      abilities,
-      instructions,
-    );
+    this.group.add(background, title, icon, cost, description, abilities, instructions);
 
     this.group.on("mouseenter", () => {
       background.stroke("#a6e3a1");
