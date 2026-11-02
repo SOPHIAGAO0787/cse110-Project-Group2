@@ -1,6 +1,6 @@
 import type Konva from "konva";
 
-export type ScreenName = "menu" | "game" | "result";
+export type ScreenName = "menu" | "game" | "result" | "shop";
 
 // Lets a screen ask the App to show a different screen (pattern from Lab 3).
 export interface ScreenSwitcher {
