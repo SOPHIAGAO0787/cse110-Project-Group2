@@ -71,7 +71,6 @@ export class GameScreenController implements Screen {
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
 
-    // WIRE(St1): update the HUD on "coinsChanged"
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
     // WIRE(M3): update the HUD on "livesChanged"
     // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
@@ -124,6 +123,15 @@ export class GameScreenController implements Screen {
       const s = placement.state;
       if (s.kind !== "placed" || pending) return;
       const tile = s.pos;
+
+      // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
+      // tryPlaceTower checks again, because coins can change while the question is open.
+      if (!this.model.wallet.canAfford(def.cost)) {
+        placement.cancel();
+        pv.hide();
+        this.view.showMessage("Not enough coins");
+        return;
+      }
 
       pending = true;
       let ok = false;
