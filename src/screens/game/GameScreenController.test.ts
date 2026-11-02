@@ -26,7 +26,9 @@ let controller: GameScreenController;
 let model: GameModel;
 
 function hud(): string {
-  const text = controller.group.getChildren().find((node) => node instanceof Konva.Text);
+  const text = controller.group
+    .getChildren()
+    .find((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
   if (!(text instanceof Konva.Text)) throw new Error("HUD text is missing from the screen");
   return text.text();
 }
@@ -57,8 +59,11 @@ describe("GameScreenController HUD event wiring", () => {
   });
 
   it.each([135, 65, 0])("refreshes coinsChanged from current wallet state (%i)", (coins) => {
-    model.wallet.coins = coins;
-    model.events.emit("coinsChanged", { coins });
+    if (coins > map.startingCoins) {
+      model.wallet.add(coins - map.startingCoins);
+    } else {
+      expect(model.wallet.spend(map.startingCoins - coins)).toBe(true);
+    }
     expectHud(coins, map.startingLives, 0, 0);
   });
 
@@ -88,9 +93,9 @@ describe("GameScreenController HUD event wiring", () => {
     model.waves.enemiesLeft = 2;
     model.events.emit("waveStarted", { wave: 1, totalWaves: map.waves.length });
     for (const enemies of [1, 0]) {
-      // Teammates' gameplay systems own these mutations and must apply them before emitting.
+      // WaveManager is still unfinished; simulate its count before emitting.
+      // The real Wallet handles the reward and emits coinsChanged.
       model.waves.enemiesLeft = enemies;
-      model.wallet.coins += 5;
       model.events.emit("enemyKilled", { enemyId: 2 - enemies, reward: 5 });
       expectHud(map.startingCoins + (2 - enemies) * 5, map.startingLives, 1, enemies);
     }
@@ -109,13 +114,22 @@ describe("GameScreenController HUD event wiring", () => {
     }
   });
 
-  it("reads a complete state snapshot instead of calculating rewards from event payloads", () => {
+  it("reads the full state after the Wallet applies a kill reward exactly once", () => {
     model.wallet.coins = 0;
     model.lives.remaining = 0;
     model.waves.currentWave = map.waves.length;
     model.waves.enemiesLeft = 0;
     model.events.emit("enemyKilled", { enemyId: 1, reward: 99 });
-    expectHud(0, 0, map.waves.length, 0);
+    expect(model.wallet.coins).toBe(99);
+    expectHud(99, 0, map.waves.length, 0);
+
+    // A zero reward emits no coinsChanged, so enemyKilled must also refresh the HUD.
+    model.lives.remaining = 1;
+    model.waves.currentWave = 1;
+    model.waves.enemiesLeft = 1;
+    model.events.emit("enemyKilled", { enemyId: 2, reward: 0 });
+    expect(model.wallet.coins).toBe(99);
+    expectHud(99, 1, 1, 1);
   });
 
   it("disconnects old model events when hidden and resets the HUD on re-entry", () => {

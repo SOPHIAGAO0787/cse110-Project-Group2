@@ -27,7 +27,9 @@ describe("GameScreenView HUD", () => {
   ])("renders coins=%i, lives=%i, wave=%i/%i, enemies=%i", (coins, lives, wave, total, enemies) => {
     view.setHud(coins, lives, wave, total, enemies);
 
-    const hud = view.group.getChildren().find((node) => node instanceof Konva.Text);
+    const hud = view.group
+      .getChildren()
+      .find((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
     expect(hud).toBeInstanceOf(Konva.Text);
     expect((hud as Konva.Text).text()).toBe(
       `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${total}   ·   Enemies Remaining: ${enemies}`,
@@ -39,7 +41,9 @@ describe("GameScreenView HUD", () => {
     view.setHud(100, 20, 1, 2, 5);
     view.setHud(0, 0, 2, 2, 0);
 
-    const texts = view.group.getChildren().filter((node) => node instanceof Konva.Text);
+    const texts = view.group
+      .getChildren()
+      .filter((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
     expect(texts).toHaveLength(1);
     expect((texts[0] as Konva.Text).text()).toBe(
       "Coins: 0   ·   Lives: 0   ·   Wave: 2/2   ·   Enemies Remaining: 0",
