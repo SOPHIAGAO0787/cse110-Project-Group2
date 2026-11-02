@@ -1,7 +1,6 @@
 import type { Path } from "./Path";
 import type { EnemyDef, Vec } from "./types";
 
-
 /*
  * Represents a single enemy traveling along a predefined path.
  *
@@ -37,10 +36,7 @@ export class Enemy {
     const movement = this.def.speed * dt;
 
     // Update the total distance travelled along the path
-    this.distance = Math.min(
-      this.distance + movement,
-      this.path.length
-    );
+    this.distance = Math.min(this.distance + movement, this.path.length);
 
     // Convert the distance travelled along the path to a position
     this.pos = this.path.pointAt(this.distance);

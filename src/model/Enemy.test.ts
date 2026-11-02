@@ -6,8 +6,6 @@
 //   it.todo("takeDamage below hp keeps it alive; exactly hp kills it");
 // });
 
-
-
 import { describe, it, expect } from "vitest";
 import { Enemy } from "./Enemy";
 import { Path } from "./Path";
@@ -110,5 +108,4 @@ describe("Enemy (R1, R2)", () => {
     expect(enemy.hp).toBe(20);
     expect(enemy.isDead()).toBe(false);
   });
-
 });
