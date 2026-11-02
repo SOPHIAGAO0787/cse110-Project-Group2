@@ -21,6 +21,10 @@ describe("Path (R1)", () => {
     expect(path.pointAt(4)).toEqual({ x: 4, y: 0 });
   });
 
+  it("interpolates a point within the first segment", () => {
+    expect(path.pointAt(2)).toEqual({ x: 2, y: 0 });
+  });
+
   it("interpolates along a segment", () => {
     expect(path.pointAt(5)).toEqual({ x: 4, y: 1 });
   });
