@@ -167,15 +167,30 @@ describe("QuestionPrompt", () => {
     expect(state.value).toBe(false);
   });
 
-  it("treats two empty submits as two wrong answers", async () => {
+  it("ignores an empty submit and keeps the question open", async () => {
     const state = track(prompt.ask(question, anchor));
     press("Enter");
     press("Enter");
     await flush();
-    expect(state.done).toBe(false); // out of tries, waiting for dismiss
-    press("Enter");
-    await flush();
-    expect(state.value).toBe(false);
+
+    expect(state.done).toBe(false);
+    expect(prompt.group.visible()).toBe(true);
+    expect(feedbackShown()).toContain("Type an answer");
+  });
+
+  it("does not use up a try on an empty submit", () => {
+    void prompt.ask(question, anchor);
+    press("Enter"); // blank: ignored
+    type("4");
+    press("Enter"); // first real wrong answer
+    expect(feedbackShown()).toContain("1 try left"); // still has a second try
+  });
+
+  it("ignores an empty Submit button click", () => {
+    void prompt.ask(question, anchor);
+    handlers["Submit"]();
+    expect(feedbackShown()).toContain("Type an answer");
+    expect(prompt.group.visible()).toBe(true);
   });
 
   it("Escape closes the popup and resolves false", async () => {

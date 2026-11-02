@@ -1,9 +1,9 @@
 [
   {
     "id": "circle-diameter",
-    "prompt": "This tower's range has a diameter of 5 tiles. What is its radius?",
+    "prompt": "This tower's range has a diameter of 5 tiles. What is its radius in tiles?",
     "answer": 2.5,
     "tolerance": 0,
-    "hint": "The diameter is half of the radius."
+    "hint": "The radius is half of the diameter."
   }
 ]

@@ -153,7 +153,7 @@ export class QuestionPrompt {
     if (e.key === "Backspace") {
       e.preventDefault(); // stop the browser navigating back
       this.typed = this.typed.slice(0, -1);
-    } else if (/^[0-9.\-]$/.test(e.key)) {
+    } else if (/^[0-9./-]$/.test(e.key)) {
       this.typed += e.key;
     } else {
       return;
@@ -163,6 +163,13 @@ export class QuestionPrompt {
 
   private submit(): void {
     if (this.question === null || this.phase !== "typing") return;
+
+    // Blank or whitespace-only: don't count it as an attempt
+    if (this.typed.trim() === "") {
+      this.feedback.text("Type an answer before submitting.");
+      this.redraw();
+      return;
+    }
 
     this.attemptsLeft -= 1;
 
