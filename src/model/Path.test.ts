@@ -33,4 +33,17 @@ describe("Path (R1)", () => {
     expect(path.pointAt(-2)).toEqual({ x: 0, y: 0 });
     expect(path.pointAt(100)).toEqual({ x: 4, y: 3 });
   });
+
+  it("skips zero-length segments when interpolating", () => {
+    const pathWithDuplicatePoints = new Path([
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+    ]);
+
+    expect(pathWithDuplicatePoints.pointAt(1)).toEqual({
+      x: 1,
+      y: 0,
+    });
+  });
 });
