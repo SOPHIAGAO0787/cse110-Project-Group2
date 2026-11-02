@@ -43,7 +43,7 @@ export class Enemy {
   }
 
   takeDamage(amount: number): void {
-    // R2: If the enemy is already dead, do not apply damage
+    // R2: Ignore zero or negative damage
     if (amount <= 0) {
       return;
     }
