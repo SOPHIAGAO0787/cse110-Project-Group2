@@ -9,6 +9,7 @@ import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
+import { QuestionService } from "../../model/questions/QuestionService";
 
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
@@ -20,11 +21,18 @@ export class GameScreenController implements Screen {
   private model: GameModel;
   private loop: GameLoop;
   private cleanupPlacement: (() => void) | null = null;
+  private questions = new QuestionService();
+  private active = false; // false while the screen is hidden
 
   constructor(app: ScreenSwitcher) {
     this.app = app;
     this.map = loadMap(map1);
-    this.view = new GameScreenView(this.map.cols, this.map.rows, () => this.model.startNextWave());
+    this.view = new GameScreenView(
+      this.map.cols,
+      this.map.rows,
+      () => this.model.startNextWave(),
+      this.questions,
+    );
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
@@ -72,7 +80,6 @@ export class GameScreenController implements Screen {
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
 
-    // WIRE(St1): update the HUD on "coinsChanged"
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
     // WIRE(M3): update the HUD on "livesChanged"
     // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
@@ -82,11 +89,14 @@ export class GameScreenController implements Screen {
     // WIRE(J2): show a message when the player can't afford a tower
     // WIRE(M2): ask a question before a tower is placed
 
+    this.active = true;
     this.group.visible(true);
     this.loop.start();
   }
 
   hide(): void {
+    this.active = false;
+    this.view.prompt.cancel(); // closes the popup and removes its key listener
     this.cleanupPlacement?.();
     this.cleanupPlacement = null;
     this.loop.stop();
@@ -107,19 +117,47 @@ export class GameScreenController implements Screen {
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
-    const beforeCommit = async (_tile: Vec): Promise<boolean> => true;
+
+    // Asks the question and returns true only if the player answered correctly.
+    const beforeCommit = async (tile: Vec): Promise<boolean> => {
+      const question = this.questions.questionFor(def);
+      this.loop.stop(); // pause the game while the question is open
+      const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
+      if (this.active) this.loop.start(); // don't restart if the player left the screen
+      return correct;
+    };
+
     let pending = false; // blocks double-triggers while a question is open
     const requestPlace = async () => {
       const s = placement.state;
       if (s.kind !== "placed" || pending) return;
       const tile = s.pos;
 
+      // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
+      // tryPlaceTower checks again, because coins can change while the question is open.
+      if (!this.model.wallet.canAfford(def.cost)) {
+        placement.cancel();
+        pv.hide();
+        this.view.showMessage("Not enough coins");
+        return;
+      }
+
       pending = true;
-      const ok = await beforeCommit(tile);
-      pending = false;
+      let ok = false;
+      try {
+        ok = await beforeCommit(tile);
+      } finally {
+        pending = false;
+      }
+
+      if (!ok) {
+        placement.cancel();
+        pv.hide();
+        return;
+      }
 
       const now = placement.state;
-      if (!ok || now.kind !== "placed" || now.pos.x !== tile.x || now.pos.y !== tile.y) return;
+      if (now.kind !== "placed" || now.pos.x !== tile.x || now.pos.y !== tile.y) return;
 
       placement.confirm(); // state: idle
       pv.hide();
@@ -150,6 +188,7 @@ export class GameScreenController implements Screen {
     };
 
     const onKey = (e: KeyboardEvent) => {
+      if (pending) return; // while a question is open, the prompt owns the keyboard
       if (e.key === "Enter") {
         void requestPlace();
       } else if (e.key === "Escape") {
