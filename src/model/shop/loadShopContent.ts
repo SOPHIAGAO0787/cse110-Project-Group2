@@ -21,11 +21,7 @@ for (const entry of upgradesJson) {
       throw new Error(`Invalid upgrade cost for "${entry.towerId}"`);
     }
 
-    const stats = [
-      upgrade.damage,
-      upgrade.attackSpeed,
-      upgrade.radius,
-    ];
+    const stats = [upgrade.damage, upgrade.attackSpeed, upgrade.radius];
 
     if (stats.some((value) => !Number.isFinite(value) || value <= 0)) {
       throw new Error(`Invalid upgrade stats for "${entry.towerId}"`);
@@ -34,9 +30,7 @@ for (const entry of upgradesJson) {
 }
 
 export const SHOP_TOWERS: ShopTower[] = TOWERS.map((def) => {
-  const config = upgradesJson.find(
-    (entry) => entry.towerId === def.id,
-  );
+  const config = upgradesJson.find((entry) => entry.towerId === def.id);
 
   // A tower without upgrade configuration has only its base level.
   const upgrades = config?.upgrades ?? [];
@@ -48,16 +42,14 @@ export const SHOP_TOWERS: ShopTower[] = TOWERS.map((def) => {
     upgradeCost: upgrades[0]?.cost ?? null,
   };
 
-  const upgradedLevels: ShopLevel[] = upgrades.map(
-    (upgrade, index) => ({
-      damage: upgrade.damage,
-      attackSpeed: upgrade.attackSpeed,
-      radius: upgrade.radius,
+  const upgradedLevels: ShopLevel[] = upgrades.map((upgrade, index) => ({
+    damage: upgrade.damage,
+    attackSpeed: upgrade.attackSpeed,
+    radius: upgrade.radius,
 
-      // This level's price to reach the following level.
-      upgradeCost: upgrades[index + 1]?.cost ?? null,
-    }),
-  );
+    // This level's price to reach the following level.
+    upgradeCost: upgrades[index + 1]?.cost ?? null,
+  }));
 
   return {
     def,
