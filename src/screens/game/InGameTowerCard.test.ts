@@ -49,9 +49,7 @@ describe("InGameTowerCard", () => {
 
   it("shows instructions for placing the tower", () => {
     expect(displayedText()).toContain("Drag onto a green tile.");
-    expect(displayedText()).toContain(
-      "Press Enter to answer the question.",
-    );
+    expect(displayedText()).toContain("Press Enter to answer the question.");
   });
 
   it("keeps the existing placement icon inside the card", () => {

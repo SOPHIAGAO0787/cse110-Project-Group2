@@ -23,9 +23,4 @@ export interface PlayerProgress {
 }
 
 export type ShopResult =
-  | "ok"
-  | "funds"
-  | "alreadyUnlocked"
-  | "locked"
-  | "maxLevel"
-  | "unknownTower";
+  "ok" | "funds" | "alreadyUnlocked" | "locked" | "maxLevel" | "unknownTower";
