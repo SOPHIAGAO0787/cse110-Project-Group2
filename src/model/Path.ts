@@ -1,12 +1,8 @@
 import type { Vec } from "./types";
 
-/*
- * The route enemies walk, as a list of corner points
- * TODO(R1): length = total distance along all segments;
- * pointAt(d) = the position d tiles along the route (clamped to the start and end)
- *
+/**
  * R1 - Path and Enemy Movement
- * Represents the route enemies follow as a sequence of waypoints
+ * Represents the route enemies follow as a list of corner points
  * Provides methods to calculate the total path length and determine
  * an enemy's position based on the distance traveled along the path
  */
