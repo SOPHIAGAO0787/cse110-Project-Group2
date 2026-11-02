@@ -1,12 +1,32 @@
 import { describe, expect, it } from "vitest";
 import map1 from "../data/maps/map1.json";
 import { GameModel } from "./GameModel";
-import { loadMap } from "./loadContent";
+import { ENEMIES, loadMap } from "./loadContent";
 
 // These tests run a real game on map1 with no screen, to check that the parts work together.
 // Each one needs two tasks. Whichever of the two merges second turns its test on.
 describe("Integration: a game on map1", () => {
-  it.todo("starting wave 1 spawns its enemies on the path (R1, N1)");
+  it("starting wave 1 spawns its enemies on the path (R1, N1)", () => {
+    const game = new GameModel(loadMap(map1));
+    game.startNextWave();
+    game.tick(0);
+    expect(game.enemies).toHaveLength(1);
+    expect(game.enemies[0].pos).toEqual(map1.path[0]);
+    game.tick(0.5);
+    expect(game.enemies).toHaveLength(1);
+    expect(game.enemies[0].pos).toEqual(
+      game.path.pointAt(ENEMIES.find((def) => def.id === "basic")!.speed * 0.5),
+    );
+    game.tick(4.3); // first wave's last spawn is due at 4.8 seconds
+    expect(game.enemies).toHaveLength(5);
+    expect(new Set(game.enemies.map((enemy) => enemy.id)).size).toBe(5);
+    expect(game.waves.enemiesLeft).toBe(5);
+    for (const enemy of game.enemies) {
+      game.events.emit("enemyLeaked", { enemyId: enemy.id });
+    }
+    expect(game.waves.enemiesLeft).toBe(0);
+    expect(game.waves.isRunning).toBe(false);
+  });
   it.todo("an enemy that reaches the base costs one life (R2, N2)");
   it.todo("killing an enemy adds its reward to the coins (R2, St1)");
   it("placing a tower spends its cost, and with too few coins nothing is placed (B1, St1)", () => {

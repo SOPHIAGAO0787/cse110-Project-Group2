@@ -10,6 +10,7 @@ import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
+import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
 
 // Connects the game model to the screen: input → model, model events → views.
@@ -44,11 +45,22 @@ export class GameScreenController implements Screen {
   // Called every time the player enters the game screen: starts a fresh game.
   show(): void {
     this.model = new GameModel(this.map);
-    this.loop = new GameLoop((dt) => this.model.tick(dt));
+
+    // R1: create the enemy view
+    const enemiesView = new EnemiesView();
+
+    this.loop = new GameLoop((dt) => {
+      this.model.tick(dt);
+      enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
+    });
     this.view.mapGroup.destroyChildren();
 
     const gridView = new GridView(this.map, (tile) => this.model.grid.isBuildable(tile));
+
+    //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
+    this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
+
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
@@ -74,7 +86,6 @@ export class GameScreenController implements Screen {
 
     // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
     // WIRE(M3): update the HUD on "livesChanged"
-    // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
     // WIRE(R3): add TowersView to this.view.mapGroup
     // WIRE(J1): shop cards in this.view.shopGroup
     // WIRE(So2): click a shop card to choose the tower to place
@@ -126,6 +137,15 @@ export class GameScreenController implements Screen {
       const s = placement.state;
       if (s.kind !== "placed" || pending) return;
       const tile = s.pos;
+
+      // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
+      // tryPlaceTower checks again, because coins can change while the question is open.
+      if (!this.model.wallet.canAfford(def.cost)) {
+        placement.cancel();
+        pv.hide();
+        this.view.showMessage("Not enough coins");
+        return;
+      }
 
       pending = true;
       let ok = false;
