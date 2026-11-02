@@ -62,14 +62,17 @@ export class GameModel {
     this.waves.start();
   }
 
-  // TODO(B1): check the grid and the wallet, then create the Tower, occupy the tile,
-  // spend the cost, and emit "towerPlaced".
+  // Places a tower if the tile is free and the player can afford it, otherwise says why not.
   tryPlaceTower(defId: string, tile: Vec): PlaceResult {
     const def = TOWERS.find((d) => d.id === defId);
     if (!def) throw new Error(`Unknown tower "${defId}"`);
 
     if (this.grid.isOccupied(tile)) return "occupied"; // check first: isBuildable is also false when occupied
     if (!this.grid.isBuildable(tile)) return "blocked";
+    // Spend after the tile checks, so a bad tile never costs coins
+    if (!this.wallet.spend(def.cost)) {
+      return "funds";
+    }
 
     this.grid.occupy(tile);
     const tower = new Tower(this.nextTowerId++, def, tile);

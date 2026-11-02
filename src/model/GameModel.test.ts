@@ -83,4 +83,35 @@ describe("GameModel.tryPlaceTower", () => {
     const model = new GameModel(map);
     expect(() => model.tryPlaceTower("nope", buildTile)).toThrow();
   });
+
+  it("takes the tower's cost off the coins", () => {
+    const model = new GameModel(map);
+    const startingCoins = model.wallet.coins;
+    model.tryPlaceTower("circle", buildTile);
+    expect(model.wallet.coins).toBe(startingCoins - TOWERS[0].cost);
+  });
+
+  it("ok with exactly enough coins", () => {
+    const model = new GameModel(map);
+    model.wallet.coins = TOWERS[0].cost;
+    expect(model.tryPlaceTower("circle", buildTile)).toBe("ok");
+    expect(model.wallet.coins).toBe(0);
+  });
+
+  it("funds with one coin too few, and nothing changes", () => {
+    const model = new GameModel(map);
+    const tooFew = TOWERS[0].cost - 1;
+    model.wallet.coins = tooFew;
+    expect(model.tryPlaceTower("circle", buildTile)).toBe("funds");
+    expect(model.wallet.coins).toBe(tooFew);
+    expect(model.towers).toHaveLength(0);
+    expect(model.grid.isOccupied(buildTile)).toBe(false);
+  });
+
+  it("does not charge for a tile it can't use", () => {
+    const model = new GameModel(map);
+    const startingCoins = model.wallet.coins;
+    model.tryPlaceTower("circle", pathTile);
+    expect(model.wallet.coins).toBe(startingCoins);
+  });
 });
