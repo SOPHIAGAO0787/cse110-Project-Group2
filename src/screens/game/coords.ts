@@ -1,4 +1,4 @@
-import type { Vec } from "../model/types";
+import type { Vec } from "../../model/types";
 // View pixel and tile conversions
 
 //tile position -> center pixel

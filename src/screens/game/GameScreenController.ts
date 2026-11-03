@@ -8,7 +8,7 @@ import map1 from "../../data/maps/map1.json";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
-import { PlacementView } from "../../ui/PlacementView";
+import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
