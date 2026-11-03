@@ -27,7 +27,32 @@ describe("Integration: a game on map1", () => {
     expect(game.waves.enemiesLeft).toBe(0);
     expect(game.waves.isRunning).toBe(false);
   });
-  it.todo("an enemy that reaches the base costs one life (R2, N2)");
+
+  // Verify that reaching the path endpoint removes the enemy,
+  // deducts one life, and emits the livesChanged event.
+  it("an enemy that reaches the base costs one life (R2, N2)", () => {
+    const game = new GameModel(loadMap(map1));
+    const livesChanged: number[] = [];
+
+    game.events.on("livesChanged", ({ lives }) => {
+      livesChanged.push(lives);
+    });
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+
+    // Move the enemy to the end of the path.
+    enemy.update(game.path.length / enemy.def.speed);
+
+    // GameModel should detect and process the leak.
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.lives.remaining).toBe(map1.startingLives - 1);
+    expect(livesChanged).toEqual([map1.startingLives - 1]);
+    expect(game.wallet.coins).toBe(map1.startingCoins);
+  });
+
   it("a simulated leak updates the real Lives model and emits livesChanged (N2)", () => {
     const game = new GameModel(loadMap(map1));
     const totals: number[] = [];
@@ -42,7 +67,33 @@ describe("Integration: a game on map1", () => {
     expect(totals).toEqual([map1.startingLives - 1]);
     expect(game.wallet.coins).toBe(map1.startingCoins);
   });
-  it.todo("killing an enemy adds its reward to the coins (R2, St1)");
+
+  //  Verify that killing an enemy removes it, awards its reward
+  // through Wallet, and emits coinsChanged.
+  it("killing an enemy adds its reward to the coins (R2, St1)", () => {
+    const game = new GameModel(loadMap(map1));
+    const coinsChanged: number[] = [];
+
+    game.events.on("coinsChanged", ({ coins }) => {
+      coinsChanged.push(coins);
+    });
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    const reward = enemy.def.reward;
+
+    // Simulate damage until the enemy dies.
+    enemy.takeDamage(enemy.hp);
+
+    // GameModel should detect the death and award coins.
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.wallet.coins).toBe(map1.startingCoins + reward);
+    expect(coinsChanged).toEqual([map1.startingCoins + reward]);
+    expect(game.lives.remaining).toBe(map1.startingLives);
+  });
+
   it("placing a tower spends its cost, and with too few coins nothing is placed (B1, St1)", () => {
     const game = new GameModel(loadMap(map1));
 

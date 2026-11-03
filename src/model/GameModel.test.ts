@@ -115,3 +115,113 @@ describe("GameModel.tryPlaceTower", () => {
     expect(model.wallet.coins).toBe(startingCoins);
   });
 });
+
+// Test for R2: Remove dead enemies and enemies that reached the base
+describe("GameModel enemy cleanup (R2)", () => {
+  it("removes dead enemies and awards coins", () => {
+    const game = new GameModel(loadMap(map1));
+    const startingCoins = game.wallet.coins;
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    const reward = enemy.def.reward;
+
+    enemy.takeDamage(enemy.hp);
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.wallet.coins).toBe(startingCoins + reward);
+  });
+
+  it("removes leaked enemies and deducts one life", () => {
+    const game = new GameModel(loadMap(map1));
+    const startingLives = game.lives.remaining;
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+
+    enemy.update(game.path.length / enemy.def.speed);
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.lives.remaining).toBe(startingLives - 1);
+  });
+
+  it("does not remove enemies still alive on the path", () => {
+    const game = new GameModel(loadMap(map1));
+
+    game.spawnEnemy("basic");
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(1);
+  });
+
+  it("does not reward or penalize the same enemy twice", () => {
+    const game = new GameModel(loadMap(map1));
+    const startingCoins = game.wallet.coins;
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    enemy.takeDamage(enemy.hp);
+
+    game.tick(0);
+    game.tick(0);
+
+    expect(game.wallet.coins).toBe(startingCoins + enemy.def.reward);
+    expect(game.enemies).toHaveLength(0);
+  });
+
+  it("prioritizes death over leaking", () => {
+    const game = new GameModel(loadMap(map1));
+    const startingLives = game.lives.remaining;
+    const startingCoins = game.wallet.coins;
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+
+    enemy.update(game.path.length / enemy.def.speed);
+    enemy.takeDamage(enemy.hp);
+
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.wallet.coins).toBe(startingCoins + enemy.def.reward);
+    expect(game.lives.remaining).toBe(startingLives);
+  });
+
+  it("clears the wave after its final enemy leaks", () => {
+    const game = new GameModel(loadMap(map1));
+    const clearedWaves: number[] = [];
+
+    game.events.on("waveCleared", ({ wave }) => {
+      clearedWaves.push(wave);
+    });
+
+    game.startNextWave();
+
+    // Spawn every scheduled enemy in the wave,
+    // (assuming the wave has a finite #of enemies).
+    const wave = game.map.waves[0];
+    const totalCount = wave.groups.reduce((sum, group) => sum + group.count, 0);
+
+    // Advance in small increments until all enemies have spawned.
+    for (let i = 0; i < 10000 && game.enemies.length < totalCount; i++) {
+      game.tick(0.1);
+    }
+
+    expect(game.enemies).toHaveLength(totalCount);
+    expect(game.waves.isRunning).toBe(true);
+
+    // Force every enemy to reach the end of the path.
+    for (const enemy of game.enemies) {
+      enemy.update(game.path.length / enemy.def.speed);
+    }
+
+    game.tick(0);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.waves.enemiesLeft).toBe(0);
+    expect(game.waves.isRunning).toBe(false);
+    expect(clearedWaves).toEqual([1]);
+  });
+});
