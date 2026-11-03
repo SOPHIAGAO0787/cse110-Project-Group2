@@ -26,12 +26,6 @@ export class GameModel {
   private nextId = 1; // every enemy gets its own number, so events can say which one
   private nextTowerId = 1; // every tower gets its own id
 
-  // So1: Game result state
-  elapsedSeconds = 0;
-
-  private gameFinished = false;
-  private finalWaveCleared = false;
-
   constructor(map: MapConfig) {
     this.map = map;
     this.path = new Path(map.path);
@@ -39,20 +33,10 @@ export class GameModel {
     this.wallet = new Wallet(map.startingCoins, this.events);
     this.lives = new Lives(map.startingLives, this.events);
     this.waves = new WaveManager(map.waves, this.events);
-    this.events.on("waveCleared", ({ wave }) => {
-      if (this.waves.totalWaves > 0 && wave === this.waves.totalWaves) {
-        this.finalWaveCleared = true;
-      }
-    });
   }
 
   // One step of the game, dt seconds long. The order matters, so don't reorder it.
   tick(dt: number): void {
-    // Stop updating the game after it ends.
-    if (this.gameFinished) return;
-
-    // Track elapsed time in seconds.
-    this.elapsedSeconds += Math.max(0, dt);
     // 1. Spawn the enemies the wave manager asks for (N1)
     for (const defId of this.waves.tick(dt)) {
       this.spawnEnemy(defId);
@@ -72,19 +56,6 @@ export class GameModel {
     //    and enemies that reached the end (emit "enemyLeaked")
 
     // 5. TODO(So1): emit "gameOver" when lives reach 0 or the last wave is cleared
-    if (this.lives.remaining <= 0) {
-      this.finishGame(false);
-    } else if (this.finalWaveCleared) {
-      this.finishGame(true);
-    }
-  }
-
-  private finishGame(won: boolean): void {
-    if (this.gameFinished) return;
-
-    this.gameFinished = true;
-
-    this.events.emit("gameOver", { won });
   }
 
   startNextWave(): void {
