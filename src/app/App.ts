@@ -2,7 +2,8 @@ import Konva from "konva";
 import { GameScreenController } from "../screens/game/GameScreenController";
 import { MenuScreen } from "../screens/MenuScreen";
 import { ResultScreen } from "../screens/ResultScreen";
-import type { Screen, ScreenName, ScreenSwitcher } from "./types";
+
+import type { GameResultData, Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 
 // Owns the Konva stage and switches between screens.
@@ -34,7 +35,7 @@ export class App implements ScreenSwitcher {
     window.addEventListener("resize", () => this.resize());
   }
 
-  switchTo(name: ScreenName, data?: { won: boolean }): void {
+  switchTo(name: ScreenName, data?: GameResultData): void {
     this.current.hide();
     if (name === "menu") {
       this.current = this.menu;

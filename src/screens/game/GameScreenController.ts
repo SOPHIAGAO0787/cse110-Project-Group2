@@ -75,7 +75,16 @@ export class GameScreenController implements Screen {
 
     refreshHud();
     const events = this.model.events;
-    events.on("gameOver", (e) => this.app.switchTo("result", { won: e.won }));
+    // So1: Send the final game result and statistics to ResultScreen.
+    events.on("gameOver", ({ won }) => {
+      this.app.switchTo("result", {
+        won,
+        elapsedSeconds: this.model.elapsedSeconds,
+        towersPlaced: this.model.towers.length,
+        remainingLives: this.model.lives.remaining,
+        finalCoins: this.model.wallet.coins,
+      });
+    });
 
     events.on("coinsChanged", refreshHud);
     events.on("livesChanged", refreshHud);
