@@ -64,7 +64,7 @@ Three rules keep it working:
 | `npm run format:check` | check formatting without changing files |
 | `npm run preview`      | serve the production build              |
 
-CI runs the type check, the format check, and the tests on every push and pull request.
+CI builds the game (which includes the type check), checks formatting, and runs the tests on every pull request and on every push to `main`.
 
 ## Contributing
 
