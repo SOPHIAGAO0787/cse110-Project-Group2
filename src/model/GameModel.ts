@@ -52,8 +52,27 @@ export class GameModel {
       tower.update(dt, this.enemies);
     }
 
-    // 4. TODO(R2): remove dead enemies (emit "enemyKilled" with the reward)
-    //    and enemies that reached the end (emit "enemyLeaked")
+    // 4. R2: Remove dead enemies and enemies that reached the end.
+    const remainingEnemies: Enemy[] = [];
+    for (const enemy of this.enemies) {
+      if (enemy.isDead()) {
+        // Enemy has been killed, so it gives a reward
+        this.events.emit("enemyKilled", {
+          enemyId: enemy.id,
+          reward: enemy.def.reward,
+        });
+      } else if (enemy.reachedEnd()) {
+        // Enemy has reached the end, so it costs a life
+        this.events.emit("enemyLeaked", {
+          enemyId: enemy.id,
+        });
+      } else {
+        // Keep enemies that are still alive and moving.
+        remainingEnemies.push(enemy);
+      }
+    }
+
+    this.enemies = remainingEnemies;
 
     // 5. TODO(So1): emit "gameOver" when lives reach 0 or the last wave is cleared
   }
