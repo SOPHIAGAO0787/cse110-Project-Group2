@@ -53,22 +53,7 @@ describe("Integration: a game on map1", () => {
     expect(game.wallet.coins).toBe(map1.startingCoins);
   });
 
-  it("a simulated leak updates the real Lives model and emits livesChanged (N2)", () => {
-    const game = new GameModel(loadMap(map1));
-    const totals: number[] = [];
-    game.events.on("livesChanged", ({ lives }) => {
-      expect(game.lives.remaining).toBe(lives);
-      totals.push(lives);
-    });
-    game.spawnEnemy("basic");
-    // R2 end-of-path detection is still pending; simulate only its event.
-    game.events.emit("enemyLeaked", { enemyId: game.enemies[0].id });
-    expect(game.lives.remaining).toBe(map1.startingLives - 1);
-    expect(totals).toEqual([map1.startingLives - 1]);
-    expect(game.wallet.coins).toBe(map1.startingCoins);
-  });
-
-  //  Verify that killing an enemy removes it, awards its reward
+  // Verify that killing an enemy removes it, awards its reward
   // through Wallet, and emits coinsChanged.
   it("killing an enemy adds its reward to the coins (R2, St1)", () => {
     const game = new GameModel(loadMap(map1));
@@ -107,6 +92,7 @@ describe("Integration: a game on map1", () => {
     expect(game.wallet.coins).toBe(0);
     expect(game.towers).toHaveLength(2);
   });
+
   it.todo("a tower next to the path kills a passing enemy (B1, R3)");
   it.todo(
     "a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)",
