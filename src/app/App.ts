@@ -3,7 +3,6 @@ import { GameScreenController } from "../screens/game/GameScreenController";
 import { MenuScreen } from "../screens/MenuScreen";
 import { ResultScreen } from "../screens/ResultScreen";
 
-import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import type { GameResultData, Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 
