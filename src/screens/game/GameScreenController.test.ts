@@ -39,6 +39,19 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
   );
 }
 
+// Clicks the real Start Wave button on the screen.
+function clickStartWave(): void {
+  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Start Wave");
+  if (label === undefined) {
+    throw new Error("Start Wave button is missing from the screen");
+  }
+  const button = label.getParent();
+  if (button === null) {
+    throw new Error("Start Wave label has no button group");
+  }
+  button.fire("click");
+}
+
 beforeEach(() => {
   models.length = 0;
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
@@ -151,5 +164,34 @@ describe("GameScreenController HUD event wiring", () => {
     model.wallet.coins = 25;
     model.events.emit("coinsChanged", { coins: 25 });
     expectHud(25, map.startingLives, 0, 0);
+  });
+
+  it("Start Wave updates the HUD through both waves", () => {
+    clickStartWave();
+    expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 5");
+
+    // Spawn all of wave 1, then kill one enemy and let the rest leak.
+    model.tick(5);
+    expect(model.enemies).toHaveLength(5);
+    const first = model.enemies[0];
+    model.events.emit("enemyKilled", { enemyId: first.id, reward: first.def.reward });
+    expect(hud()).toContain(`Coins: ${map.startingCoins + first.def.reward}`);
+    expect(hud()).toContain("Enemies Remaining: 4");
+    for (let i = 1; i < 5; i++) {
+      model.events.emit("enemyLeaked", { enemyId: model.enemies[i].id });
+    }
+    expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
+
+    // Wave 2 has 8 enemies. Clicking again after the last wave changes nothing.
+    clickStartWave();
+    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
+    model.tick(7);
+    const wave2 = model.enemies.slice(model.enemies.length - 8);
+    for (const enemy of wave2) {
+      model.events.emit("enemyLeaked", { enemyId: enemy.id });
+    }
+    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
+    clickStartWave();
+    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
   });
 });
