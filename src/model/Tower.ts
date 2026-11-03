@@ -3,8 +3,6 @@ import type { Enemy } from "./Enemy";
 import type { RangeShape, TowerDef, Vec } from "./types";
 
 // A placed tower that shoots enemies inside its range.
-// TODO(R3): every 1 / fireRatePerSec seconds, pick the enemy in range that is furthest
-// along the path (tie: lowest id) and call takeDamage(def.damage) on it.
 export class Tower {
   id: number;
   def: TowerDef;
@@ -20,6 +18,6 @@ export class Tower {
   }
 
   update(dt: number, enemies: Enemy[]): void {
-    // TODO(R3)
+    // Towers don't attack yet, so there is nothing to update.
   }
 }

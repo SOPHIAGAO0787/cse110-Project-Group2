@@ -1,8 +1,10 @@
-# CSE 110 Project — Group 2
+# Geometry Tower Defense
 
-Geometry tower defense game built with TypeScript, Vite, and Konva.
+A tower defense game where you answer geometry questions to build your defenses. Built by CSE 110 Group 2 with TypeScript, Vite, and Konva.
 
-## Getting started
+![Placing a tower, answering its question, and starting a wave](assets/demo.gif)
+
+## Play it
 
 ```sh
 npm install
@@ -11,65 +13,63 @@ npm run dev
 
 Then open the URL Vite prints (usually http://localhost:5173).
 
-## Scripts
+## How to play
 
-- `npm run dev` — start the dev server
-- `npm test` — run the unit tests (Vitest)
-- `npm run test:watch` — re-run tests as you edit
-- `npm run build` — type-check and build to `dist/`
-- `npm run format` — format all files with Prettier
-- `npm run preview` — serve the production build
+1. Click **Play Map 1** on the menu.
+2. Drag the tower from the shop on the right onto a green tile, then press **Enter**.
+3. Answer the geometry question about the tower's range. A correct answer places the tower and spends its coins.
+4. Click **Start Wave** to send enemies down the path. Each enemy that reaches the end costs a life.
+5. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars and stats.
 
-CI runs the type check, the format check, and the tests on every push and pull request.
+The menu also has a **Tower Shop** screen that shows each tower's cost, stats, and upgrades. It is a demo with its own coins and is not connected to the game yet.
 
-## Where things live
+**Works today:** the map, tower placement with a question, coins, lives, waves, and the victory and defeat screens.
+**Coming next:** towers attacking enemies, choosing towers from the in-game shop, and connecting the Tower Shop to the game.
+
+## How the code is organized
 
 ```
 src/
-  main.ts                 starts the App
-  app/                    App (owns the stage, switches screens) and screen types
-  core/                   EventBus (game events) and GameLoop (calls tick every frame)
-  model/                  game rules and state: plain TypeScript, no Konva, unit tested
-    types.ts              shared shapes and the list of game events (everyone codes against these)
-    GameModel.ts          holds everything for one game and runs each tick in order
-  data/                   maps, towers, enemies, questions (JSON)
-  screens/                Menu, Result, and the Game screen (views + controller)
+  main.ts             starts the App
+  app/                App (owns the Konva stage, switches screens) and screen types
+  core/               EventBus (game events) and GameLoop (calls tick every frame)
+  model/              game rules and state: plain TypeScript, no Konva, unit tested
+    GameModel.ts      holds everything for one game and runs each tick in order
+    types.ts          shared shapes and the list of game events
+    geometry/         tower range shapes
+    questions/        picks and checks geometry questions
+    shop/             shop data: tower costs, stats, and upgrades
+  data/               maps, towers, enemies, upgrades, and questions (JSON)
+  screens/            Menu and Result screens, and the shared button
+    game/             the game screen: view, controller, grid, enemies, placement, question popup
+    shop/             the Tower Shop screen
+assets/               images for this README
 ```
 
-Rules of thumb:
+Three rules keep it working:
 
 - **A number or a decision goes in `model/`. A pixel goes in `screens/`.** Model code never imports Konva, so it can be tested without a browser.
 - **Positions in the model are in tiles**, not pixels. `(3, 2)` is the center of the tile in column 3, row 2. Views multiply by `TILE`.
-- **Parts talk through events.** For example, an enemy dying emits `enemyKilled`, and the wallet listens for it. In tests, emit the event yourself instead of waiting for a teammate's code.
+- **Parts talk through events.** For example, an enemy dying emits `enemyKilled`, and the wallet listens for it. In tests, emit the event yourself instead of waiting for another part to be finished.
 
-## Where to start on your task
+## Scripts
 
-Each Sprint 1 task already has a file with `TODO(<task id>)` comments and a test file listing the tests to write (`it.todo`).
+| Command                | What it does                            |
+| ---------------------- | --------------------------------------- |
+| `npm run dev`          | start the dev server                    |
+| `npm test`             | run the unit tests (Vitest)             |
+| `npm run test:watch`   | re-run the tests as you edit            |
+| `npm run build`        | type-check and build to `dist/`         |
+| `npm run format`       | format all files with Prettier          |
+| `npm run format:check` | check formatting without changing files |
+| `npm run preview`      | serve the production build              |
 
-| Task                          | Start in                                                                    |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| B1 Place circle towers        | `GameModel.tryPlaceTower`, `WIRE(B1)` in `GameScreenController.ts`          |
-| B2 Range preview              | `WIRE(B2)` in `GameScreenController.ts`                                     |
-| R1 Path + movement            | `src/model/Path.ts`, `src/model/Enemy.ts`                                   |
-| R2 Enemy HP / death / leaking | `src/model/Enemy.ts`, step 4 in `GameModel.tick`                            |
-| R3 Tower targeting            | `src/model/Tower.ts`                                                        |
-| N1 Waves + HUD                | `src/model/WaveManager.ts`                                                  |
-| N2 Lives                      | `src/model/Lives.ts`                                                        |
-| So1 Victory / defeat          | step 5 in `GameModel.tick`, `src/screens/ResultScreen.ts`                   |
-| So2 Buy towers                | `WIRE(So2)` in `GameScreenController.ts`                                    |
-| St1 Coins                     | `src/model/Wallet.ts`                                                       |
-| St2 Grid                      | `src/model/Grid.ts`                                                         |
-| St3 Integration tests         | `src/model/integration.test.ts`                                             |
-| J1 Shop cards                 | `shopGroup` in `src/screens/game/GameScreenView.ts`, `src/data/towers.json` |
-| J2 "Not enough coins" message | `WIRE(J2)` in `GameScreenController.ts`                                     |
-| M1, M2 Questions              | `src/model/questions/QuestionService.ts`, `src/data/questions.json`         |
-| M3 Lives in the HUD           | `WIRE(M3)` in `GameScreenController.ts`                                     |
+CI builds the game (which includes the type check), checks formatting, and runs the tests on every pull request and on every push to `main`.
 
-Search for `TODO(` and `WIRE(` to find every spot. `src/model/geometry/CircleRange.ts` is a finished example of a small model class with tests.
+## Contributing
 
-## Workflow
-
-1. `git switch main && git pull`, then `git switch -c feat/<task-id>-<short-name>`
-2. Write the tests from your `it.todo` list, then make them pass (`npm test`)
-3. Open a pull request, fill in the template, add your user story's label, and ask a teammate to review
-4. Merge after one approval and green CI
+1. Pick an issue on the project board, or create a sub-issue under its user story.
+2. `git switch main && git pull`, then `git switch -c feat/<short-name>`.
+3. Write tests for the new behavior and make them pass (`npm test`).
+4. Open a pull request, fill in the template with `Closes #<issue>`, add the user story's label, and ask a teammate to review.
+5. Merge with a merge commit after one approval and green CI.

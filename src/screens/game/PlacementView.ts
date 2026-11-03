@@ -1,7 +1,7 @@
 import Konva from "konva";
-import { TILE } from "../screens/game/GameScreenView";
+import { TILE } from "./GameScreenView";
 import { tileToPixel } from "./coords";
-import type { Vec } from "../model/types";
+import type { Vec } from "../../model/types";
 
 export class PlacementView {
   group = new Konva.Group({ listening: false }); // so GridView's hover still gets the mouse

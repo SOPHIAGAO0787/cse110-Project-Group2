@@ -36,9 +36,7 @@ function parseAnswer(input: string): number | null {
   return numerator / denominator;
 }
 
-// Picks geometry questions and checks answers.
-// TODO(M1): questionFor() builds a question from the tower's real numbers
-// (e.g. radius 2.5 -> "What is the diameter?"); For now it picks one at random
+// Picks a random geometry question and checks answers.
 export class QuestionService {
   questionFor(tower: TowerDef): Question {
     // tower details will be used in questions in the future

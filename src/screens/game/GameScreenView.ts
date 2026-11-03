@@ -23,7 +23,7 @@ const MESSAGE_MS = 2000; // how long showMessage() keeps a message on screen
 export class GameScreenView {
   group = new Konva.Group();
   mapGroup = new Konva.Group();
-  shopGroup = new Konva.Group(); // TODO(J1): add tower cards here
+  shopGroup = new Konva.Group();
   startWaveButton: Konva.Group;
   readonly prompt: QuestionPrompt;
 
@@ -64,7 +64,7 @@ export class GameScreenView {
     );
   }
 
-  // TODO(N1, M3): call this when lives, wave number, or remaining enemies changes
+  // Rewrites the HUD text. The controller calls this whenever one of these values changes.
   setHud(
     coins: number,
     lives: number,

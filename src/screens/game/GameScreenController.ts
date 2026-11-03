@@ -8,13 +8,12 @@ import map1 from "../../data/maps/map1.json";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
-import { PlacementView } from "../../ui/PlacementView";
+import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
 
 // Connects the game model to the screen: input → model, model events → views.
-// Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
@@ -87,14 +86,6 @@ export class GameScreenController implements Screen {
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
-
-    // WIRE(N1): update the HUD on "waveStarted" / "waveCleared"
-    // WIRE(M3): update the HUD on "livesChanged"
-    // WIRE(R3): add TowersView to this.view.mapGroup
-    // WIRE(J1): shop cards in this.view.shopGroup
-    // WIRE(So2): click a shop card to choose the tower to place
-    // WIRE(J2): show a message when the player can't afford a tower
-    // WIRE(M2): ask a question before a tower is placed
 
     this.active = true;
     this.group.visible(true);
