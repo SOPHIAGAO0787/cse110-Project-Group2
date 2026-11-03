@@ -6,7 +6,6 @@ import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResultData, Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 
-
 // Owns the Konva stage and switches between screens.
 export class App implements ScreenSwitcher {
   private stage: Konva.Stage;
