@@ -3,7 +3,6 @@ import type { Screen, ScreenSwitcher } from "../app/types";
 import { makeButton } from "./button";
 
 // Shown when the game ends.
-// TODO(So1): show "Victory!" or "Defeat" using data.won, and polish this screen.
 export class ResultScreen implements Screen {
   group = new Konva.Group();
   private app: ScreenSwitcher;
@@ -21,7 +20,7 @@ export class ResultScreen implements Screen {
     this.group.add(this.message, this.menuButton);
   }
 
-  // data.won says whether the player won (unused until So1)
+  // Shows "Game over" for both a win and a loss.
   show(data?: { won: boolean }): void {
     this.group.visible(true);
   }

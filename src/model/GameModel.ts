@@ -73,8 +73,6 @@ export class GameModel {
     }
 
     this.enemies = remainingEnemies;
-
-    // 5. TODO(So1): emit "gameOver" when lives reach 0 or the last wave is cleared
   }
 
   startNextWave(): void {

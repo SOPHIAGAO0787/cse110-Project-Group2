@@ -14,7 +14,6 @@ import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
 
 // Connects the game model to the screen: input → model, model events → views.
-// Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
@@ -83,9 +82,6 @@ export class GameScreenController implements Screen {
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
-
-    // WIRE(R3): add TowersView to this.view.mapGroup
-    // WIRE(So2): click a shop card to choose the tower to place
 
     this.active = true;
     this.group.visible(true);
