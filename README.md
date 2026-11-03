@@ -19,11 +19,12 @@ Then open the URL Vite prints (usually http://localhost:5173).
 2. Drag the tower from the shop on the right onto a green tile, then press **Enter**.
 3. Answer the geometry question about the tower's range. A correct answer places the tower and spends its coins.
 4. Click **Start Wave** to send enemies down the path. Each enemy that reaches the end costs a life.
+5. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars and stats.
 
-The menu also has a **Tower Shop** screen that shows each tower's cost, stats, and upgrades.
+The menu also has a **Tower Shop** screen that shows each tower's cost, stats, and upgrades. It is a demo with its own coins and is not connected to the game yet.
 
-**Works today:** the map, tower placement with a question, coins, lives, waves, and the in-game and menu shops.
-**Coming next:** towers attacking enemies, the victory and defeat screen, and choosing towers from the shop.
+**Works today:** the map, tower placement with a question, coins, lives, waves, and the victory and defeat screens.
+**Coming next:** towers attacking enemies, choosing towers from the in-game shop, and connecting the Tower Shop to the game.
 
 ## How the code is organized
 
