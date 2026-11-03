@@ -7,7 +7,7 @@ A tower defense game that teaches geometry, built by CSE 110 Group 2 with TypeSc
 1. Click **Play Map 1** on the menu.
 2. Drag a tower from the shop onto a green tile, then press **Enter**.
 3. Answer the geometry question. A correct answer places the tower and spends its coins.
-4. Click **Start Wave** to send enemies down the path, and stop them before they reach the end. (Enemy waves are still being built.)
+4. Click **Start Wave** to send enemies down the path. Each enemy that reaches the end costs a life. (Towers don't attack yet.)
 
 The menu also has a **Tower Shop** screen that shows each tower's cost and stats.
 
