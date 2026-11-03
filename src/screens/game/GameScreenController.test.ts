@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
+import type { ScreenSwitcher } from "../../app/types";
 import Konva from "konva";
 import "vitest-canvas-mock";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
@@ -24,6 +25,7 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
 
 let controller: GameScreenController;
 let model: GameModel;
+let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 
 function hud(): string {
   const text = controller.group
@@ -42,7 +44,8 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
 beforeEach(() => {
   models.length = 0;
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
-  controller = new GameScreenController({ switchTo: vi.fn() });
+  switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
+  controller = new GameScreenController({ switchTo });
   controller.show();
   model = models[models.length - 1];
 });
@@ -151,5 +154,18 @@ describe("GameScreenController HUD event wiring", () => {
     model.wallet.coins = 25;
     model.events.emit("coinsChanged", { coins: 25 });
     expectHud(25, map.startingLives, 0, 0);
+  });
+});
+
+describe("GameScreenController game over (So1)", () => {
+  it("sends the model's final result to the result screen", () => {
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    model.lives.remaining = 1;
+    model.events.emit("enemyLeaked", { enemyId: 99 });
+    model.tick(0);
+
+    expect(switchTo).toHaveBeenCalledTimes(1);
+    expect(switchTo).toHaveBeenCalledWith("result", model.result);
+    expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
   });
 });

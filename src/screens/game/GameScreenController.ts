@@ -75,7 +75,11 @@ export class GameScreenController implements Screen {
 
     refreshHud();
     const events = this.model.events;
-    events.on("gameOver", (e) => this.app.switchTo("result", { won: e.won }));
+    // So1: the model builds the final stats; the result screen only displays them
+    events.on("gameOver", () => {
+      const result = this.model.result;
+      if (result) this.app.switchTo("result", result);
+    });
 
     events.on("coinsChanged", refreshHud);
     events.on("livesChanged", refreshHud);
@@ -128,6 +132,7 @@ export class GameScreenController implements Screen {
       const question = this.questions.questionFor(def);
       this.loop.stop(); // pause the game while the question is open
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
+      if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
       if (this.active) this.loop.start(); // don't restart if the player left the screen
       return correct;
     };
