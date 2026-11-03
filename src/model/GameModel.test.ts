@@ -225,3 +225,130 @@ describe("GameModel enemy cleanup (R2)", () => {
     expect(clearedWaves).toEqual([1]);
   });
 });
+
+// So1: the game ends in victory or defeat and records its stats for the result screen.
+// map1 has two waves with 13 enemies in total, so with no towers every enemy leaks:
+// 14 lives survive with 1 left, 13 or fewer lose.
+describe("GameModel game result (So1)", () => {
+  function gameWithLives(startingLives: number): GameModel {
+    return new GameModel(loadMap({ ...map1, startingLives }));
+  }
+
+  // Starts each wave as soon as the previous one clears, and ticks until the game ends.
+  function playUntilOver(game: GameModel): boolean[] {
+    const outcomes: boolean[] = [];
+    game.events.on("gameOver", ({ won }) => outcomes.push(won));
+    game.events.on("waveCleared", () => game.startNextWave());
+    game.startNextWave();
+    for (let i = 0; i < 10000 && !game.isOver; i++) {
+      game.tick(0.1);
+    }
+    return outcomes;
+  }
+
+  it("ends in victory when the last wave is cleared with lives left", () => {
+    const game = gameWithLives(14);
+
+    expect(playUntilOver(game)).toEqual([true]);
+    expect(game.result).toMatchObject({ won: true, stars: 1, remainingLives: 1 });
+    expect(game.waves.currentWave).toBe(map1.waves.length);
+  });
+
+  it("ends in defeat as soon as the last life is lost", () => {
+    const game = gameWithLives(3);
+
+    expect(playUntilOver(game)).toEqual([false]);
+    expect(game.result).toMatchObject({ won: false, stars: 0, remainingLives: 0 });
+    expect(game.waves.currentWave).toBe(1); // lost during wave 1, so wave 2 never started
+  });
+
+  it("counts losing the last life on the step the last wave clears as a defeat", () => {
+    const game = gameWithLives(13);
+
+    expect(playUntilOver(game)).toEqual([false]);
+    expect(game.waves.isRunning).toBe(false); // the last wave did clear
+  });
+
+  it("is not over after an earlier wave clears", () => {
+    const game = gameWithLives(20);
+    const outcomes: boolean[] = [];
+    const cleared: number[] = [];
+    game.events.on("gameOver", ({ won }) => outcomes.push(won));
+    game.events.on("waveCleared", ({ wave }) => cleared.push(wave));
+
+    game.startNextWave();
+    for (let i = 0; i < 10000 && cleared.length === 0; i++) {
+      game.tick(0.1);
+    }
+
+    expect(cleared).toEqual([1]);
+    expect(outcomes).toEqual([]);
+    expect(game.isOver).toBe(false);
+    expect(game.result).toBeNull();
+  });
+
+  it("emits gameOver once and then freezes the game", () => {
+    const game = gameWithLives(1);
+    expect(playUntilOver(game)).toEqual([false]);
+    const time = game.elapsedSeconds;
+    const positions = game.enemies.map((enemy) => enemy.distance);
+    let laterGameOvers = 0;
+    game.events.on("gameOver", () => laterGameOvers++);
+
+    game.tick(1);
+    game.tick(1);
+    game.startNextWave();
+
+    expect(laterGameOvers).toBe(0);
+    expect(game.elapsedSeconds).toBe(time);
+    expect(game.enemies.map((enemy) => enemy.distance)).toEqual(positions);
+    expect(game.waves.currentWave).toBe(1);
+  });
+
+  it("counts elapsed time and ignores negative or non-finite steps", () => {
+    const game = gameWithLives(20);
+
+    game.tick(0.1);
+    game.tick(0.2);
+    game.tick(-1);
+    game.tick(Number.NaN);
+    game.tick(Number.POSITIVE_INFINITY);
+
+    expect(game.elapsedSeconds).toBeCloseTo(0.3);
+  });
+
+  it("records the stats at the moment the game ends", () => {
+    const game = gameWithLives(1);
+    const tile = { x: 0, y: 2 };
+    expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+    expect(game.tryPlaceTower("circle", tile)).toBe("occupied"); // failed placements don't count
+    game.recordQuestionSolved();
+    game.recordQuestionSolved();
+    game.tick(0.5);
+
+    game.events.emit("enemyLeaked", { enemyId: 99 }); // costs the only life
+    game.tick(0.25);
+
+    expect(game.result).toEqual({
+      won: false,
+      stars: 0,
+      elapsedSeconds: 0.75,
+      towersPlaced: 1,
+      remainingLives: 0,
+      finalCoins: map1.startingCoins - TOWERS.find((d) => d.id === "circle")!.cost,
+      questionsSolved: 2,
+    });
+  });
+
+  it("does not change the result after the game ends", () => {
+    const game = gameWithLives(1);
+    game.events.emit("enemyLeaked", { enemyId: 99 });
+    game.tick(0);
+    const result = { ...game.result };
+
+    game.recordQuestionSolved();
+    game.tryPlaceTower("circle", { x: 0, y: 2 });
+
+    expect(game.result).toEqual(result);
+  });
+});
