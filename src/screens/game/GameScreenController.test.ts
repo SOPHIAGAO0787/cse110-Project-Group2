@@ -108,8 +108,9 @@ describe("GameScreenController HUD event wiring", () => {
     model.events.emit("waveStarted", { wave: 1, totalWaves: map.waves.length });
     for (const remaining of [1, 0]) {
       model.waves.enemiesLeft = remaining;
-      model.lives.remaining = remaining;
+      // The real Lives model handles the leak and emits livesChanged.
       model.events.emit("enemyLeaked", { enemyId: 2 - remaining });
+      expect(model.lives.remaining).toBe(remaining);
       expectHud(map.startingCoins, remaining, 1, remaining);
     }
   });

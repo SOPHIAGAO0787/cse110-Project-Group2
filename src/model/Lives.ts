@@ -1,8 +1,6 @@
 import type { EventBus } from "../core/EventBus";
 
 // How many enemies can still reach the base before the player loses.
-// TODO(N2): listen for "enemyLeaked" and lose one life; never go below 0;
-// emit "livesChanged" with the new total.
 export class Lives {
   remaining: number;
   private events: EventBus;
@@ -10,9 +8,12 @@ export class Lives {
   constructor(startingLives: number, events: EventBus) {
     this.events = events;
     this.remaining = startingLives;
+    events.on("enemyLeaked", () => this.lose());
   }
 
   lose(): void {
-    // TODO(N2)
+    if (this.remaining <= 0) return;
+    this.remaining--;
+    this.events.emit("livesChanged", { lives: this.remaining });
   }
 }
