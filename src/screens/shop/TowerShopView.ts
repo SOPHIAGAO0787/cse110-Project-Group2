@@ -1,6 +1,6 @@
 import Konva from "konva";
 import { makeButton } from "../button";
-import type { ShopTower } from "./ShopPreviewData";
+import type { ShopTower } from "../../model/shop/types";
 
 interface ShopViewState {
   towers: ShopTower[];

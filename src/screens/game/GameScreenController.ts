@@ -10,6 +10,8 @@ import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "../../ui/PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
+import { EnemiesView } from "./EnemiesView";
+import { InGameTowerCard } from "./InGameTowerCard";
 
 // Connects the game model to the screen: input → model, model events → views.
 // Each "WIRE" comment marks where a task plugs in. Only edit your own spots.
@@ -43,11 +45,22 @@ export class GameScreenController implements Screen {
   // Called every time the player enters the game screen: starts a fresh game.
   show(): void {
     this.model = new GameModel(this.map);
-    this.loop = new GameLoop((dt) => this.model.tick(dt));
+
+    // R1: create the enemy view
+    const enemiesView = new EnemiesView();
+
+    this.loop = new GameLoop((dt) => {
+      this.model.tick(dt);
+      enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
+    });
     this.view.mapGroup.destroyChildren();
 
     const gridView = new GridView(this.map, (tile) => this.model.grid.isBuildable(tile));
+
+    //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
+    this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
+
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
@@ -71,7 +84,6 @@ export class GameScreenController implements Screen {
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
 
-    // WIRE(R1): add EnemiesView to this.view.mapGroup and sync it every frame
     // WIRE(R3): add TowersView to this.view.mapGroup
     // WIRE(So2): click a shop card to choose the tower to place
 
@@ -98,8 +110,10 @@ export class GameScreenController implements Screen {
     const placement = new PlacementModel();
     const def = TOWERS.find((d) => d.id === "circle")!;
     const pv = new PlacementView(def.range.radius);
-    this.view.mapGroup.add(pv.group); // after the grid, so it draws on top
-    this.view.shopGroup.add(pv.menuCircle);
+    this.view.mapGroup.add(pv.group);
+
+    const card = new InGameTowerCard(def, pv.menuCircle);
+    this.view.shopGroup.add(card.group);
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
@@ -118,6 +132,15 @@ export class GameScreenController implements Screen {
       const s = placement.state;
       if (s.kind !== "placed" || pending) return;
       const tile = s.pos;
+
+      // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
+      // tryPlaceTower checks again, because coins can change while the question is open.
+      if (!this.model.wallet.canAfford(def.cost)) {
+        placement.cancel();
+        pv.hide();
+        this.view.showMessage("Not enough coins");
+        return;
+      }
 
       pending = true;
       let ok = false;
@@ -174,7 +197,7 @@ export class GameScreenController implements Screen {
       }
     };
 
-    pv.menuCircle.on("pointerdown", onDown);
+    card.group.on("pointerdown", onDown);
     stage?.on("pointermove.placement", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
@@ -184,7 +207,7 @@ export class GameScreenController implements Screen {
       stage?.off(".placement");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
-      pv.menuCircle.destroy();
+      card.group.destroy();
     };
   }
 
