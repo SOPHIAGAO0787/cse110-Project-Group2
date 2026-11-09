@@ -1,5 +1,5 @@
 import Konva from "konva";
-import { BUTTON_FILL, BUTTON_SHADOW } from "./theme";
+import { BUTTON_FILL, BUTTON_SHADOW, FONT } from "./theme";
 
 // A clickable rectangle with a label. Konva has no built-in buttons, so we make our own.
 export function makeButton(label: string, onClick: () => void): Konva.Group {
@@ -21,6 +21,8 @@ export function makeButton(label: string, onClick: () => void): Konva.Group {
     align: "center",
     verticalAlign: "middle",
     fontSize: 20,
+    fontFamily: FONT,
+    fontStyle: "bold",
     fill: "white",
   });
   button.add(background, text);

@@ -1,5 +1,8 @@
-// Colors from the team's design mockup. Screens import these instead of typing hex codes,
-// so every screen keeps the same look.
+// Colors and font from the team's design mockup. Screens import these instead of typing
+// their own values, so every screen keeps the same look.
+
+// Loaded in index.html. Konva.Text needs `fontFamily: FONT` to use it.
+export const FONT = "Nunito";
 
 // Page and cards
 export const PAGE_BACKGROUND = "#cfcfcf";
