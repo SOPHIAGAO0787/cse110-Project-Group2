@@ -3,7 +3,7 @@ import type { Screen, ScreenSwitcher } from "../app/types";
 import { MAPS } from "../model/loadContent";
 import type { Progress } from "../model/Progress";
 import type { MapConfig } from "../model/types";
-import { BUTTON_HEIGHT, makeButton } from "./button";
+import { BUTTON_HEIGHT, makeBackButton, makeButton } from "./button";
 import { formatStars } from "./resultFormat";
 import {
   CARD_BORDER,
@@ -33,7 +33,6 @@ const MAP_CARD_STRIP = "#fafcff";
 const MAP_CARD_STEP_X = 492; // from one card's left edge to the next card's left edge
 const MAP_CARD_STEP_Y = 304; // from one card's top edge to the next card's top edge
 const BUTTON_WIDTH = 117;
-const BACK_WIDTH = 140;
 
 const LOCKED_TOP = "#dfdfdf";
 const LOCKED_SHAPE = "#a9a9a9";
@@ -61,9 +60,10 @@ const CARD_LOOKS: CardLook[] = [
 //   ┌──────────────────────────────────────┐
 //   │ header: game name                    │
 //   ├──────────────────────────────────────┤
-//   │  ┌ Choose your map ───────────────┐  │
+//   │  ┌────────────────────────────────┐  │
+//   │  │ [←] Choose your map            │  │
 //   │  │  [ map 1 ]  [ map 2 ]          │  │
-//   │  │  [ map 3 ]  [ map 4 ]   [Back] │  │
+//   │  │  [ map 3 ]  [ map 4 ]          │  │
 //   │  └────────────────────────────────┘  │
 //   └──────────────────────────────────────┘
 export class MapSelectScreen implements Screen {
@@ -100,8 +100,11 @@ export class MapSelectScreen implements Screen {
       shadowOffset: { x: 0, y: 8 },
       shadowBlur: 0,
     });
+    // The back arrow goes in the top-left corner, with the title next to it
+    const backButton = makeBackButton(() => this.app.switchTo("menu"));
+    backButton.position({ x: 56, y: 42 });
     const title = new Konva.Text({
-      x: 56,
+      x: 112,
       y: 47,
       text: "Choose your map",
       fontSize: 28,
@@ -110,8 +113,6 @@ export class MapSelectScreen implements Screen {
       fill: TITLE_TEXT,
     });
     const sun = new Konva.Circle({ x: 1230, y: 90, radius: 40, fill: SUN_COLOR });
-    const backButton = makeButton("Back", () => this.app.switchTo("menu"), BACK_WIDTH);
-    backButton.position({ x: CARD_WIDTH - 56 - BACK_WIDTH, y: CARD_HEIGHT - 56 - BUTTON_HEIGHT });
     this.mapCards.position({ x: 76, y: 178 });
     this.content.add(card, title, sun, this.mapCards, backButton);
 
