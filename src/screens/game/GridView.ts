@@ -2,7 +2,9 @@ import Konva from "konva";
 import type { MapConfig, Vec } from "../../model/types";
 import { TILE } from "./GameScreenView";
 
-// Draws the map: one square per tile, plus a dashed line showing the enemy route.
+const PATCH_EDGE = 3; // how far the dark edge around a patch of build tiles sticks out, in pixels
+
+// Draws the map: one square per tile, plus a road along the enemy route.
 // While the mouse is over the map, the tile under it is tinted green if a tower
 // can go there and red if not.
 export class GridView {
@@ -20,29 +22,87 @@ export class GridView {
   constructor(map: MapConfig, isBuildable: (tile: Vec) => boolean) {
     this.isBuildable = isBuildable;
 
+    // The scenery is one big rectangle, so the map has no lines between tiles
+    this.group.add(
+      new Konva.Rect({
+        width: map.cols * TILE,
+        height: map.rows * TILE,
+        fill: map.colors.blocked,
+      }),
+    );
+
+    // Build tiles in two passes. First a dark square a little bigger than each tile,
+    // then the tiles on top. Next to each other the tiles cover the dark squares,
+    // so only a dark edge around each patch of build tiles is left.
+    const edges = new Konva.Group({ opacity: 0.3, listening: false });
     for (let y = 0; y < map.rows; y++) {
       for (let x = 0; x < map.cols; x++) {
-        const tile = map.tiles[y][x];
-        this.group.add(
-          new Konva.Rect({
-            x: x * TILE,
-            y: y * TILE,
-            width: TILE,
-            height: TILE,
-            fill: tileColor(map, tile),
-            stroke: "#00000022",
-          }),
-        );
+        if (map.tiles[y][x] === "#") {
+          edges.add(
+            new Konva.Rect({
+              x: x * TILE - PATCH_EDGE,
+              y: y * TILE - PATCH_EDGE,
+              width: TILE + 2 * PATCH_EDGE,
+              height: TILE + 2 * PATCH_EDGE,
+              fill: "black",
+            }),
+          );
+        }
+      }
+    }
+    // Drawn as one picture, so where two squares overlap the edge does not get darker.
+    // (cache() fails on an empty group, so skip it on a map with no build tiles.)
+    if (edges.hasChildren()) {
+      edges.cache();
+    }
+    this.group.add(edges);
+    for (let y = 0; y < map.rows; y++) {
+      for (let x = 0; x < map.cols; x++) {
+        if (map.tiles[y][x] === "#") {
+          this.group.add(
+            new Konva.Rect({
+              x: x * TILE,
+              y: y * TILE,
+              width: TILE,
+              height: TILE,
+              fill: map.colors.buildable,
+              // A thin outline in the same color hides the seams between neighbors
+              stroke: map.colors.buildable,
+              strokeWidth: 1,
+              listening: false,
+            }),
+          );
+        }
       }
     }
 
-    // Path points are tile centers, so add half a tile
+    // The road follows the enemy route. Path points are tile centers, so add half a tile.
     const points: number[] = [];
     for (const p of map.path) {
       points.push((p.x + 0.5) * TILE, (p.y + 0.5) * TILE);
     }
+    // A dark line one tile wide, then the road color on top, a little narrower,
+    // so a dark edge shows on both sides of the road
     this.group.add(
-      new Konva.Line({ points, stroke: "#f4e9c8", strokeWidth: 2, dash: [6, 6], listening: false }),
+      new Konva.Line({
+        points,
+        stroke: "black",
+        opacity: 0.3,
+        strokeWidth: TILE,
+        lineCap: "round",
+        lineJoin: "round",
+        listening: false,
+      }),
+    );
+    this.group.add(
+      new Konva.Line({
+        points,
+        stroke: map.colors.path,
+        strokeWidth: TILE - 8,
+        lineCap: "round",
+        lineJoin: "round",
+        listening: false,
+      }),
     );
 
     this.group.add(this.hover);
@@ -74,16 +134,5 @@ export class GridView {
       this.hover.fill("#ff4d4d");
     }
     this.hover.visible(true);
-  }
-}
-
-// The fill for one tile, from the map's own colors
-function tileColor(map: MapConfig, tile: string): string {
-  if (tile === "#") {
-    return map.colors.buildable;
-  } else if (tile === "P") {
-    return map.colors.path;
-  } else {
-    return map.colors.blocked;
   }
 }

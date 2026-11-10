@@ -19,21 +19,43 @@ function fillsAt(view: GridView, x: number, y: number): string[] {
 }
 
 describe("GridView", () => {
-  it("draws every tile in its map's own colors", () => {
+  it("draws the scenery as one rectangle in the map's blocked color", () => {
+    for (const map of MAPS) {
+      const view = new GridView(map, () => true);
+      const scenery = view.group.find<Konva.Rect>("Rect")[0];
+      expect(scenery.fill()).toBe(map.colors.blocked);
+      expect(scenery.width()).toBe(map.cols * TILE);
+      expect(scenery.height()).toBe(map.rows * TILE);
+    }
+  });
+
+  it("draws every build tile in the map's buildable color", () => {
     for (const map of MAPS) {
       const view = new GridView(map, () => true);
       for (let y = 0; y < map.rows; y++) {
         for (let x = 0; x < map.cols; x++) {
-          const tile = map.tiles[y][x];
-          let expected = map.colors.blocked;
-          if (tile === "#") {
-            expected = map.colors.buildable;
-          } else if (tile === "P") {
-            expected = map.colors.path;
+          if (map.tiles[y][x] === "#") {
+            expect(fillsAt(view, x, y)).toContain(map.colors.buildable);
           }
-          expect(fillsAt(view, x, y)).toContain(expected);
         }
       }
+    }
+  });
+
+  it("draws the road in the map's path color along the enemy route", () => {
+    for (const map of MAPS) {
+      const view = new GridView(map, () => true);
+      let road: Konva.Line | null = null;
+      for (const line of view.group.find<Konva.Line>("Line")) {
+        if (line.stroke() === map.colors.path) {
+          road = line;
+        }
+      }
+      if (road === null) {
+        throw new Error(`${map.id}: no road drawn`);
+      }
+      // Two numbers (x and y) per corner of the route
+      expect(road.points()).toHaveLength(map.path.length * 2);
     }
   });
 });
