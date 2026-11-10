@@ -17,7 +17,7 @@ import type { Progress } from "../../model/Progress";
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
-  private progress: Progress; // says which map to play
+  private progress: Progress; // which map to play; every finished game saves its stars here
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -81,7 +81,11 @@ export class GameScreenController implements Screen {
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
       const result = this.model.result;
-      if (result) this.app.switchTo("result", result);
+      if (result) {
+        // A win unlocks the next map and its stars show on the map screen
+        this.progress.recordResult(this.map.id, result.stars);
+        this.app.switchTo("result", result);
+      }
     });
 
     events.on("coinsChanged", refreshHud);

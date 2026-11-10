@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import map1 from "../data/maps/map1.json";
 import { GameModel } from "./GameModel";
 import { ENEMIES, loadMap, MAPS } from "./loadContent";
+import { Progress } from "./Progress";
+
+// The stars a finished game earned
+function finalStars(game: GameModel): number {
+  const result = game.result;
+  if (result === null) {
+    throw new Error("The game is not over yet");
+  }
+  return result.stars;
+}
 
 // These tests run a real game on map1 with no screen, to check that the parts work together.
 // Each one needs two tasks. Whichever of the two merges second turns its test on.
@@ -91,6 +101,23 @@ describe("Integration: a game on map1", () => {
     expect(game.tryPlaceTower("circle", { x: 0, y: 3 })).toBe("funds");
     expect(game.wallet.coins).toBe(0);
     expect(game.towers).toHaveLength(2);
+  });
+
+  it("winning map1 unlocks map2, and losing does not (So1, #68)", () => {
+    const progress = new Progress(MAPS);
+
+    const lost = new GameModel(loadMap(map1));
+    lost.lives.remaining = 0;
+    lost.tick(0);
+    progress.recordResult("map1", finalStars(lost));
+    expect(progress.isUnlocked("map2")).toBe(false);
+
+    const won = new GameModel(loadMap(map1));
+    won.events.emit("waveCleared", { wave: map1.waves.length });
+    won.tick(0);
+    progress.recordResult("map1", finalStars(won));
+    expect(progress.isUnlocked("map2")).toBe(true);
+    expect(progress.starsFor("map1")).toBe(3);
   });
 
   it.todo("a tower next to the path kills a passing enemy (B1, R3)");

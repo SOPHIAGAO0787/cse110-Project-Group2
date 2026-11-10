@@ -215,6 +215,24 @@ describe("GameScreenController game over (So1)", () => {
     expect(switchTo).toHaveBeenCalledWith("result", model.result);
     expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
   });
+
+  it("records a win so the next map unlocks", () => {
+    // Clearing the last wave with every life left is a 3-star win
+    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: true, stars: 3 });
+    expect(progress.starsFor("map1")).toBe(3);
+    expect(progress.isUnlocked("map2")).toBe(true);
+  });
+
+  it("records a loss without unlocking the next map", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: false });
+    expect(progress.isUnlocked("map2")).toBe(false);
+  });
 });
 
 describe("GameScreenController map choice", () => {
