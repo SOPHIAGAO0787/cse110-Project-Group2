@@ -45,15 +45,15 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
   );
 }
 
-// Clicks the real Start Wave button on the screen.
-function clickStartWave(): void {
-  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Start Wave");
+// Clicks the real button with this label on the screen, e.g. "Start Wave".
+function clickButton(text: string): void {
+  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === text);
   if (label === undefined) {
-    throw new Error("Start Wave button is missing from the screen");
+    throw new Error(`${text} button is missing from the screen`);
   }
   const button = label.getParent();
   if (button === null) {
-    throw new Error("Start Wave label has no button group");
+    throw new Error(`${text} label has no button group`);
   }
   button.fire("click");
 }
@@ -175,7 +175,7 @@ describe("GameScreenController HUD event wiring", () => {
   });
 
   it("Start Wave updates the HUD through both waves", () => {
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 5");
 
     // Spawn all of wave 1, then kill one enemy and let the rest leak.
@@ -191,7 +191,7 @@ describe("GameScreenController HUD event wiring", () => {
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
 
     // Wave 2 has 8 enemies. Clicking again after the last wave changes nothing.
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
     model.tick(7);
     const wave2 = model.enemies.slice(model.enemies.length - 8);
@@ -199,7 +199,7 @@ describe("GameScreenController HUD event wiring", () => {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
   });
 });
@@ -232,6 +232,16 @@ describe("GameScreenController game over (So1)", () => {
 
     expect(model.result).toMatchObject({ won: false });
     expect(progress.isUnlocked("map2")).toBe(false);
+  });
+});
+
+describe("GameScreenController Back to maps", () => {
+  it("goes back to the map screen without recording a result", () => {
+    clickButton("Back to maps");
+
+    expect(switchTo).toHaveBeenCalledWith("maps");
+    expect(model.result).toBeNull();
+    expect(progress.starsFor("map1")).toBe(0);
   });
 });
 

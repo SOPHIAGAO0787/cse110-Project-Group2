@@ -35,6 +35,8 @@ export class GameScreenController implements Screen {
       this.map.cols,
       this.map.rows,
       () => this.model.startNextWave(),
+      // Leaving ends the game without a result, so nothing is recorded on Progress
+      () => this.app.switchTo("maps"),
       this.questions,
     );
     this.group = this.view.group;
