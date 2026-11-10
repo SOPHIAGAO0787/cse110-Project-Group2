@@ -12,6 +12,8 @@ export interface Vec {
 export interface MapConfig {
   id: string;
   name: string;
+  // Fill colors for each kind of tile, so every map has its own look
+  colors: { buildable: string; path: string; blocked: string };
   cols: number;
   rows: number;
   // One string per row: '#' buildable, 'P' enemy path, '.' blocked

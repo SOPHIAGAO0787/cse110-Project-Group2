@@ -1,6 +1,7 @@
 {
   "id": "map1",
   "name": "Circle Grove",
+  "colors": { "buildable": "#7ec850", "path": "#d9b77a", "blocked": "#4f8a3c" },
   "cols": 16,
   "rows": 10,
   "tiles": [

@@ -7,6 +7,7 @@ function validMap() {
   return {
     id: "test",
     name: "Test",
+    colors: { buildable: "#00ff00", path: "#996633", blocked: "#000000" },
     cols: 4,
     rows: 3,
     tiles: ["#...", "PPPP", "...#"],
@@ -34,6 +35,16 @@ describe("loadMap", () => {
   it("rejects a map whose row count doesn't match rows", () => {
     const map = { ...validMap(), rows: 4 };
     expect(() => loadMap(map)).toThrow(/rows/);
+  });
+
+  it("rejects a map without colors", () => {
+    const map = { ...validMap(), colors: undefined };
+    expect(() => loadMap(map)).toThrow(/colors/);
+  });
+
+  it("rejects a map missing one of its colors", () => {
+    const map = { ...validMap(), colors: { buildable: "#00ff00", path: "#996633" } };
+    expect(() => loadMap(map)).toThrow(/colors/);
   });
 
   it("rejects a row with the wrong width", () => {
