@@ -2,8 +2,6 @@ import Konva from "konva";
 import type { MapConfig, Vec } from "../../model/types";
 import { TILE } from "./GameScreenView";
 
-const COLORS: { [tile: string]: string } = { P: "#c2a878", "#": "#4a7c59", ".": "#2e3b2e" };
-
 // Draws the map: one square per tile, plus a dashed line showing the enemy route.
 // While the mouse is over the map, the tile under it is tinted green if a tower
 // can go there and red if not.
@@ -31,7 +29,7 @@ export class GridView {
             y: y * TILE,
             width: TILE,
             height: TILE,
-            fill: COLORS[tile],
+            fill: tileColor(map, tile),
             stroke: "#00000022",
           }),
         );
@@ -76,5 +74,16 @@ export class GridView {
       this.hover.fill("#ff4d4d");
     }
     this.hover.visible(true);
+  }
+}
+
+// The fill for one tile, from the map's own colors
+function tileColor(map: MapConfig, tile: string): string {
+  if (tile === "#") {
+    return map.colors.buildable;
+  } else if (tile === "P") {
+    return map.colors.path;
+  } else {
+    return map.colors.blocked;
   }
 }
