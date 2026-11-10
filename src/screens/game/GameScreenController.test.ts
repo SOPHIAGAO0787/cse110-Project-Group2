@@ -7,6 +7,9 @@ import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
 import map from "../../data/maps/map1.json";
+import map2 from "../../data/maps/map2.json";
+import { MAPS } from "../../model/loadContent";
+import { Progress } from "../../model/Progress";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -26,6 +29,7 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
 let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
+let progress: Progress;
 
 function hud(): string {
   const text = controller.group
@@ -58,7 +62,8 @@ beforeEach(() => {
   models.length = 0;
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
-  controller = new GameScreenController({ switchTo });
+  progress = new Progress(MAPS);
+  controller = new GameScreenController({ switchTo }, progress);
   controller.show();
   model = models[models.length - 1];
 });
@@ -209,5 +214,18 @@ describe("GameScreenController game over (So1)", () => {
     expect(switchTo).toHaveBeenCalledTimes(1);
     expect(switchTo).toHaveBeenCalledWith("result", model.result);
     expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
+  });
+});
+
+describe("GameScreenController map choice", () => {
+  it("plays the map picked on the map screen", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    controller.show();
+    model = models[models.length - 1];
+
+    // map2 starts at a different corner and has one more wave than map1
+    expect(model.path.pointAt(0)).toEqual(map2.path[0]);
+    expect(hud()).toContain(`Wave: 0/${map2.waves.length}`);
   });
 });
