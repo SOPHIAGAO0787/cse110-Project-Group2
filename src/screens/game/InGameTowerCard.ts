@@ -68,7 +68,7 @@ export class InGameTowerCard {
       x: 16,
       y: 292,
       width: 196,
-      text: "Drag onto a green tile.\nPress Enter to answer the question.",
+      text: "Drag onto a tile that turns green.\nPress Enter to answer the question.",
       fontSize: 13,
       fill: "#b4b4c8",
       lineHeight: 1.3,

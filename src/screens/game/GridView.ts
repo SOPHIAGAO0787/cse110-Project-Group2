@@ -4,11 +4,12 @@ import { TILE } from "./GameScreenView";
 
 const PATCH_EDGE = 3; // how far the dark edge around a patch of build tiles sticks out, in pixels
 
-// Draws the map: one square per tile, plus a road along the enemy route.
-// While the mouse is over the map, the tile under it is tinted green if a tower
-// can go there and red if not.
+// Draws the map: the scenery, the build spots, and a road along the enemy route.
+// While the player places a tower, grid lines show each tile, and the tile under
+// the mouse is tinted green if a tower can go there and red if not.
 export class GridView {
   group = new Konva.Group();
+  private gridLines = new Konva.Group({ visible: false, opacity: 0.4, listening: false });
   private hover = new Konva.Rect({
     width: TILE,
     height: TILE,
@@ -105,6 +106,19 @@ export class GridView {
       }),
     );
 
+    // One line along every tile edge, hidden until showGrid(true)
+    for (let x = 0; x <= map.cols; x++) {
+      this.gridLines.add(
+        new Konva.Line({ points: [x * TILE, 0, x * TILE, map.rows * TILE], stroke: "white" }),
+      );
+    }
+    for (let y = 0; y <= map.rows; y++) {
+      this.gridLines.add(
+        new Konva.Line({ points: [0, y * TILE, map.cols * TILE, y * TILE], stroke: "white" }),
+      );
+    }
+    this.group.add(this.gridLines);
+
     this.group.add(this.hover);
     this.group.on("mousemove", () => this.moveHover());
     this.group.on("mouseleave", () => this.hover.visible(false));
@@ -121,8 +135,20 @@ export class GridView {
     return { x: Math.floor(pointer.x / TILE), y: Math.floor(pointer.y / TILE) };
   }
 
-  // Puts the tint on the tile under the mouse
+  // Shows the grid lines while a tower is being placed, and hides them and the tint after.
+  // The tint appears on the next mouse move over the map.
+  showGrid(visible: boolean): void {
+    this.gridLines.visible(visible);
+    if (!visible) {
+      this.hover.visible(false);
+    }
+  }
+
+  // Puts the tint on the tile under the mouse, but only while the grid is showing
   private moveHover(): void {
+    if (!this.gridLines.visible()) {
+      return;
+    }
     const tile = this.tileUnderMouse();
     if (tile === null) {
       return;

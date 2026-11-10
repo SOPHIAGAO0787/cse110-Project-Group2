@@ -178,6 +178,7 @@ export class GameScreenController implements Screen {
     const onDown = () => {
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
+      gridView.showGrid(true);
     };
 
     const onMove = () => {
@@ -187,6 +188,7 @@ export class GameScreenController implements Screen {
     };
 
     const onUp = () => {
+      gridView.showGrid(false); // also when Escape already ended the drag
       if (placement.state.kind !== "dragging") return;
       const tile = gridView.tileUnderMouse();
       if (tile && canPlace(tile)) {

@@ -58,4 +58,24 @@ describe("GridView", () => {
       expect(road.points()).toHaveLength(map.path.length * 2);
     }
   });
+
+  it("shows the grid lines only while a tower is being placed", () => {
+    const map = MAPS[0];
+    const view = new GridView(map, () => true);
+    const gridLines: Konva.Line[] = [];
+    for (const line of view.group.find<Konva.Line>("Line")) {
+      if (line.stroke() === "white") {
+        gridLines.push(line);
+      }
+    }
+    // One line on each side of every column and every row
+    expect(gridLines).toHaveLength(map.cols + 1 + map.rows + 1);
+    expect(gridLines[0].isVisible()).toBe(false);
+
+    view.showGrid(true);
+    expect(gridLines[0].isVisible()).toBe(true);
+
+    view.showGrid(false);
+    expect(gridLines[0].isVisible()).toBe(false);
+  });
 });
