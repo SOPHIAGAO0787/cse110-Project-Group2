@@ -1,5 +1,5 @@
 import Konva from "konva";
-import type { MapConfig, Vec } from "../../model/types";
+import type { Decoration, MapConfig, Vec } from "../../model/types";
 import { TILE } from "./GameScreenView";
 
 const PATCH_EDGE = 3; // how far the dark edge around a patch of build tiles sticks out, in pixels
@@ -73,6 +73,21 @@ export class GridView {
               listening: false,
             }),
           );
+        }
+      }
+    }
+
+    // Decorations on about a third of the blocked tiles. scatter() picks the tiles and
+    // nudges each decoration off the tile center, so they don't line up in rows.
+    for (let y = 0; y < map.rows; y++) {
+      for (let x = 0; x < map.cols; x++) {
+        const spot = scatter(x, y);
+        if (map.tiles[y][x] === "." && spot < 35) {
+          const decoration = makeDecoration(map.decoration);
+          decoration.x((x + 0.5) * TILE + (spot % 7) * 2 - 6);
+          decoration.y((y + 0.5) * TILE + (spot % 5) * 2 - 4);
+          decoration.scale({ x: 0.8 + (spot % 3) * 0.15, y: 0.8 + (spot % 3) * 0.15 });
+          this.group.add(decoration);
         }
       }
     }
@@ -161,4 +176,47 @@ export class GridView {
     }
     this.hover.visible(true);
   }
+}
+
+// A number from 0 to 99 for each tile. It looks random but is always the same for the
+// same tile, so a map looks the same every time it is played.
+function scatter(x: number, y: number): number {
+  return (x * 37 + y * 131 + x * y * 17) % 100;
+}
+
+// One decoration, drawn around (0, 0) and smaller than a tile
+function makeDecoration(kind: Decoration): Konva.Group {
+  const decoration = new Konva.Group({ name: "decoration", listening: false });
+  if (kind === "trees") {
+    // A shadow, the leaves, and a lighter spot where the sun hits
+    decoration.add(new Konva.Circle({ x: 3, y: 4, radius: 15, fill: "black", opacity: 0.2 }));
+    decoration.add(new Konva.Circle({ radius: 15, fill: "#2e7d32" }));
+    decoration.add(new Konva.Circle({ x: -5, y: -5, radius: 6, fill: "#4caf50" }));
+  } else if (kind === "rocks") {
+    // A dark rock with a lighter top
+    decoration.add(new Konva.Ellipse({ y: 4, radiusX: 15, radiusY: 10, fill: "#6d3b1f" }));
+    decoration.add(new Konva.Ellipse({ y: 1, radiusX: 10, radiusY: 6, fill: "#c0703a" }));
+  } else if (kind === "waves") {
+    // Two little white curves, one above the other
+    for (const dy of [-5, 5]) {
+      decoration.add(
+        new Konva.Line({
+          points: [-12, dy, -6, dy - 4, 0, dy, 6, dy - 4, 12, dy],
+          tension: 0.5,
+          stroke: "white",
+          strokeWidth: 2,
+          opacity: 0.7,
+        }),
+      );
+    }
+  } else {
+    // A grey mountain with a snowy top
+    decoration.add(
+      new Konva.Line({ points: [-17, 13, 0, -15, 17, 13], closed: true, fill: "#4f5964" }),
+    );
+    decoration.add(
+      new Konva.Line({ points: [-6, -4, 0, -15, 6, -4], closed: true, fill: "white" }),
+    );
+  }
+  return decoration;
 }

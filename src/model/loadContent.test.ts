@@ -8,6 +8,7 @@ function validMap() {
     id: "test",
     name: "Test",
     colors: { buildable: "#00ff00", path: "#996633", blocked: "#000000" },
+    decoration: "trees",
     cols: 4,
     rows: 3,
     tiles: ["#...", "PPPP", "...#"],
@@ -45,6 +46,11 @@ describe("loadMap", () => {
   it("rejects a map missing one of its colors", () => {
     const map = { ...validMap(), colors: { buildable: "#00ff00", path: "#996633" } };
     expect(() => loadMap(map)).toThrow(/colors/);
+  });
+
+  it("rejects an unknown decoration", () => {
+    const map = { ...validMap(), decoration: "flowers" };
+    expect(() => loadMap(map)).toThrow(/flowers/);
   });
 
   it("rejects a row with the wrong width", () => {

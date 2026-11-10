@@ -27,6 +27,16 @@ export function loadMap(data: unknown): MapConfig {
     throw new Error(`${map.id}: colors needs buildable, path and blocked`);
   }
 
+  const decoration = map.decoration;
+  if (
+    decoration !== "trees" &&
+    decoration !== "rocks" &&
+    decoration !== "waves" &&
+    decoration !== "mountains"
+  ) {
+    throw new Error(`${map.id}: unknown decoration "${decoration}"`);
+  }
+
   if (map.tiles.length !== map.rows) {
     throw new Error(`${map.id}: has ${map.tiles.length} rows of tiles but rows is ${map.rows}`);
   }

@@ -78,4 +78,18 @@ describe("GridView", () => {
     view.showGrid(false);
     expect(gridLines[0].isVisible()).toBe(false);
   });
+
+  it("puts decorations only on blocked tiles", () => {
+    for (const map of MAPS) {
+      const view = new GridView(map, () => true);
+      const decorations = view.group.find(".decoration");
+      expect(decorations.length).toBeGreaterThan(0);
+      for (const decoration of decorations) {
+        // Each decoration sits a few pixels off its tile's center, so rounding down finds the tile
+        const x = Math.floor(decoration.x() / TILE);
+        const y = Math.floor(decoration.y() / TILE);
+        expect(map.tiles[y][x]).toBe(".");
+      }
+    }
+  });
 });
