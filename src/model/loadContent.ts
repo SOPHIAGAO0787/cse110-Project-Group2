@@ -1,6 +1,10 @@
 import enemiesJson from "../data/enemies.json";
 import questionsJson from "../data/questions.json";
 import towersJson from "../data/towers.json";
+import map1 from "../data/maps/map1.json";
+import map2 from "../data/maps/map2.json";
+import map3 from "../data/maps/map3.json";
+import map4 from "../data/maps/map4.json";
 import type { EnemyDef, MapConfig, Question, TowerDef } from "./types";
 
 // "as" tells TypeScript what shape the JSON has. loadMap below also checks maps for mistakes.
@@ -44,4 +48,17 @@ export function loadMap(data: unknown): MapConfig {
   }
 
   return map;
+}
+
+// Every map, in the order the player unlocks them.
+export const MAPS: MapConfig[] = [loadMap(map1), loadMap(map2), loadMap(map3), loadMap(map4)];
+
+// Returns the map with this id. Throws if there is none, so a typo in an id fails loudly.
+export function findMap(id: string): MapConfig {
+  for (const map of MAPS) {
+    if (map.id === id) {
+      return map;
+    }
+  }
+  throw new Error(`Unknown map "${id}"`);
 }

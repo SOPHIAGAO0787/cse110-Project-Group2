@@ -1,0 +1,33 @@
+{
+  "id": "map3",
+  "name": "Area Archipelago",
+  "cols": 16,
+  "rows": 10,
+  "tiles": [
+    "................",
+    "..........PPPPPP",
+    "..........P..##.",
+    ".###......P####.",
+    "PPPPPP....P##...",
+    "...##P....P.....",
+    "...##P###.P.....",
+    ".....P###.P.....",
+    ".....PPPPPP.....",
+    "................"
+  ],
+  "path": [
+    { "x": 0, "y": 4 },
+    { "x": 5, "y": 4 },
+    { "x": 5, "y": 8 },
+    { "x": 10, "y": 8 },
+    { "x": 10, "y": 1 },
+    { "x": 15, "y": 1 }
+  ],
+  "startingCoins": 100,
+  "startingLives": 20,
+  "waves": [
+    { "groups": [{ "enemy": "basic", "count": 8, "intervalSec": 1.0 }] },
+    { "groups": [{ "enemy": "basic", "count": 10, "intervalSec": 0.8 }] },
+    { "groups": [{ "enemy": "basic", "count": 14, "intervalSec": 0.7 }] }
+  ]
+}
