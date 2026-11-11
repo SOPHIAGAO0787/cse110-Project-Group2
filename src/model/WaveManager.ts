@@ -1,11 +1,14 @@
 import type { EventBus } from "../core/EventBus";
 import type { WaveConfig } from "./types";
 
+export const WAVE_PREPARATION_SECONDS = 10;
+
 // Schedules enemy definition IDs; GameModel creates enemies and announces their IDs.
 export class WaveManager {
   currentWave = 0; // 0 = no wave started yet, 1 = first wave
   enemiesLeft = 0; // includes enemies still waiting to spawn
   isRunning = false;
+  preparationRemaining: number | null = null;
   private waves: WaveConfig[];
   private events: EventBus;
   private groupIndex = 0;
@@ -33,8 +36,25 @@ export class WaveManager {
     return this.waves.length;
   }
 
+  get lastSpawnRemaining(): number | null {
+    if (!this.isRunning || this.scheduledLeft === 0) return null;
+    const groups = this.waves[this.currentWave - 1].groups;
+    let remaining = this.nextSpawnAt - this.elapsed;
+    for (let i = this.groupIndex; i < groups.length; i++) {
+      const count = groups[i].count - (i === this.groupIndex ? this.spawnedInGroup + 1 : 0);
+      remaining += count * groups[i].intervalSec;
+    }
+    return Math.max(0, remaining);
+  }
+
   start(): void {
+    if (this.currentWave !== 0) return;
+    this.beginWave();
+  }
+
+  private beginWave(): void {
     if (this.isRunning || this.currentWave >= this.totalWaves) return;
+    this.preparationRemaining = null;
     const wave = this.waves[this.currentWave];
     this.currentWave++;
     this.groupIndex = 0;
@@ -54,7 +74,18 @@ export class WaveManager {
   // First enemy is due at time 0 (including tick(0)). Later enemies wait their
   // group's interval, including the first enemy of each subsequent nonempty group.
   tick(dt: number): string[] {
-    if (!this.isRunning || !Number.isFinite(dt) || dt < 0) return [];
+    if (!Number.isFinite(dt) || dt < 0) return [];
+    while (this.preparationRemaining !== null) {
+      const remaining = this.preparationRemaining;
+      const tolerance = Number.EPSILON * Math.max(1, remaining, dt) * 8;
+      if (dt + tolerance < remaining) {
+        this.preparationRemaining = remaining - dt;
+        return [];
+      }
+      dt = Math.max(0, dt - remaining);
+      this.beginWave();
+    }
+    if (!this.isRunning) return [];
     this.elapsed += dt;
     const groups = this.waves[this.currentWave - 1].groups;
     const spawns: string[] = [];
@@ -101,6 +132,9 @@ export class WaveManager {
     )
       return;
     this.isRunning = false;
+    if (this.currentWave < this.totalWaves) {
+      this.preparationRemaining = WAVE_PREPARATION_SECONDS;
+    }
     this.events.emit("waveCleared", { wave: this.currentWave });
   }
 }

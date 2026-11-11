@@ -23,6 +23,17 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
   };
 });
 
+const frames = vi.hoisted(() => [] as ((dt: number) => void)[]);
+vi.mock("../../core/GameLoop", () => ({
+  GameLoop: class {
+    constructor(tick: (dt: number) => void) {
+      frames.push(tick);
+    }
+    start() {}
+    stop() {}
+  },
+}));
+
 let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
@@ -185,11 +196,15 @@ describe("GameScreenController HUD event wiring", () => {
     }
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
 
-    // Wave 2 has 8 enemies. Clicking again after the last wave changes nothing.
+    // A click cannot skip preparation. Wave 2 starts automatically after 10 seconds.
     clickStartWave();
+    expect(model.waves.currentWave).toBe(1);
+    // These enemies were removed through events above; remove their stale model objects.
+    model.enemies = [];
+    model.tick(10);
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
     model.tick(7);
-    const wave2 = model.enemies.slice(model.enemies.length - 8);
+    const wave2 = [...model.enemies];
     for (const enemy of wave2) {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
@@ -210,4 +225,36 @@ describe("GameScreenController game over (So1)", () => {
     expect(switchTo).toHaveBeenCalledWith("result", model.result);
     expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
   });
+});
+
+it("refreshes timers through simulated frames and resets them on re-entry", () => {
+  const frame = frames[frames.length - 1];
+  const timer = () =>
+    controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => /^(Next Wave In|Last Enemy Spawns In):/.test(text.text()));
+  expect(timer()).toBeUndefined();
+  clickStartWave();
+  expect(timer()?.text()).toBe("Last Enemy Spawns In: 5s");
+  frame(5);
+  expect(timer()).toBeUndefined();
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  frame(0);
+  expect(timer()?.text()).toBe("Next Wave In: 10s");
+  frame(1);
+  expect(timer()?.text()).toBe("Next Wave In: 9s");
+  frame(9);
+  expect(hud()).toContain("Wave: 2/2");
+  expect(timer()?.text()).toBe("Last Enemy Spawns In: 7s");
+  const stop = vi.spyOn(GameLoop.prototype, "stop");
+  controller.hide();
+  expect(stop).toHaveBeenCalled();
+  const elapsed = model.elapsedSeconds;
+  frame(5);
+  expect(model.elapsedSeconds).toBe(elapsed);
+  controller.show();
+  model = models[models.length - 1];
+  expect(model.waves.preparationRemaining).toBeNull();
+  expect(timer()).toBeUndefined();
+  expectHud(map.startingCoins, map.startingLives, 0, 0);
 });

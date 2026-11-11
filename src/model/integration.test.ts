@@ -98,3 +98,46 @@ describe("Integration: a game on map1", () => {
     "a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)",
   );
 });
+
+it("prepares the next wave only after cleanup, then ends normally after the final wave", () => {
+  const game = new GameModel(loadMap(map1));
+  game.tick(10);
+  expect(game.waves.currentWave).toBe(0);
+  game.startNextWave();
+  game.tick(4.8);
+  expect(game.waves.lastSpawnRemaining).toBeNull();
+  expect(game.waves.preparationRemaining).toBeNull();
+  for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
+  game.tick(0);
+  expect(game.waves.preparationRemaining).toBe(10);
+  expect(game.isOver).toBe(false);
+  game.tick(9);
+  expect(game.waves.preparationRemaining).toBe(1);
+  game.startNextWave();
+  expect(game.waves.currentWave).toBe(1);
+  game.tick(1);
+  expect(game.waves.currentWave).toBe(2);
+  expect(game.enemies).toHaveLength(1);
+  game.tick(6.3);
+  for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
+  game.tick(0);
+  expect(game.result?.won).toBe(true);
+  expect(game.waves.preparationRemaining).toBeNull();
+  game.tick(100);
+  expect(game.waves.currentWave).toBe(2);
+});
+
+it("freezes preparation after defeat", () => {
+  const game = new GameModel(loadMap(map1));
+  game.startNextWave();
+  game.tick(4.8);
+  for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
+  game.tick(0);
+  expect(game.waves.preparationRemaining).toBe(10);
+  game.lives.remaining = 0;
+  game.tick(0);
+  expect(game.result?.won).toBe(false);
+  game.tick(100);
+  expect(game.waves.preparationRemaining).toBe(10);
+  expect(game.waves.currentWave).toBe(1);
+});

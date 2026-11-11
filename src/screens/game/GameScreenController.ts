@@ -49,7 +49,9 @@ export class GameScreenController implements Screen {
     const enemiesView = new EnemiesView();
 
     this.loop = new GameLoop((dt) => {
+      if (!this.active) return;
       this.model.tick(dt);
+      if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
     });
     this.view.mapGroup.destroyChildren();
@@ -63,6 +65,7 @@ export class GameScreenController implements Screen {
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
+      this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
         this.model.lives.remaining,
@@ -76,6 +79,8 @@ export class GameScreenController implements Screen {
     const events = this.model.events;
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
+      this.loop.stop();
+      this.refreshWaveTimers();
       const result = this.model.result;
       if (result) this.app.switchTo("result", result);
     });
@@ -104,6 +109,15 @@ export class GameScreenController implements Screen {
 
   resize(width: number, height: number): void {
     this.view.resize(width, height);
+  }
+
+  private refreshWaveTimers(): void {
+    const waves = this.model.waves;
+    this.view.setWaveTimers(
+      this.model.isOver ? null : waves.preparationRemaining,
+      this.model.isOver ? null : waves.lastSpawnRemaining,
+      !this.model.isOver && waves.currentWave === 0 && waves.totalWaves > 0,
+    );
   }
 
   private wirePlacement(gridView: GridView): () => void {

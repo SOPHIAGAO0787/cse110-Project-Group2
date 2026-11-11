@@ -30,6 +30,13 @@ export class GameScreenView {
   private mapCols: number;
   private mapRows: number;
   private hudText = new Konva.Text({ x: MARGIN, y: 14, fontSize: 20, fill: "white" });
+  private timerText = new Konva.Text({
+    x: 20,
+    width: SHOP_WIDTH - 40,
+    fontSize: 18,
+    fill: "white",
+    listening: false,
+  });
   private shopBackground = new Konva.Rect({ fill: "#262637", stroke: "#3a3a52" });
   private shopTitle = new Konva.Text({ x: 20, y: 20, text: "Shop", fontSize: 22, fill: "white" });
   // A short message under the HUD, e.g. "Not enough coins". Hidden until showMessage() is called.
@@ -53,7 +60,7 @@ export class GameScreenView {
     this.mapRows = mapRows;
     this.startWaveButton = makeButton("Start Wave", onStartWave);
     this.prompt = new QuestionPrompt(questions);
-    this.shopGroup.add(this.shopBackground, this.shopTitle);
+    this.shopGroup.add(this.shopBackground, this.shopTitle, this.timerText);
     this.group.add(
       this.mapGroup,
       this.hudText,
@@ -75,6 +82,16 @@ export class GameScreenView {
     this.hudText.text(
       `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
     );
+  }
+
+  setWaveTimers(preparation: number | null, lastSpawn: number | null, canStart: boolean): void {
+    const seconds = preparation ?? lastSpawn;
+    const text =
+      seconds !== null && Number.isFinite(seconds)
+        ? `${preparation !== null ? "Next Wave In" : "Last Enemy Spawns In"}: ${Math.ceil(Math.max(0, seconds))}s`
+        : "";
+    if (this.timerText.text() !== text) this.timerText.text(text);
+    this.startWaveButton.visible(canStart);
   }
 
   // Shows a message under the HUD for 2 seconds.
@@ -101,6 +118,7 @@ export class GameScreenView {
     this.shopGroup.x(width - SHOP_WIDTH);
     this.shopBackground.size({ width: SHOP_WIDTH, height });
     this.startWaveButton.position({ x: width - SHOP_WIDTH + 30, y: height - 80 });
+    this.timerText.y(height - 80);
 
     // Fit the map into the space left of the shop and below the HUD
     const areaWidth = width - SHOP_WIDTH - 2 * MARGIN;
