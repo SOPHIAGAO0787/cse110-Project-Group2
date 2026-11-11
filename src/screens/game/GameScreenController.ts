@@ -117,6 +117,11 @@ export class GameScreenController implements Screen {
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
+    //Circle Fire Animation
+    this.model.events.on("towerFired", ({ towerId }) => {    
+      const tower = this.model.towers.find((t) => t.id === towerId);
+      if (tower) pv.pulse(tower.tile, tower.def.range.radius);
+    });
 
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
