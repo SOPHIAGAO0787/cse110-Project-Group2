@@ -17,7 +17,22 @@ export class Tower {
     this.range = new CircleRange(tile, def.range.radius);
   }
 
-  update(dt: number, enemies: Enemy[]): void {
-    // Towers don't attack yet, so there is nothing to update.
-  }
+  private cooldown = 0; // seconds until the next shot
+
+    update(dt: number, enemies: Enemy[]): void {
+    this.cooldown = Math.max(0, this.cooldown - dt);
+    if (this.cooldown > 0) return;
+
+    const inRange = enemies.filter(
+        (e) => !e.isDead() && !e.reachedEnd() && this.range.contains(e.pos),
+    );
+    if (inRange.length === 0) return;   
+
+    // single target: furthest along the path, ties go to the lowest id
+    const target = inRange.reduce((best, e) =>
+        e.distance > best.distance || (e.distance === best.distance && e.id < best.id) ? e : best,
+    );
+    target.takeDamage(this.def.damage);
+    this.cooldown = 1 / this.def.fireRatePerSec;
+    }
 }
