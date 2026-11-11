@@ -34,6 +34,7 @@ export class EnemiesView {
         this.shapes.set(enemy.id, circle);
         this.group.add(circle);
       }
+      // flash red for 120 ms when the enemy loses hp
       const prev = this.lastHp.get(enemy.id);
       if (prev !== undefined && enemy.hp < prev) {
         this.flashUntil.set(enemy.id, performance.now() + 120);

@@ -19,20 +19,21 @@ export class Tower {
 
   private cooldown = 0; // seconds until the next shot
 
-    update(dt: number, enemies: Enemy[]): void {
+  update(dt: number, enemies: Enemy[]): boolean {
     this.cooldown = Math.max(0, this.cooldown - dt);
-    if (this.cooldown > 0) return;
+    if (this.cooldown > 0) return false;
 
     const inRange = enemies.filter(
-        (e) => !e.isDead() && !e.reachedEnd() && this.range.contains(e.pos),
+      (e) => !e.isDead() && !e.reachedEnd() && this.range.contains(e.pos),
     );
-    if (inRange.length === 0) return;   
+    if (inRange.length === 0) return false;
 
     // single target: furthest along the path, ties go to the lowest id
     const target = inRange.reduce((best, e) =>
-        e.distance > best.distance || (e.distance === best.distance && e.id < best.id) ? e : best,
+      e.distance > best.distance || (e.distance === best.distance && e.id < best.id) ? e : best,
     );
     target.takeDamage(this.def.damage);
     this.cooldown = 1 / this.def.fireRatePerSec;
-    }
+    return true;
+  }
 }

@@ -76,5 +76,6 @@ export interface GameEvents {
   waveStarted: { wave: number; totalWaves: number };
   waveCleared: { wave: number };
   towerPlaced: { towerId: number; defId: string; tile: Vec };
+  towerFired: { towerId: number };
   gameOver: { won: boolean };
 }
