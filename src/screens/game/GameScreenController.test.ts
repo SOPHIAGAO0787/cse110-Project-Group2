@@ -310,6 +310,41 @@ describe("GameScreenController settings", () => {
   });
 });
 
+describe("GameScreenController mini-game bonus coins", () => {
+  // Starts a new game, the way the App does when the player picks a map again
+  function startNewGame(): void {
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+  }
+
+  it("adds the bonus to the starting coins", () => {
+    progress.addMiniGameReward(3);
+    startNewGame();
+    expectHud(map.startingCoins + progress.bonusCoins, map.startingLives, 0, 0);
+  });
+
+  it("uses up the bonus when the game ends", () => {
+    progress.addMiniGameReward(3);
+    startNewGame();
+    model.lives.remaining = 0;
+    model.tick(0);
+
+    expect(progress.bonusCoins).toBe(0);
+    startNewGame();
+    expectHud(map.startingCoins, map.startingLives, 0, 0);
+  });
+
+  it("keeps the bonus when the player leaves before the game ends", () => {
+    progress.addMiniGameReward(3);
+    const bonus = progress.bonusCoins;
+    startNewGame();
+    clickIcon("back");
+
+    expect(progress.bonusCoins).toBe(bonus);
+  });
+});
+
 describe("GameScreenController map choice", () => {
   it("plays the map picked on the map screen", () => {
     controller.hide();
