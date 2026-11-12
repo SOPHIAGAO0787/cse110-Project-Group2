@@ -1,7 +1,7 @@
 import type { EventBus } from "../core/EventBus";
 import type { WaveConfig } from "./types";
 
-export const WAVE_PREPARATION_SECONDS = 10;
+export const WAVE_PREPARATION_SECONDS = 20;
 
 // Schedules enemy definition IDs; GameModel creates enemies and announces their IDs.
 export class WaveManager {
