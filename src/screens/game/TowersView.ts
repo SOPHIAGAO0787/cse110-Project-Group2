@@ -14,6 +14,21 @@ class CircleSprite implements TowerSprite {
   group = new Konva.Group({ listening: false });
   private body = new Konva.Circle({ radius: TILE / 2, fill: "#2a5d99" });
   private radiusPx: number;
+  private shakeAnim: Konva.Animation | null = null;
+  private startShake(): void {
+    this.shakeAnim?.stop();
+    this.shakeAnim = new Konva.Animation((frame) => {
+      const t = frame.time / 300; // 0 to 1 over 300 ms
+      if (t >= 1) {
+        this.body.x(0); // always finish centered
+        this.shakeAnim?.stop();
+        return;
+      }
+      this.body.x(3 * (1 - t) * Math.sin(t * Math.PI * 6)); // wobbles x
+      this.body.y(2 * (1 - t) * Math.sin(t * Math.PI * 3)); // wobbles y
+    }, this.body.getLayer());
+    this.shakeAnim.start();
+  }
 
   constructor(def: TowerDef) {
     this.radiusPx = def.range.radius * TILE;
@@ -21,7 +36,7 @@ class CircleSprite implements TowerSprite {
   }
 
   fire(): void {
-    // ring grows to the full radius and fades out
+    // expanding ring (unchanged)
     const ring = new Konva.Circle({
       radius: 0,
       stroke: "#4a90d9",
@@ -38,17 +53,17 @@ class CircleSprite implements TowerSprite {
       easing: Konva.Easings.EaseOut,
       onFinish: () => ring.destroy(),
     }).play();
-
-    // quick pop on the tower body
     new Konva.Tween({
+      //Tower bounce
       node: this.body,
       duration: 0.06,
-      scaleX: 1.15,
-      scaleY: 1.15,
+      scaleX: 0.85,
+      scaleY: 0.85,
       onFinish: () => {
         new Konva.Tween({ node: this.body, duration: 0.1, scaleX: 1, scaleY: 1 }).play();
       },
     }).play();
+    this.startShake();
   }
 }
 
