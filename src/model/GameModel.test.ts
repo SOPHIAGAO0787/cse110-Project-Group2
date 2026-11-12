@@ -226,6 +226,48 @@ describe("GameModel enemy cleanup (R2)", () => {
   });
 });
 
+// B2: towers shoot enemies in range
+describe("GameModel tower firing (B2)", () => {
+  const tile = { x: 0, y: 2 };
+
+  it("emits towerFired when a tower shoots an enemy in range", () => {
+    const game = new GameModel(loadMap(map1));
+    const fired: number[] = [];
+    game.events.on("towerFired", (e) => fired.push(e.towerId));
+
+    game.tryPlaceTower("circle", tile);
+    game.spawnEnemy("basic");
+    game.tick(0.016);
+
+    expect(fired).toEqual([game.towers[0].id]);
+  });
+
+  it("does not fire when no enemy is in range", () => {
+    const game = new GameModel(loadMap(map1));
+    const fired: number[] = [];
+    game.events.on("towerFired", (e) => fired.push(e.towerId));
+
+    game.tryPlaceTower("circle", tile);
+    game.tick(0.016);
+
+    expect(fired).toEqual([]);
+  });
+
+  it("awards coins when a tower kills an enemy", () => {
+    const game = new GameModel(loadMap(map1));
+    game.tryPlaceTower("circle", tile);
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    enemy.takeDamage(enemy.hp - 1); // one hit from dead
+    const coinsBefore = game.wallet.coins;
+
+    game.tick(0.016);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.wallet.coins).toBe(coinsBefore + enemy.def.reward);
+  });
+});
+
 // So1: the game ends in victory or defeat and records its stats for the result screen.
 // map1 has two waves with 13 enemies in total, so with no towers every enemy leaks:
 // 14 lives survive with 1 left, 13 or fewer lose.
