@@ -91,6 +91,9 @@ export class GameScreenView {
         ? `${preparation !== null ? "Next Wave In" : "Last Enemy Spawns In"}: ${Math.ceil(Math.max(0, seconds))}s`
         : "";
     if (this.timerText.text() !== text) this.timerText.text(text);
+    this.startWaveButton
+      .findOne<Konva.Text>("Text")!
+      .text(preparation !== null ? "Start Next Wave" : "Start Wave");
     this.startWaveButton.visible(canStart);
   }
 
@@ -118,7 +121,7 @@ export class GameScreenView {
     this.shopGroup.x(width - SHOP_WIDTH);
     this.shopBackground.size({ width: SHOP_WIDTH, height });
     this.startWaveButton.position({ x: width - SHOP_WIDTH + 30, y: height - 80 });
-    this.timerText.y(height - 80);
+    this.timerText.y(height - 140);
 
     // Fit the map into the space left of the shop and below the HUD
     const areaWidth = width - SHOP_WIDTH - 2 * MARGIN;

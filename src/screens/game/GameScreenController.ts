@@ -116,7 +116,10 @@ export class GameScreenController implements Screen {
     this.view.setWaveTimers(
       this.model.isOver ? null : waves.preparationRemaining,
       this.model.isOver ? null : waves.lastSpawnRemaining,
-      !this.model.isOver && waves.currentWave === 0 && waves.totalWaves > 0,
+      !this.model.isOver &&
+        !waves.isRunning &&
+        waves.currentWave < waves.totalWaves &&
+        (waves.currentWave === 0 || waves.preparationRemaining !== null),
     );
   }
 

@@ -48,7 +48,7 @@ export class WaveManager {
   }
 
   start(): void {
-    if (this.currentWave !== 0) return;
+    if (this.currentWave !== 0 && this.preparationRemaining === null) return;
     this.beginWave();
   }
 

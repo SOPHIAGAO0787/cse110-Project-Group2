@@ -54,7 +54,9 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
 
 // Clicks the real Start Wave button on the screen.
 function clickStartWave(): void {
-  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Start Wave");
+  const label = controller.group
+    .find<Konva.Text>("Text")
+    .find((t) => ["Start Wave", "Start Next Wave"].includes(t.text()));
   if (label === undefined) {
     throw new Error("Start Wave button is missing from the screen");
   }
@@ -196,12 +198,12 @@ describe("GameScreenController HUD event wiring", () => {
     }
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
 
-    // A click cannot skip preparation. Wave 2 starts automatically after 10 seconds.
+    // A click skips preparation and starts wave 2 immediately.
     clickStartWave();
-    expect(model.waves.currentWave).toBe(1);
+    expect(model.waves.currentWave).toBe(2);
     // These enemies were removed through events above; remove their stale model objects.
     model.enemies = [];
-    model.tick(10);
+    model.tick(0);
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
     model.tick(7);
     const wave2 = [...model.enemies];
@@ -257,4 +259,42 @@ it("refreshes timers through simulated frames and resets them on re-entry", () =
   expect(model.waves.preparationRemaining).toBeNull();
   expect(timer()).toBeUndefined();
   expectHud(map.startingCoins, map.startingLives, 0, 0);
+});
+
+it("shows an early-start button only during preparation and clears it after the final wave", () => {
+  const button = () =>
+    controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => ["Start Wave", "Start Next Wave"].includes(text.text()))!;
+  expect(button().text()).toBe("Start Wave");
+  expect(button().getParent()!.visible()).toBe(true);
+  clickStartWave();
+  expect(button().getParent()!.visible()).toBe(false);
+  model.tick(4.8);
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  model.tick(0);
+  expect(button().text()).toBe("Start Next Wave");
+  expect(button().getParent()!.visible()).toBe(true);
+  clickStartWave();
+  clickStartWave();
+  expect(model.waves.currentWave).toBe(2);
+  expect(model.waves.preparationRemaining).toBeNull();
+  expect(button().getParent()!.visible()).toBe(false);
+  expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
+  model.tick(6.3);
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  model.tick(0);
+  expect(model.result?.won).toBe(true);
+  expect(button().getParent()!.visible()).toBe(false);
+  expect(
+    controller.group
+      .find<Konva.Text>("Text")
+      .some((text) => text.text().startsWith("Next Wave In:")),
+  ).toBe(false);
+  clickStartWave();
+  expect(model.waves.currentWave).toBe(2);
+  controller.hide();
+  controller.show();
+  expect(button().text()).toBe("Start Wave");
+  expect(button().getParent()!.visible()).toBe(true);
 });

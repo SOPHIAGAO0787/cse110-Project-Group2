@@ -113,8 +113,6 @@ it("prepares the next wave only after cleanup, then ends normally after the fina
   expect(game.isOver).toBe(false);
   game.tick(9);
   expect(game.waves.preparationRemaining).toBe(1);
-  game.startNextWave();
-  expect(game.waves.currentWave).toBe(1);
   game.tick(1);
   expect(game.waves.currentWave).toBe(2);
   expect(game.enemies).toHaveLength(1);

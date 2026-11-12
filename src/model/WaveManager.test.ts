@@ -270,7 +270,6 @@ describe("wave preparation and last spawn timing", () => {
     expect(manager.preparationRemaining).toBeNull();
     events.emit("enemyLeaked", { enemyId: last.id });
     expect(manager.preparationRemaining).toBe(10);
-    manager.start();
     expect(manager.currentWave).toBe(1);
     for (const dt of [0, -1, NaN, Infinity]) spawn(dt);
     expect(manager.preparationRemaining).toBe(10);
@@ -334,4 +333,34 @@ describe("wave preparation and last spawn timing", () => {
     expect(spawn(0)).toHaveLength(2);
     expect(manager.lastSpawnRemaining).toBeNull();
   });
+});
+
+it("manually skips preparation, resets timing, and ignores repeated or active starts", () => {
+  const { manager, events, spawn } = setup([
+    { groups: [group("basic", 1, 1)] },
+    { groups: [group("fast", 2, 2)] },
+  ]);
+  const started: number[] = [];
+  events.on("waveStarted", ({ wave }) => started.push(wave));
+  manager.start();
+  const [first] = spawn(0);
+  events.emit("enemyKilled", { enemyId: first.id, reward: 0 });
+  spawn(3);
+  expect(manager.preparationRemaining).toBe(7);
+  manager.start();
+  manager.start();
+  expect(started).toEqual([1, 2]);
+  expect(manager.preparationRemaining).toBeNull();
+  expect(manager.lastSpawnRemaining).toBe(2);
+  const [second] = spawn(0);
+  manager.start();
+  expect(spawn(1)).toEqual([]);
+  const [third] = spawn(1);
+  manager.start();
+  expect(started).toEqual([1, 2]);
+  events.emit("enemyLeaked", { enemyId: second.id });
+  events.emit("enemyLeaked", { enemyId: third.id });
+  manager.start();
+  expect(manager.preparationRemaining).toBeNull();
+  expect(started).toEqual([1, 2]);
 });
