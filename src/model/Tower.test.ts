@@ -51,4 +51,3 @@ describe("Tower.update", () => {
     expect(behind.hp).toBe(behind.def.hp);
   });
 });
-
