@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import map1 from "../data/maps/map1.json";
+import { WAVE_PREPARATION_SECONDS } from "./WaveManager";
 import { GameModel } from "./GameModel";
 import { ENEMIES, loadMap } from "./loadContent";
 
@@ -109,9 +110,9 @@ it("prepares the next wave only after cleanup, then ends normally after the fina
   expect(game.waves.preparationRemaining).toBeNull();
   for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
   game.tick(0);
-  expect(game.waves.preparationRemaining).toBe(10);
+  expect(game.waves.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
   expect(game.isOver).toBe(false);
-  game.tick(9);
+  game.tick(WAVE_PREPARATION_SECONDS - 1);
   expect(game.waves.preparationRemaining).toBe(1);
   game.tick(1);
   expect(game.waves.currentWave).toBe(2);
@@ -131,11 +132,11 @@ it("freezes preparation after defeat", () => {
   game.tick(4.8);
   for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
   game.tick(0);
-  expect(game.waves.preparationRemaining).toBe(10);
+  expect(game.waves.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
   game.lives.remaining = 0;
   game.tick(0);
   expect(game.result?.won).toBe(false);
   game.tick(100);
-  expect(game.waves.preparationRemaining).toBe(10);
+  expect(game.waves.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
   expect(game.waves.currentWave).toBe(1);
 });

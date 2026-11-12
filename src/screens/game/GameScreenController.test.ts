@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
+import { WAVE_PREPARATION_SECONDS } from "../../model/WaveManager";
+import { GridView } from "./GridView";
+import { QuestionPrompt } from "./QuestionPrompt";
+import { QuestionService } from "../../model/questions/QuestionService";
+import { TOWERS } from "../../model/loadContent";
 import map from "../../data/maps/map1.json";
 
 // Capture real model instances without exposing the controller's private fields.
@@ -242,10 +247,10 @@ it("refreshes timers through simulated frames and resets them on re-entry", () =
   expect(timer()).toBeUndefined();
   for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
   frame(0);
-  expect(timer()?.text()).toBe("Next Wave In: 10s");
+  expect(timer()?.text()).toBe(`Next Wave In: ${WAVE_PREPARATION_SECONDS}s`);
   frame(1);
-  expect(timer()?.text()).toBe("Next Wave In: 9s");
-  frame(9);
+  expect(timer()?.text()).toBe(`Next Wave In: ${WAVE_PREPARATION_SECONDS - 1}s`);
+  frame(WAVE_PREPARATION_SECONDS - 1);
   expect(hud()).toContain("Wave: 2/2");
   expect(timer()?.text()).toBe("Last Enemy Spawns In: 7s");
   const stop = vi.spyOn(GameLoop.prototype, "stop");
@@ -297,4 +302,144 @@ it("shows an early-start button only during preparation and clears it after the 
   controller.show();
   expect(button().text()).toBe("Start Wave");
   expect(button().getParent()!.visible()).toBe(true);
+});
+
+const press = (key: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key }));
+const settlePlacement = async () => {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+};
+
+function openPlacementQuestion() {
+  vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+  vi.spyOn(QuestionService.prototype, "questionFor").mockReturnValue({
+    id: "test",
+    prompt: "2 + 3?",
+    answer: 5,
+    tolerance: 0,
+    hint: "Add them.",
+  });
+  const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+  const card = controller.group
+    .find<Konva.Text>("Text")
+    .find((text) => text.text() === TOWERS.find((tower) => tower.id === "circle")!.name)!
+    .getParent()!;
+  card.fire("pointerdown");
+  window.dispatchEvent(new Event("pointerup"));
+  press("Enter");
+  expect(ask).toHaveBeenCalledTimes(1);
+  return { ask, card, prompt: ask.mock.instances[0] as QuestionPrompt };
+}
+
+it("keeps simulation and automatic waves running while an unanswered prompt stays functional", async () => {
+  clickStartWave();
+  const frame = frames[frames.length - 1];
+  frame(4.8);
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  frame(0);
+  const stop = vi.spyOn(GameLoop.prototype, "stop");
+  const start = vi.spyOn(GameLoop.prototype, "start").mockClear();
+  const { prompt } = openPlacementQuestion();
+  frame(1);
+  expect(model.waves.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS - 1);
+  for (let i = 0; i < WAVE_PREPARATION_SECONDS - 1; i++) frame(1);
+  expect(model.waves.currentWave).toBe(2);
+  expect(model.enemies).toHaveLength(1);
+  const distance = model.enemies[0].distance;
+  frame(1);
+  expect(model.enemies.length).toBeGreaterThan(1);
+  expect(model.enemies[0].distance).toBeGreaterThan(distance);
+  expect(prompt.group.visible()).toBe(true);
+  press("5");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(1);
+  expect(stop).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+});
+
+it("prevents duplicate prompts and placements while retaining retries", async () => {
+  const { ask, card, prompt } = openPlacementQuestion();
+  card.fire("pointerdown");
+  window.dispatchEvent(new Event("pointerup"));
+  press("4");
+  press("Enter");
+  expect(model.towers).toHaveLength(0);
+  expect(prompt.group.visible()).toBe(true);
+  expect(ask).toHaveBeenCalledTimes(1);
+  press("5");
+  press("Enter");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(1);
+  expect(ask).toHaveBeenCalledTimes(1);
+});
+
+it("does not place a tower after exhausting incorrect answers", async () => {
+  openPlacementQuestion();
+  press("4");
+  press("Enter");
+  press("4");
+  press("Enter");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+});
+
+it.each(["defeat", "victory"])(
+  "cancels a pending question on %s without relying on navigation",
+  async (outcome) => {
+    const { prompt } = openPlacementQuestion();
+    if (outcome === "defeat") model.lives.remaining = 0;
+    else model.events.emit("waveCleared", { wave: model.waves.totalWaves });
+    frames[frames.length - 1](0);
+    expect(prompt.group.visible()).toBe(false);
+    press("5");
+    press("Enter");
+    await settlePlacement();
+    expect(model.towers).toHaveLength(0);
+    expect(switchTo).toHaveBeenCalledWith("result", model.result);
+  },
+);
+
+it("rejects an already-correct answer if game over occurs before the continuation", async () => {
+  openPlacementQuestion();
+  press("5");
+  press("Enter");
+  model.lives.remaining = 0;
+  frames[frames.length - 1](0);
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+});
+
+it("invalidates a resolved answer when leaving and immediately re-entering", async () => {
+  const { prompt } = openPlacementQuestion();
+  press("5");
+  press("Enter");
+  const oldModel = model;
+  controller.hide();
+  expect(prompt.group.visible()).toBe(false);
+  controller.show();
+  model = models[models.length - 1];
+  await settlePlacement();
+  expect(oldModel.towers).toHaveLength(0);
+  expect(model.towers).toHaveLength(0);
+  expect(model.waves.currentWave).toBe(0);
+});
+
+it("cancels an unanswered question on leaving", async () => {
+  const { prompt } = openPlacementQuestion();
+  controller.hide();
+  expect(prompt.group.visible()).toBe(false);
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+});
+
+it("rechecks funds after a correct answer", async () => {
+  openPlacementQuestion();
+  model.wallet.spend(model.wallet.coins);
+  press("5");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+  expect(model.wallet.coins).toBe(0);
 });

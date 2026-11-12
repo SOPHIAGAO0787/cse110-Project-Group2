@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EventBus } from "../core/EventBus";
-import { WaveManager } from "./WaveManager";
+import { WaveManager, WAVE_PREPARATION_SECONDS } from "./WaveManager";
 import type { WaveConfig } from "./types";
 
 const group = (enemy: string, count: number, intervalSec: number) => ({
@@ -110,7 +110,7 @@ describe("WaveManager (N1)", () => {
     manager.start();
     const [first] = spawn(50);
     events.emit("enemyKilled", { enemyId: first.id, reward: 5 });
-    const [second] = spawn(10);
+    const [second] = spawn(WAVE_PREPARATION_SECONDS);
     expect(manager.currentWave).toBe(2);
     expect(manager.enemiesLeft).toBe(2);
     expect(spawn(0)).toEqual([]);
@@ -230,9 +230,9 @@ describe("WaveManager (N1)", () => {
     events.on("waveCleared", ({ wave }) => seen.push(`clear${wave}`));
     manager.start();
     expect(manager.isRunning).toBe(false);
-    manager.tick(10);
+    manager.tick(WAVE_PREPARATION_SECONDS);
     expect(manager.isRunning).toBe(false);
-    const initial = spawn(10);
+    const initial = spawn(WAVE_PREPARATION_SECONDS);
     expect(manager.enemiesLeft).toBe(2);
     const [first] = initial;
     expect(first.defId).toBe("basic");
@@ -269,15 +269,15 @@ describe("wave preparation and last spawn timing", () => {
     expect(manager.lastSpawnRemaining).toBeNull();
     expect(manager.preparationRemaining).toBeNull();
     events.emit("enemyLeaked", { enemyId: last.id });
-    expect(manager.preparationRemaining).toBe(10);
+    expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
     expect(manager.currentWave).toBe(1);
     for (const dt of [0, -1, NaN, Infinity]) spawn(dt);
-    expect(manager.preparationRemaining).toBe(10);
+    expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
     spawn(3);
-    expect(manager.preparationRemaining).toBe(7);
+    expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS - 3);
     const started: number[] = [];
     events.on("waveStarted", ({ wave }) => started.push(wave));
-    const [next] = spawn(7);
+    const [next] = spawn(WAVE_PREPARATION_SECONDS - 3);
     expect(started).toEqual([2]);
     expect(manager.preparationRemaining).toBeNull();
     manager.start();
@@ -294,8 +294,10 @@ describe("wave preparation and last spawn timing", () => {
     const small = setup(waves);
     large.manager.start();
     small.manager.start();
-    const expected = large.spawn(10.75).map((e) => e.defId);
-    const actual = Array.from({ length: 43 }, () => small.spawn(0.25))
+    const expected = large.spawn(WAVE_PREPARATION_SECONDS + 0.75).map((e) => e.defId);
+    const actual = Array.from({ length: (WAVE_PREPARATION_SECONDS + 0.75) / 0.25 }, () =>
+      small.spawn(0.25),
+    )
       .flat()
       .map((e) => e.defId);
     expect(actual).toEqual(expected);
@@ -346,7 +348,7 @@ it("manually skips preparation, resets timing, and ignores repeated or active st
   const [first] = spawn(0);
   events.emit("enemyKilled", { enemyId: first.id, reward: 0 });
   spawn(3);
-  expect(manager.preparationRemaining).toBe(7);
+  expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS - 3);
   manager.start();
   manager.start();
   expect(started).toEqual([1, 2]);
