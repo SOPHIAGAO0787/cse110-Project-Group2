@@ -87,10 +87,10 @@ export class GameScreenController implements Screen {
     events.on("waveStarted", refreshHud);
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
-    events.on("enemyLeaked", refreshHud);  //listeners for add/fire
+    events.on("enemyLeaked", refreshHud); //listeners for add/fire
     events.on("towerPlaced", ({ towerId }) => {
-        const tower = this.model.towers.find((t) => t.id === towerId);
-        if (tower) towersView.add(tower);
+      const tower = this.model.towers.find((t) => t.id === towerId);
+      if (tower) towersView.add(tower);
     });
     events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
 
