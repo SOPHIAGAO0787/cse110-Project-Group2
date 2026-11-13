@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { rangeReach } from "../towerConfig";
 
 // A circle tower with two upgrades.
 function validConfig() {
@@ -43,7 +42,7 @@ describe("loadShopContent", () => {
       {
         damage: tower.def.damage,
         attackSpeed: tower.def.fireRatePerSec,
-        radius: rangeReach(tower.def),
+        radius: tower.def.range.radius,
         upgradeCost: 75,
       },
       { damage: 8, attackSpeed: 1.2, radius: 2.8, upgradeCost: 125 },

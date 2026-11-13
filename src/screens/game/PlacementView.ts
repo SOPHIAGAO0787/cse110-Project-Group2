@@ -1,10 +1,7 @@
 import Konva from "konva";
 import { TILE } from "./GameScreenView";
 import { tileToPixel } from "./coords";
-import { sectorRadius } from "../../model/geometry/sector";
-import type { TowerDef, Vec } from "../../model/types";
-
-const toDegrees = (radians: number) => (radians * 180) / Math.PI;
+import type { Vec } from "../../model/types";
 
 export class PlacementView {
   group = new Konva.Group({ listening: false }); // so GridView's hover still gets the mouse
@@ -13,21 +10,21 @@ export class PlacementView {
 
   private ghost = new Konva.Circle({ radius: TILE / 2, opacity: 0.6, visible: false });
   private range = new Konva.Circle({ stroke: "#4a90d9", fill: "#4a90d933", visible: false });
-  // the triangle tower's cone, shown instead of the ring
-  private wedge = new Konva.Wedge({
-    radius: 0,
-    angle: 0,
-    stroke: "#4a90d9",
-    fill: "#4a90d933",
-    visible: false,
-    listening: false,
-  });
-  private def: TowerDef;
+  private towers = new Konva.Group(); // holds the placed-tower markers
 
-  constructor(def: TowerDef) {
-    this.def = def;
-    if (def.range.kind === "circle") this.range.radius(def.range.radius * TILE);
-    this.group.add(this.range, this.wedge, this.ghost);
+  constructor(radiusTiles: number) {
+    this.range.radius(radiusTiles * TILE);
+    this.group.add(this.towers, this.range, this.ghost);
+  }
+
+  addTower(tile: Vec): void {
+    this.towers.add(
+      new Konva.Circle({
+        ...tileToPixel(tile, TILE),
+        radius: TILE / 2,
+        fill: "#2a5d99",
+      }),
+    );
   }
 
   show(tile: Vec, valid: boolean): void {
@@ -36,26 +33,11 @@ export class PlacementView {
       .position(px)
       .fill(valid ? "#4a90d9" : "#d94a4a")
       .visible(true);
-    // circle towers show their ring; cone towers show nothing extra until showSector is called
-    this.range.position(px).visible(this.def.range.kind === "circle");
-  }
-
-  // Shows the triangle's cone: facing and spread in radians, reach from the constant area.
-  showSector(tile: Vec, cfg: { facing: number; spread: number }): void {
-    if (this.def.range.kind !== "sector") return;
-    this.range.visible(false);
-    this.wedge
-      .position(tileToPixel(tile, TILE))
-      .radius(sectorRadius(cfg.spread, this.def.range.area) * TILE)
-      .angle(toDegrees(cfg.spread))
-      // a Wedge starts at its rotation and sweeps clockwise, so back up half the angle to centre it
-      .rotation(toDegrees(cfg.facing) - toDegrees(cfg.spread) / 2)
-      .visible(true);
+    this.range.position(px).visible(true);
   }
 
   hide(): void {
     this.ghost.visible(false);
     this.range.visible(false);
-    this.wedge.visible(false);
   }
 }

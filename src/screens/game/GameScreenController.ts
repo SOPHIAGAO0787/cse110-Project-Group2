@@ -12,7 +12,6 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
-import { TowersView } from "./TowersView";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -48,11 +47,10 @@ export class GameScreenController implements Screen {
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
-    const towersView = new TowersView();
+
     this.loop = new GameLoop((dt) => {
       this.model.tick(dt);
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
-      towersView.update(this.model.towers, this.model.enemies, dt); // towers turn towards their targets
     });
     this.view.mapGroup.destroyChildren();
 
@@ -60,7 +58,6 @@ export class GameScreenController implements Screen {
 
     //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
-    this.view.mapGroup.add(towersView.group);
     this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
 
     this.cleanupPlacement = this.wirePlacement(gridView);
@@ -88,12 +85,7 @@ export class GameScreenController implements Screen {
     events.on("waveStarted", refreshHud);
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
-    events.on("enemyLeaked", refreshHud); //listeners for add/fire
-    events.on("towerPlaced", ({ towerId }) => {
-      const tower = this.model.towers.find((t) => t.id === towerId);
-      if (tower) towersView.add(tower);
-    });
-    events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
+    events.on("enemyLeaked", refreshHud);
 
     this.active = true;
     this.group.visible(true);
@@ -117,7 +109,7 @@ export class GameScreenController implements Screen {
   private wirePlacement(gridView: GridView): () => void {
     const placement = new PlacementModel();
     const def = TOWERS.find((d) => d.id === "circle")!;
-    const pv = new PlacementView(def);
+    const pv = new PlacementView(def.range.radius);
     this.view.mapGroup.add(pv.group);
 
     const card = new InGameTowerCard(def, pv.menuCircle);
@@ -170,7 +162,7 @@ export class GameScreenController implements Screen {
 
       placement.confirm(); // state: idle
       pv.hide();
-      this.commitTower(tile);
+      if (this.commitTower(tile)) pv.addTower(tile);
     };
 
     const onDown = () => {

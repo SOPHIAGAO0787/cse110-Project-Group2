@@ -1,5 +1,4 @@
 import Konva from "konva";
-import { describeRange } from "../../model/towerConfig";
 import type { TowerDef } from "../../model/types";
 
 export class InGameTowerCard {
@@ -57,7 +56,7 @@ export class InGameTowerCard {
       text: [
         `Damage: ${def.damage}`,
         `Attack speed: ${def.fireRatePerSec} shots/sec`,
-        `Range: ${describeRange(def)}`,
+        `Range: ${def.range.radius} tiles`,
       ].join("\n"),
       fontSize: 15,
       fill: "white",

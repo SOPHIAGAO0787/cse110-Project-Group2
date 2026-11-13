@@ -12,7 +12,6 @@ const tower: TowerDef = {
   cost: 50,
   damage: 5,
   fireRatePerSec: 1,
-  attack: "all",
   range: { kind: "circle", radius: 2.5 },
 };
 

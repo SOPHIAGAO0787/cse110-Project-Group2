@@ -10,8 +10,6 @@ export class EnemiesView {
 
   // Maps each enemy's unique ID to its Konva shape.
   private shapes = new Map<number, Konva.Circle>();
-  private lastHp = new Map<number, number>();
-  private flashUntil = new Map<number, number>();
 
   sync(enemies: Enemy[]): void {
     const activeIds = new Set<number>();
@@ -34,14 +32,6 @@ export class EnemiesView {
         this.shapes.set(enemy.id, circle);
         this.group.add(circle);
       }
-      // flash red for 120 ms when the enemy loses hp
-      const prev = this.lastHp.get(enemy.id);
-      if (prev !== undefined && enemy.hp < prev) {
-        this.flashUntil.set(enemy.id, performance.now() + 120);
-      }
-      this.lastHp.set(enemy.id, enemy.hp);
-      const flashing = performance.now() < (this.flashUntil.get(enemy.id) ?? 0);
-      circle.fill(flashing ? "#ff3b3b" : enemy.def.color);
 
       // Model positions are tile coordinates.
       // Convert them to the center of the corresponding tile.
@@ -56,8 +46,6 @@ export class EnemiesView {
       if (!activeIds.has(id)) {
         circle.destroy();
         this.shapes.delete(id);
-        this.lastHp.delete(id);
-        this.flashUntil.delete(id);
       }
     }
   }

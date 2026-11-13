@@ -6,8 +6,7 @@ import { ENEMIES, TOWERS } from "./loadContent";
 import { Lives } from "./Lives";
 import { Path } from "./Path";
 import { Tower } from "./Tower";
-import { defaultConfig, normalizeConfig } from "./towerConfig";
-import type { MapConfig, PlaceResult, TowerConfig, Vec } from "./types";
+import type { MapConfig, PlaceResult, Vec } from "./types";
 import { Wallet } from "./Wallet";
 import { WaveManager } from "./WaveManager";
 
@@ -64,9 +63,7 @@ export class GameModel {
 
     // 3. Towers shoot enemies in range (R3)
     for (const tower of this.towers) {
-      if (tower.update(dt, this.enemies) > 0) {
-        this.events.emit("towerFired", { towerId: tower.id });
-      }
+      tower.update(dt, this.enemies);
     }
 
     // 4. R2: Remove dead enemies and enemies that reached the end.
@@ -121,11 +118,9 @@ export class GameModel {
   }
 
   // Places a tower if the tile is free and the player can afford it, otherwise says why not.
-  tryPlaceTower(defId: string, tile: Vec, config?: TowerConfig): PlaceResult {
+  tryPlaceTower(defId: string, tile: Vec): PlaceResult {
     const def = TOWERS.find((d) => d.id === defId);
     if (!def) throw new Error(`Unknown tower "${defId}"`);
-    // Check the config before anything is spent or occupied, so a bad config can't cost coins.
-    const finalConfig = normalizeConfig(def, config ?? defaultConfig(def));
 
     if (this.grid.isOccupied(tile)) return "occupied"; // check first: isBuildable is also false when occupied
     if (!this.grid.isBuildable(tile)) return "blocked";
@@ -135,7 +130,7 @@ export class GameModel {
     }
 
     this.grid.occupy(tile);
-    const tower = new Tower(this.nextTowerId++, def, tile, finalConfig);
+    const tower = new Tower(this.nextTowerId++, def, tile);
     this.towers.push(tower);
     this.towersPlaced++;
     this.events.emit("towerPlaced", { towerId: tower.id, defId: def.id, tile });
