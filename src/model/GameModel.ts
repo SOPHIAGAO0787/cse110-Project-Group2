@@ -5,6 +5,7 @@ import { starRating, type GameResult } from "./GameResult";
 import { ENEMIES, TOWERS } from "./loadContent";
 import { Lives } from "./Lives";
 import { Path } from "./Path";
+import { PlayerProgress } from "./PlayerProgress";
 import { Tower } from "./Tower";
 import type { MapConfig, PlaceResult, Vec } from "./types";
 import { Wallet } from "./Wallet";
@@ -34,7 +35,10 @@ export class GameModel {
   private finalWaveCleared = false;
   private finalResult: GameResult | null = null; // set once, when the game ends
 
-  constructor(map: MapConfig) {
+  constructor(
+    map: MapConfig,
+    private progress: PlayerProgress = new PlayerProgress(),
+  ) {
     this.map = map;
     this.path = new Path(map.path);
     this.grid = new Grid(map);
@@ -121,6 +125,8 @@ export class GameModel {
   tryPlaceTower(defId: string, tile: Vec): PlaceResult {
     const def = TOWERS.find((d) => d.id === defId);
     if (!def) throw new Error(`Unknown tower "${defId}"`);
+
+    if (this.progress.getMaxLevel(defId) < 0) return "locked";
 
     if (this.grid.isOccupied(tile)) return "occupied"; // check first: isBuildable is also false when occupied
     if (!this.grid.isBuildable(tile)) return "blocked";

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GameModel } from "./GameModel";
+import { PlayerProgress } from "./PlayerProgress";
 import { loadMap, TOWERS } from "./loadContent";
 import map1 from "../data/maps/map1.json";
 import type { Vec } from "./types";
@@ -50,6 +51,22 @@ describe("GameModel.tryPlaceTower", () => {
   const map = loadMap(map1);
   const buildTile = findTile(map.tiles, "#");
   const pathTile = findTile(map.tiles, "P");
+
+  it("rejects a locked tower without spending coins or occupying its tile", () => {
+    const progress = new PlayerProgress();
+    progress.maxLevels.delete("circle");
+    const model = new GameModel(map, progress);
+    const startingCoins = model.wallet.coins;
+
+    expect(model.tryPlaceTower("circle", buildTile)).toBe("locked");
+    expect(model.wallet.coins).toBe(startingCoins);
+    expect(model.towers).toHaveLength(0);
+    expect(model.grid.isOccupied(buildTile)).toBe(false);
+
+    // Unlocking through the same shared object allows placement.
+    progress.maxLevels.set("circle", 0);
+    expect(model.tryPlaceTower("circle", buildTile)).toBe("ok");
+  });
 
   it("ok on a # tile, and the tower is added to the model", () => {
     const model = new GameModel(map);
