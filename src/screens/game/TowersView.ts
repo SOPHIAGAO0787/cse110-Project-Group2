@@ -1,6 +1,7 @@
 import Konva from "konva";
 import { TILE } from "./GameScreenView";
 import { tileToPixel } from "./coords";
+import type { Enemy } from "../../model/Enemy";
 import type { Tower } from "../../model/Tower";
 import type { Vec } from "../../model/types";
 
@@ -10,7 +11,11 @@ const toDegrees = (radians: number) => (radians * 180) / Math.PI;
 interface TowerSprite {
   group: Konva.Group; // the tower's visual, positioned at its tile
   fire(): void; // the animation when it shoots
+  // Called every frame with where the tower's target is (null if none); dt is in seconds.
+  update?(target: Vec | null, dt: number): void;
 }
+
+const TURN_SPEED = 10; // radians per second, how fast a triangle swings towards its target
 
 // Wobbles a node around its resting position at (0, 0) for 300 ms, then puts it back exactly.
 class Shake {
@@ -88,11 +93,18 @@ class CircleSprite implements TowerSprite {
 
 class TriangleSprite implements TowerSprite {
   group = new Konva.Group({ listening: false });
-  private body = new Konva.RegularPolygon({ sides: 3, radius: TILE / 2, fill: "#2a8f5d" });
+  // A pointed dart that points along +x, so its rotation is simply the angle it aims at.
+  // (An equilateral triangle looks the same after a 120° turn, so you couldn't tell where it aims.)
+  private body = new Konva.Line({
+    points: [TILE * 0.55, 0, -TILE * 0.35, TILE * 0.3, -TILE * 0.35, -TILE * 0.3],
+    closed: true,
+    fill: "#2a8f5d",
+  });
   private shake: Shake;
   private tower: Tower;
-  private facing: number;
+  private facing: number; // where the cone points (the real hit area; never changes)
   private spread: number;
+  private angle: number; // where the body points right now: swings towards the target, else back to `facing`
 
   constructor(tower: Tower) {
     const cfg = tower.config;
@@ -100,19 +112,31 @@ class TriangleSprite implements TowerSprite {
     this.tower = tower;
     this.facing = cfg.facing;
     this.spread = cfg.spread;
-
-    // The polygon's tip points up (-y); +90° turns it to point along `facing`.
-    // Only the body turns, so the cone flash below is not rotated twice.
-    this.body.rotation(toDegrees(this.facing) + 90);
+    this.angle = cfg.facing;
+    this.pointBody();
     this.group.add(this.body);
 
-    // Kick backwards, away from where it is aiming.
-    const dx = -Math.cos(this.facing);
-    const dy = -Math.sin(this.facing);
+    // Kick backwards, away from where the body is pointing.
     this.shake = new Shake(this.body, (t) => {
       const k = 4 * (1 - t) * Math.sin(t * Math.PI * 6);
-      return { x: dx * k, y: dy * k };
+      return { x: -Math.cos(this.angle) * k, y: -Math.sin(this.angle) * k };
     });
+  }
+
+  // Only the body turns, so the cone flash below is not rotated twice.
+  private pointBody(): void {
+    this.body.rotation(toDegrees(this.angle));
+  }
+
+  update(target: Vec | null, dt: number): void {
+    const wanted = target
+      ? Math.atan2(target.y - this.tower.tile.y, target.x - this.tower.tile.x)
+      : this.facing;
+    // shortest way round, wrapped into [-π, π]
+    const diff = Math.atan2(Math.sin(wanted - this.angle), Math.cos(wanted - this.angle));
+    const maxStep = TURN_SPEED * dt;
+    this.angle += Math.max(-maxStep, Math.min(maxStep, diff));
+    this.pointBody();
   }
 
   fire(): void {
@@ -160,5 +184,13 @@ export class TowersView {
 
   fire(towerId: number): void {
     this.sprites.get(towerId)?.fire();
+  }
+
+  // Once per frame: lets each tower swing towards its current target.
+  update(towers: Tower[], enemies: Enemy[], dt: number): void {
+    for (const tower of towers) {
+      const target = tower.aimTarget(enemies);
+      this.sprites.get(tower.id)?.update?.(target ? target.pos : null, dt);
+    }
   }
 }

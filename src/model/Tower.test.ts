@@ -133,6 +133,26 @@ describe("Tower targeting", () => {
   });
 });
 
+describe("Tower.aimTarget", () => {
+  it("is the enemy the tower would shoot, and does not hurt it", () => {
+    const { game, tower } = setup("triangle", coneFacingNorth(MAX_SPREAD));
+    const [behind, ahead] = spawn(game, 2);
+    behind.pos = { x: 0, y: 1 };
+    ahead.pos = { x: 0, y: 1 };
+    ahead.distance = 1;
+
+    expect(tower.aimTarget(game.enemies)).toBe(ahead);
+    expect(ahead.hp).toBe(ahead.def.hp);
+  });
+
+  it("is undefined when nothing is in range", () => {
+    const { game, tower } = setup("triangle", coneFacingNorth(MAX_SPREAD));
+    const [enemy] = spawn(game);
+    enemy.pos = { x: 0, y: 5 }; // behind the tower
+    expect(tower.aimTarget(game.enemies)).toBeUndefined();
+  });
+});
+
 describe("Triangle tower cone", () => {
   it("hits an enemy inside the cone but not one behind the tower", () => {
     const { game, tower, interval } = setup("triangle", coneFacingNorth(Math.PI / 4));
@@ -150,7 +170,8 @@ describe("Triangle tower cone", () => {
   it("a narrow cone reaches further than a wide one (same area)", () => {
     const wide = setup("triangle", coneFacingNorth(MAX_SPREAD)).tower;
     const narrow = setup("triangle", coneFacingNorth(MIN_SPREAD)).tower;
-    const far = { x: 0, y: 2 - 3.5 }; // 3.5 tiles ahead
+    // a point ahead of the tower, between the two reaches, so it does not depend on the area
+    const far = { x: 0, y: 2 - (wide.reach + narrow.reach) / 2 };
 
     expect(narrow.reach).toBeGreaterThan(wide.reach);
     expect(wide.range.contains(far)).toBe(false);
