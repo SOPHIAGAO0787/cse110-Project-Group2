@@ -1,5 +1,5 @@
 export class PlayerProgress {
-  shopCoins = 200;
+  shopCoins = 200; // FIX: needs to be connected to the database in sprint3
 
   // Stored values are array indexes:
   // 0 means Level 1.

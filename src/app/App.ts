@@ -5,6 +5,7 @@ import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResult } from "../model/GameResult";
 import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
+import { PlayerProgress } from "../model/PlayerProgress";
 
 // Owns the Konva stage and switches between screens.
 export class App implements ScreenSwitcher {
@@ -15,15 +16,16 @@ export class App implements ScreenSwitcher {
   private result: ResultScreen;
   private current: Screen;
   private shop: TowerShopScreen;
+  private progress = new PlayerProgress();
 
   constructor(containerId: string) {
     this.stage = new Konva.Stage({ container: containerId });
     this.stage.add(this.layer);
 
     this.menu = new MenuScreen(this);
-    this.game = new GameScreenController(this);
+    this.game = new GameScreenController(this, this.progress);
     this.result = new ResultScreen(this);
-    this.shop = new TowerShopScreen(this);
+    this.shop = new TowerShopScreen(this, this.progress);
     for (const screen of this.allScreens()) {
       this.layer.add(screen.group);
       screen.group.visible(false);

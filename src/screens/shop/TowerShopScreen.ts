@@ -10,7 +10,10 @@ export class TowerShopScreen implements Screen {
 
   group: TowerShopView["group"];
 
-  constructor(app: ScreenSwitcher, private progress: PlayerProgress,) {
+  constructor(
+    app: ScreenSwitcher,
+    private progress: PlayerProgress,
+  ) {
     this.view = new TowerShopView({
       onSelect: (id) => {
         this.selectedId = id;
