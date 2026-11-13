@@ -43,7 +43,7 @@ describe("PlacementView", () => {
     expect(wedge.visible()).toBe(true);
     expect(wedge.angle()).toBeCloseTo(60);
     expect(wedge.rotation()).toBeCloseTo(-30); // starts 30° before the facing direction
-    expect(wedge.radius()).toBeCloseTo(sectorRadius(spread, 2.6) * TILE);
+    expect(wedge.radius()).toBeCloseTo(sectorRadius(spread, 7.5) * TILE);
   });
 
   it("makes a wider cone shorter", () => {
