@@ -53,10 +53,7 @@ export class Tower {
 
       if (!target || enemy.distance > target.distance) {
         target = enemy;
-      } else if (
-        enemy.distance === target.distance &&
-        enemy.id < target.id
-      ) {
+      } else if (enemy.distance === target.distance && enemy.id < target.id) {
         target = enemy;
       }
     }
