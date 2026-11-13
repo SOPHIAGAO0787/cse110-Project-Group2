@@ -156,6 +156,26 @@ export class GameScreenController implements Screen {
     };
 
     let pending = false; // blocks double-triggers while a question is open
+
+    const onUpgrade = () => {
+      if (pending || disposed || this.model.isOver || placement.state.kind !== "idle") {
+        return;
+      }
+
+      const tile = gridView.tileUnderMouse();
+      if (!tile) return;
+
+      const tower = this.model.towers.find(
+        (item) => item.tile.x === tile.x && item.tile.y === tile.y,
+      );
+      if (!tower) return;
+
+      const message = this.model.tryUpgradeTower(tower.id);
+      this.view.showMessage(message);
+    };
+
+    gridView.group.on("click.upgrade tap.upgrade", onUpgrade);
+
     const requestPlace = async () => {
       const s = placement.state;
       if (s.kind !== "placed" || pending || disposed || this.model.isOver) return;
@@ -254,6 +274,7 @@ export class GameScreenController implements Screen {
       disposed = true;
       placement.cancel();
       stage?.off(".placement");
+      gridView.group.off(".upgrade");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
       choices.forEach((choice) => {
