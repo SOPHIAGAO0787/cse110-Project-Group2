@@ -116,7 +116,7 @@ export class GameScreenController implements Screen {
   private wirePlacement(gridView: GridView): () => void {
     const placement = new PlacementModel();
     const def = TOWERS.find((d) => d.id === "circle")!;
-    const pv = new PlacementView(def.range.radius);
+    const pv = new PlacementView(def);
     this.view.mapGroup.add(pv.group);
 
     const card = new InGameTowerCard(def, pv.menuCircle);
