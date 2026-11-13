@@ -8,8 +8,8 @@ const toDegrees = (radians: number) => (radians * 180) / Math.PI;
 
 export class PlacementView {
   group = new Konva.Group({ listening: false }); // so GridView's hover still gets the mouse
-  // temporary stand-in for a shop card; goes in shopGroup (unscaled)
-  menuCircle = new Konva.Circle({ x: 130, y: 120, radius: 24, fill: "#4a90d9" });
+  // temporary stand-in for a shop card icon; goes in shopGroup (unscaled)
+  menuIcon: Konva.Shape;
 
   private ghost = new Konva.Circle({ radius: TILE / 2, opacity: 0.6, visible: false });
   private range = new Konva.Circle({ stroke: "#4a90d9", fill: "#4a90d933", visible: false });
@@ -26,6 +26,10 @@ export class PlacementView {
 
   constructor(def: TowerDef) {
     this.def = def;
+    this.menuIcon =
+      def.range.kind === "sector"
+        ? new Konva.RegularPolygon({ x: 130, y: 120, sides: 3, radius: 28, fill: "#2a8f5d" })
+        : new Konva.Circle({ x: 130, y: 120, radius: 24, fill: "#4a90d9" });
     if (def.range.kind === "circle") this.range.radius(def.range.radius * TILE);
     this.group.add(this.range, this.wedge, this.ghost);
   }

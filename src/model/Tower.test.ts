@@ -56,13 +56,23 @@ describe("Tower.update (firing)", () => {
     expect(enemy.hp).toBe(enemy.def.hp);
   });
 
-  it("does not save up shots while there are no targets", () => {
-    const { game, tower, interval } = setup();
-    tower.update(10, []);
+  it("reloads while idle, so it fires the moment an enemy arrives", () => {
+    const { game, tower } = setup();
+    const interval = 1 / tower.def.fireRatePerSec;
+    tower.update(interval, []); // nothing to shoot at, so it just reloads
     const [enemy] = spawn(game);
 
-    expect(tower.update(interval / 2, game.enemies)).toBe(0);
-    expect(enemy.hp).toBe(enemy.def.hp);
+    expect(tower.update(0.001, game.enemies)).toBe(1);
+    expect(enemy.hp).toBe(enemy.def.hp - tower.def.damage);
+  });
+
+  it("keeps at most one shot ready while idle", () => {
+    const { game, tower } = setup();
+    tower.update(10, []); // a long wait must not bank ten shots
+    spawn(game);
+
+    expect(tower.update(0.001, game.enemies)).toBe(1);
+    expect(tower.update(0.001, game.enemies)).toBe(0);
   });
 
   it("ignores enemies outside the range", () => {

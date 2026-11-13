@@ -63,6 +63,16 @@ export class GridView {
     return { x: Math.floor(pointer.x / TILE), y: Math.floor(pointer.y / TILE) };
   }
 
+  // The mouse position in tile units, not snapped to a tile: (3, 2) is the center of tile (3, 2).
+  // For aiming, where the exact direction matters. Null if the mouse is not on the page.
+  pointerInTiles(): Vec | null {
+    const pointer = this.group.getRelativePointerPosition();
+    if (pointer === null) {
+      return null;
+    }
+    return { x: pointer.x / TILE - 0.5, y: pointer.y / TILE - 0.5 };
+  }
+
   // Puts the tint on the tile under the mouse
   private moveHover(): void {
     const tile = this.tileUnderMouse();

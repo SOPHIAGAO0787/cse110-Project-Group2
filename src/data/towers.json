@@ -12,11 +12,11 @@
   {
     "id": "triangle",
     "name": "Triangle Tower",
-    "description": "Hits the front-most enemy inside a cone. A narrower cone reaches further.",
+    "description": "Hits the front-most enemy in an aimed cone.",
     "cost": 75,
-    "damage": 8,
+    "damage": 10,
     "fireRatePerSec": 0.8,
     "attack": "first",
-    "range": { "kind": "sector", "area": 2.6 }
+    "range": { "kind": "sector", "area": 7.5 }
   }
 ]

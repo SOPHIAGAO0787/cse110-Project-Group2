@@ -51,9 +51,11 @@ export class Tower {
   update(dt: number, enemies: Enemy[]): number {
     if (!Number.isFinite(dt) || dt <= 0) return 0;
 
-    // Do not save up shots while there are no targets.
+    // With no targets the tower reloads, but keeps at most one shot ready so shots can't pile up.
+    // (Resetting to 0 instead would stop a tower from ever firing at enemies that cross its
+    // cone faster than one firing interval.)
     if (this.findTargets(enemies).length === 0) {
-      this.shotProgress = 0;
+      this.shotProgress = Math.min(1, this.shotProgress + dt * this.def.fireRatePerSec);
       return 0;
     }
 
@@ -64,7 +66,7 @@ export class Tower {
       const targets = this.findTargets(enemies);
 
       if (targets.length === 0) {
-        this.shotProgress = 0;
+        this.shotProgress = Math.min(this.shotProgress, 1);
         break;
       }
 
