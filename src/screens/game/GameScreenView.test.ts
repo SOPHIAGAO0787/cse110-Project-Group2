@@ -51,3 +51,46 @@ describe("GameScreenView HUD", () => {
     expect(view.group.getChildren()).toHaveLength(childCount);
   });
 });
+
+it("updates a single timer node, clamps values, and preserves layout on resize", () => {
+  const count = view.shopGroup.getChildren().length;
+  view.setWaveTimers(9.1, null, false);
+  const timer = view.shopGroup
+    .find<Konva.Text>("Text")
+    .find((text) => text.text().startsWith("Next Wave"))!;
+  expect(timer.text()).toBe("Next Wave In: 10s");
+  expect(view.startWaveButton.visible()).toBe(false);
+  view.setWaveTimers(null, 4.2, false);
+  expect(timer.text()).toBe("Last Enemy Spawns In: 5s");
+  view.setWaveTimers(-1, null, false);
+  expect(timer.text()).toBe("Next Wave In: 0s");
+  view.setWaveTimers(NaN, null, false);
+  expect(timer.text()).toBe("");
+  view.setWaveTimers(null, null, true);
+  expect(timer.text()).toBe("");
+  expect(view.startWaveButton.visible()).toBe(true);
+  view.resize(1200, 800);
+  expect(view.shopGroup.x()).toBe(940);
+  expect(timer.position()).toEqual({ x: 20, y: 660 });
+  expect(view.shopGroup.getChildren()).toHaveLength(count);
+});
+
+it("keeps the preparation timer above the relabeled button across resizes", () => {
+  view.setWaveTimers(7, null, true);
+  const label = view.startWaveButton.findOne<Konva.Text>("Text")!;
+  const timer = view.shopGroup
+    .find<Konva.Text>("Text")
+    .find((text) => text.text().startsWith("Next Wave"))!;
+  expect(label.text()).toBe("Start Next Wave");
+  expect(view.startWaveButton.visible()).toBe(true);
+  expect(timer.text()).toBe("Next Wave In: 7s");
+  for (const height of [600, 800]) {
+    view.resize(1200, height);
+    expect(timer.getAbsolutePosition().y + timer.height()).toBeLessThan(view.startWaveButton.y());
+  }
+  view.setWaveTimers(null, 2, false);
+  expect(view.startWaveButton.visible()).toBe(false);
+  expect(timer.text()).toBe("Last Enemy Spawns In: 2s");
+  view.setWaveTimers(null, null, true);
+  expect(label.text()).toBe("Start Wave");
+});

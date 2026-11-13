@@ -234,11 +234,10 @@ describe("GameModel game result (So1)", () => {
     return new GameModel(loadMap({ ...map1, startingLives }));
   }
 
-  // Starts each wave as soon as the previous one clears, and ticks until the game ends.
+  // Starts the first wave, then lets preparation timers advance subsequent waves.
   function playUntilOver(game: GameModel): boolean[] {
     const outcomes: boolean[] = [];
     game.events.on("gameOver", ({ won }) => outcomes.push(won));
-    game.events.on("waveCleared", () => game.startNextWave());
     game.startNextWave();
     for (let i = 0; i < 10000 && !game.isOver; i++) {
       game.tick(0.1);

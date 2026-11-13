@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
+import { WAVE_PREPARATION_SECONDS } from "../../model/WaveManager";
+import { GridView } from "./GridView";
+import { QuestionPrompt } from "./QuestionPrompt";
+import { QuestionService } from "../../model/questions/QuestionService";
+import { TOWERS } from "../../model/loadContent";
 import map from "../../data/maps/map1.json";
 
 // Capture real model instances without exposing the controller's private fields.
@@ -22,6 +27,17 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
     },
   };
 });
+
+const frames = vi.hoisted(() => [] as ((dt: number) => void)[]);
+vi.mock("../../core/GameLoop", () => ({
+  GameLoop: class {
+    constructor(tick: (dt: number) => void) {
+      frames.push(tick);
+    }
+    start() {}
+    stop() {}
+  },
+}));
 
 let controller: GameScreenController;
 let model: GameModel;
@@ -43,7 +59,9 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
 
 // Clicks the real Start Wave button on the screen.
 function clickStartWave(): void {
-  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Start Wave");
+  const label = controller.group
+    .find<Konva.Text>("Text")
+    .find((t) => ["Start Wave", "Start Next Wave"].includes(t.text()));
   if (label === undefined) {
     throw new Error("Start Wave button is missing from the screen");
   }
@@ -185,11 +203,15 @@ describe("GameScreenController HUD event wiring", () => {
     }
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
 
-    // Wave 2 has 8 enemies. Clicking again after the last wave changes nothing.
+    // A click skips preparation and starts wave 2 immediately.
     clickStartWave();
+    expect(model.waves.currentWave).toBe(2);
+    // These enemies were removed through events above; remove their stale model objects.
+    model.enemies = [];
+    model.tick(0);
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
     model.tick(7);
-    const wave2 = model.enemies.slice(model.enemies.length - 8);
+    const wave2 = [...model.enemies];
     for (const enemy of wave2) {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
@@ -210,4 +232,214 @@ describe("GameScreenController game over (So1)", () => {
     expect(switchTo).toHaveBeenCalledWith("result", model.result);
     expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
   });
+});
+
+it("refreshes timers through simulated frames and resets them on re-entry", () => {
+  const frame = frames[frames.length - 1];
+  const timer = () =>
+    controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => /^(Next Wave In|Last Enemy Spawns In):/.test(text.text()));
+  expect(timer()).toBeUndefined();
+  clickStartWave();
+  expect(timer()?.text()).toBe("Last Enemy Spawns In: 5s");
+  frame(5);
+  expect(timer()).toBeUndefined();
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  frame(0);
+  expect(timer()?.text()).toBe(`Next Wave In: ${WAVE_PREPARATION_SECONDS}s`);
+  frame(1);
+  expect(timer()?.text()).toBe(`Next Wave In: ${WAVE_PREPARATION_SECONDS - 1}s`);
+  frame(WAVE_PREPARATION_SECONDS - 1);
+  expect(hud()).toContain("Wave: 2/2");
+  expect(timer()?.text()).toBe("Last Enemy Spawns In: 7s");
+  const stop = vi.spyOn(GameLoop.prototype, "stop");
+  controller.hide();
+  expect(stop).toHaveBeenCalled();
+  const elapsed = model.elapsedSeconds;
+  frame(5);
+  expect(model.elapsedSeconds).toBe(elapsed);
+  controller.show();
+  model = models[models.length - 1];
+  expect(model.waves.preparationRemaining).toBeNull();
+  expect(timer()).toBeUndefined();
+  expectHud(map.startingCoins, map.startingLives, 0, 0);
+});
+
+it("shows an early-start button only during preparation and clears it after the final wave", () => {
+  const button = () =>
+    controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => ["Start Wave", "Start Next Wave"].includes(text.text()))!;
+  expect(button().text()).toBe("Start Wave");
+  expect(button().getParent()!.visible()).toBe(true);
+  clickStartWave();
+  expect(button().getParent()!.visible()).toBe(false);
+  model.tick(4.8);
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  model.tick(0);
+  expect(button().text()).toBe("Start Next Wave");
+  expect(button().getParent()!.visible()).toBe(true);
+  clickStartWave();
+  clickStartWave();
+  expect(model.waves.currentWave).toBe(2);
+  expect(model.waves.preparationRemaining).toBeNull();
+  expect(button().getParent()!.visible()).toBe(false);
+  expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
+  model.tick(6.3);
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  model.tick(0);
+  expect(model.result?.won).toBe(true);
+  expect(button().getParent()!.visible()).toBe(false);
+  expect(
+    controller.group
+      .find<Konva.Text>("Text")
+      .some((text) => text.text().startsWith("Next Wave In:")),
+  ).toBe(false);
+  clickStartWave();
+  expect(model.waves.currentWave).toBe(2);
+  controller.hide();
+  controller.show();
+  expect(button().text()).toBe("Start Wave");
+  expect(button().getParent()!.visible()).toBe(true);
+});
+
+const press = (key: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key }));
+const settlePlacement = async () => {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+};
+
+function openPlacementQuestion() {
+  vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+  vi.spyOn(QuestionService.prototype, "questionFor").mockReturnValue({
+    id: "test",
+    prompt: "2 + 3?",
+    answer: 5,
+    tolerance: 0,
+    hint: "Add them.",
+  });
+  const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+  const card = controller.group
+    .find<Konva.Text>("Text")
+    .find((text) => text.text() === TOWERS.find((tower) => tower.id === "circle")!.name)!
+    .getParent()!;
+  card.fire("pointerdown");
+  window.dispatchEvent(new Event("pointerup"));
+  press("Enter");
+  expect(ask).toHaveBeenCalledTimes(1);
+  return { ask, card, prompt: ask.mock.instances[0] as QuestionPrompt };
+}
+
+it("keeps simulation and automatic waves running while an unanswered prompt stays functional", async () => {
+  clickStartWave();
+  const frame = frames[frames.length - 1];
+  frame(4.8);
+  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+  frame(0);
+  const stop = vi.spyOn(GameLoop.prototype, "stop");
+  const start = vi.spyOn(GameLoop.prototype, "start").mockClear();
+  const { prompt } = openPlacementQuestion();
+  frame(1);
+  expect(model.waves.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS - 1);
+  for (let i = 0; i < WAVE_PREPARATION_SECONDS - 1; i++) frame(1);
+  expect(model.waves.currentWave).toBe(2);
+  expect(model.enemies).toHaveLength(1);
+  const distance = model.enemies[0].distance;
+  frame(1);
+  expect(model.enemies.length).toBeGreaterThan(1);
+  expect(model.enemies[0].distance).toBeGreaterThan(distance);
+  expect(prompt.group.visible()).toBe(true);
+  press("5");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(1);
+  expect(stop).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+});
+
+it("prevents duplicate prompts and placements while retaining retries", async () => {
+  const { ask, card, prompt } = openPlacementQuestion();
+  card.fire("pointerdown");
+  window.dispatchEvent(new Event("pointerup"));
+  press("4");
+  press("Enter");
+  expect(model.towers).toHaveLength(0);
+  expect(prompt.group.visible()).toBe(true);
+  expect(ask).toHaveBeenCalledTimes(1);
+  press("5");
+  press("Enter");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(1);
+  expect(ask).toHaveBeenCalledTimes(1);
+});
+
+it("does not place a tower after exhausting incorrect answers", async () => {
+  openPlacementQuestion();
+  press("4");
+  press("Enter");
+  press("4");
+  press("Enter");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+});
+
+it.each(["defeat", "victory"])(
+  "cancels a pending question on %s without relying on navigation",
+  async (outcome) => {
+    const { prompt } = openPlacementQuestion();
+    if (outcome === "defeat") model.lives.remaining = 0;
+    else model.events.emit("waveCleared", { wave: model.waves.totalWaves });
+    frames[frames.length - 1](0);
+    expect(prompt.group.visible()).toBe(false);
+    press("5");
+    press("Enter");
+    await settlePlacement();
+    expect(model.towers).toHaveLength(0);
+    expect(switchTo).toHaveBeenCalledWith("result", model.result);
+  },
+);
+
+it("rejects an already-correct answer if game over occurs before the continuation", async () => {
+  openPlacementQuestion();
+  press("5");
+  press("Enter");
+  model.lives.remaining = 0;
+  frames[frames.length - 1](0);
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+});
+
+it("invalidates a resolved answer when leaving and immediately re-entering", async () => {
+  const { prompt } = openPlacementQuestion();
+  press("5");
+  press("Enter");
+  const oldModel = model;
+  controller.hide();
+  expect(prompt.group.visible()).toBe(false);
+  controller.show();
+  model = models[models.length - 1];
+  await settlePlacement();
+  expect(oldModel.towers).toHaveLength(0);
+  expect(model.towers).toHaveLength(0);
+  expect(model.waves.currentWave).toBe(0);
+});
+
+it("cancels an unanswered question on leaving", async () => {
+  const { prompt } = openPlacementQuestion();
+  controller.hide();
+  expect(prompt.group.visible()).toBe(false);
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+});
+
+it("rechecks funds after a correct answer", async () => {
+  openPlacementQuestion();
+  model.wallet.spend(model.wallet.coins);
+  press("5");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(0);
+  expect(model.wallet.coins).toBe(0);
 });

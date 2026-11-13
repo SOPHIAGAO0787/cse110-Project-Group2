@@ -49,7 +49,9 @@ export class GameScreenController implements Screen {
     const enemiesView = new EnemiesView();
 
     this.loop = new GameLoop((dt) => {
+      if (!this.active) return;
       this.model.tick(dt);
+      if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
     });
     this.view.mapGroup.destroyChildren();
@@ -63,6 +65,7 @@ export class GameScreenController implements Screen {
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
+      this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
         this.model.lives.remaining,
@@ -76,6 +79,11 @@ export class GameScreenController implements Screen {
     const events = this.model.events;
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
+      this.loop.stop();
+      this.view.prompt.cancel();
+      this.cleanupPlacement?.();
+      this.cleanupPlacement = null;
+      this.refreshWaveTimers();
       const result = this.model.result;
       if (result) this.app.switchTo("result", result);
     });
@@ -106,7 +114,22 @@ export class GameScreenController implements Screen {
     this.view.resize(width, height);
   }
 
+  private refreshWaveTimers(): void {
+    const waves = this.model.waves;
+    this.view.setWaveTimers(
+      this.model.isOver ? null : waves.preparationRemaining,
+      this.model.isOver ? null : waves.lastSpawnRemaining,
+      !this.model.isOver &&
+        !waves.isRunning &&
+        waves.currentWave < waves.totalWaves &&
+        (waves.currentWave === 0 || waves.preparationRemaining !== null),
+    );
+  }
+
   private wirePlacement(gridView: GridView): () => void {
+    const model = this.model;
+    let disposed = false;
+    const canCommit = () => !disposed && this.active && !model.isOver;
     const placement = new PlacementModel();
     const def = TOWERS.find((d) => d.id === "circle")!;
     const pv = new PlacementView(def.range.radius);
@@ -121,17 +144,16 @@ export class GameScreenController implements Screen {
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);
-      this.loop.stop(); // pause the game while the question is open
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
-      if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
-      if (this.active) this.loop.start(); // don't restart if the player left the screen
+      if (!canCommit()) return false;
+      if (correct) model.recordQuestionSolved(); // So1: shown on the result screen
       return correct;
     };
 
     let pending = false; // blocks double-triggers while a question is open
     const requestPlace = async () => {
       const s = placement.state;
-      if (s.kind !== "placed" || pending) return;
+      if (!canCommit() || s.kind !== "placed" || pending) return;
       const tile = s.pos;
 
       // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
@@ -151,7 +173,7 @@ export class GameScreenController implements Screen {
         pending = false;
       }
 
-      if (!ok) {
+      if (!ok || !canCommit()) {
         placement.cancel();
         pv.hide();
         return;
@@ -166,6 +188,7 @@ export class GameScreenController implements Screen {
     };
 
     const onDown = () => {
+      if (pending || !canCommit()) return;
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
     };
@@ -204,7 +227,10 @@ export class GameScreenController implements Screen {
     window.addEventListener("keydown", onKey);
 
     return () => {
-      // called from hide()
+      // Invalidate pending answers before removing input handlers.
+      disposed = true;
+      placement.cancel();
+      pv.hide();
       stage?.off(".placement");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);

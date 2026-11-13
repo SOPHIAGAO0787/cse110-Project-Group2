@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EventBus } from "../core/EventBus";
-import { WaveManager } from "./WaveManager";
+import { WaveManager, WAVE_PREPARATION_SECONDS } from "./WaveManager";
 import type { WaveConfig } from "./types";
 
 const group = (enemy: string, count: number, intervalSec: number) => ({
@@ -110,10 +110,10 @@ describe("WaveManager (N1)", () => {
     manager.start();
     const [first] = spawn(50);
     events.emit("enemyKilled", { enemyId: first.id, reward: 5 });
-    manager.start();
+    const [second] = spawn(WAVE_PREPARATION_SECONDS);
     expect(manager.currentWave).toBe(2);
     expect(manager.enemiesLeft).toBe(2);
-    const [second] = spawn(0);
+    expect(spawn(0)).toEqual([]);
     expect(second.defId).toBe("fast");
     events.emit("enemyLeaked", { enemyId: first.id }); // prior wave
     expect(manager.enemiesLeft).toBe(2);
@@ -230,12 +230,11 @@ describe("WaveManager (N1)", () => {
     events.on("waveCleared", ({ wave }) => seen.push(`clear${wave}`));
     manager.start();
     expect(manager.isRunning).toBe(false);
-    manager.tick(0);
-    manager.start();
+    manager.tick(WAVE_PREPARATION_SECONDS);
     expect(manager.isRunning).toBe(false);
-    manager.start();
+    const initial = spawn(WAVE_PREPARATION_SECONDS);
     expect(manager.enemiesLeft).toBe(2);
-    const [first] = spawn(0);
+    const [first] = initial;
     expect(first.defId).toBe("basic");
     const [second] = spawn(0.2);
     expect(second.defId).toBe("fast");
@@ -250,4 +249,120 @@ describe("WaveManager (N1)", () => {
     expect(spawn(0).map((e) => e.defId)).toEqual(["basic", "basic", "fast"]);
     expect(spawn(0)).toEqual([]);
   });
+});
+
+describe("wave preparation and last spawn timing", () => {
+  it("waits for all scheduled and living enemies, blocks manual starts, and starts once", () => {
+    const { manager, events, spawn } = setup([
+      { groups: [group("basic", 2, 2)] },
+      { groups: [group("fast", 1, 1)] },
+    ]);
+    expect(manager.preparationRemaining).toBeNull();
+    expect(manager.lastSpawnRemaining).toBeNull();
+    spawn(50);
+    expect(manager.currentWave).toBe(0);
+    manager.start();
+    const [first] = spawn(0);
+    events.emit("enemyKilled", { enemyId: first.id, reward: 0 });
+    expect(manager.preparationRemaining).toBeNull();
+    const [last] = spawn(2);
+    expect(manager.lastSpawnRemaining).toBeNull();
+    expect(manager.preparationRemaining).toBeNull();
+    events.emit("enemyLeaked", { enemyId: last.id });
+    expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
+    expect(manager.currentWave).toBe(1);
+    for (const dt of [0, -1, NaN, Infinity]) spawn(dt);
+    expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
+    spawn(3);
+    expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS - 3);
+    const started: number[] = [];
+    events.on("waveStarted", ({ wave }) => started.push(wave));
+    const [next] = spawn(WAVE_PREPARATION_SECONDS - 3);
+    expect(started).toEqual([2]);
+    expect(manager.preparationRemaining).toBeNull();
+    manager.start();
+    spawn(100);
+    expect(started).toEqual([2]);
+    events.emit("enemyLeaked", { enemyId: next.id });
+    expect(manager.preparationRemaining).toBeNull();
+    expect(spawn(100)).toEqual([]);
+  });
+
+  it("carries leftover countdown time into the actual spawn schedule consistently", () => {
+    const waves = [{ groups: [] }, { groups: [group("basic", 3, 0.5)] }];
+    const large = setup(waves);
+    const small = setup(waves);
+    large.manager.start();
+    small.manager.start();
+    const expected = large.spawn(WAVE_PREPARATION_SECONDS + 0.75).map((e) => e.defId);
+    const actual = Array.from({ length: (WAVE_PREPARATION_SECONDS + 0.75) / 0.25 }, () =>
+      small.spawn(0.25),
+    )
+      .flat()
+      .map((e) => e.defId);
+    expect(actual).toEqual(expected);
+    expect(expected).toHaveLength(2);
+    expect(small.manager.lastSpawnRemaining).toBeCloseTo(0.25);
+    expect(large.manager.lastSpawnRemaining).toBeCloseTo(0.25);
+  });
+
+  it("derives the last spawn from mixed intervals, ignoring empty groups", () => {
+    const { manager, spawn } = setup([
+      {
+        groups: [
+          group("empty", 0, 99),
+          group("basic", 2, 0.5),
+          group("empty", 0, 99),
+          group("fast", 2, 0.25),
+          group("instant", 2, 0),
+        ],
+      },
+    ]);
+    manager.start();
+    expect(manager.lastSpawnRemaining).toBe(1);
+    spawn(0);
+    expect(manager.lastSpawnRemaining).toBe(1);
+    spawn(0.6);
+    expect(manager.lastSpawnRemaining).toBeCloseTo(0.4);
+    expect(spawn(0.4).map((e) => e.defId)).toEqual(["fast", "fast", "instant", "instant"]);
+    expect(manager.lastSpawnRemaining).toBeNull();
+  });
+
+  it("handles empty and zero interval waves without invalid timer values", () => {
+    const { manager, spawn } = setup([{ groups: [group("basic", 2, 0)] }]);
+    manager.start();
+    expect(manager.lastSpawnRemaining).toBe(0);
+    expect(spawn(0)).toHaveLength(2);
+    expect(manager.lastSpawnRemaining).toBeNull();
+  });
+});
+
+it("manually skips preparation, resets timing, and ignores repeated or active starts", () => {
+  const { manager, events, spawn } = setup([
+    { groups: [group("basic", 1, 1)] },
+    { groups: [group("fast", 2, 2)] },
+  ]);
+  const started: number[] = [];
+  events.on("waveStarted", ({ wave }) => started.push(wave));
+  manager.start();
+  const [first] = spawn(0);
+  events.emit("enemyKilled", { enemyId: first.id, reward: 0 });
+  spawn(3);
+  expect(manager.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS - 3);
+  manager.start();
+  manager.start();
+  expect(started).toEqual([1, 2]);
+  expect(manager.preparationRemaining).toBeNull();
+  expect(manager.lastSpawnRemaining).toBe(2);
+  const [second] = spawn(0);
+  manager.start();
+  expect(spawn(1)).toEqual([]);
+  const [third] = spawn(1);
+  manager.start();
+  expect(started).toEqual([1, 2]);
+  events.emit("enemyLeaked", { enemyId: second.id });
+  events.emit("enemyLeaked", { enemyId: third.id });
+  manager.start();
+  expect(manager.preparationRemaining).toBeNull();
+  expect(started).toEqual([1, 2]);
 });
