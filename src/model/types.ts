@@ -44,8 +44,19 @@ export interface TowerDef {
   cost: number;
   damage: number; // per shot
   fireRatePerSec: number;
-  range: { kind: "circle"; radius: number }; // Sprint 2: sector (triangle), rect
+  // "all" hits every enemy in range, "first" hits only the one furthest along the path
+  attack: "first" | "all";
+  range: RangeDef;
 }
+
+// The shape of a tower's range as written in towers.json.
+export type RangeDef =
+  | { kind: "circle"; radius: number } // radius in tiles
+  | { kind: "sector"; area: number }; // triangle: the cone's area in tiles², its reach follows from the angle
+
+// What the player chooses when placing a tower. Angles are in radians.
+export type TowerConfig =
+  { kind: "circle"; radius: number } | { kind: "sector"; facing: number; spread: number }; // facing: 0 = right, y grows downward
 
 // "Is this point inside the tower's range?" Each tower shape implements this.
 export interface RangeShape {
