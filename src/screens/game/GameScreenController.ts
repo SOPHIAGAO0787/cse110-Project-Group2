@@ -52,6 +52,7 @@ export class GameScreenController implements Screen {
     this.loop = new GameLoop((dt) => {
       this.model.tick(dt);
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
+      towersView.update(this.model.towers, this.model.enemies, dt); // towers turn towards their targets
     });
     this.view.mapGroup.destroyChildren();
 

@@ -35,15 +35,17 @@ describe("PlacementView", () => {
   });
 
   it("draws the cone centred on the facing direction", () => {
-    const view = new PlacementView(triangle);
     const spread = Math.PI / 3; // 60°
+    const triangle = TOWERS.find((d) => d.id === "triangle")!;
+    const view = new PlacementView(triangle);
+    const triangleArea = triangle.range.kind === "sector" ? triangle.range.area : 0; // from towers.json
     view.showSector({ x: 2, y: 2 }, { facing: 0, spread }); // facing right
 
     const wedge = wedgeOf(view);
     expect(wedge.visible()).toBe(true);
     expect(wedge.angle()).toBeCloseTo(60);
     expect(wedge.rotation()).toBeCloseTo(-30); // starts 30° before the facing direction
-    expect(wedge.radius()).toBeCloseTo(sectorRadius(spread, 7.5) * TILE);
+    expect(wedge.radius()).toBeCloseTo(sectorRadius(spread, triangleArea) * TILE);
   });
 
   it("makes a wider cone shorter", () => {

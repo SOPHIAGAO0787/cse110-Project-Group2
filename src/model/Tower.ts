@@ -47,6 +47,12 @@ export class Tower {
     ];
   }
 
+  // The enemy this tower would shoot right now, or undefined if nothing is in range.
+  // The views use it to turn a tower towards its target. It changes nothing.
+  aimTarget(enemies: Enemy[]): Enemy | undefined {
+    return this.findTargets(enemies)[0];
+  }
+
   // Returns how many shots were fired during this step.
   update(dt: number, enemies: Enemy[]): number {
     if (!Number.isFinite(dt) || dt <= 0) return 0;
