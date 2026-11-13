@@ -21,6 +21,7 @@ class CircleSprite implements TowerSprite {
       const t = frame.time / 300; // 0 to 1 over 300 ms
       if (t >= 1) {
         this.body.x(0); // always finish centered
+        this.body.y(0);
         this.shakeAnim?.stop();
         return;
       }
