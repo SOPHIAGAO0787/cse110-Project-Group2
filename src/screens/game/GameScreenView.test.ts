@@ -8,7 +8,13 @@ import { QuestionService } from "../../model/questions/QuestionService";
 let view: GameScreenView;
 
 beforeEach(() => {
-  view = new GameScreenView(16, 10, () => {}, new QuestionService());
+  view = new GameScreenView(
+    16,
+    10,
+    () => {},
+    () => {},
+    new QuestionService(),
+  );
 });
 
 afterEach(() => {

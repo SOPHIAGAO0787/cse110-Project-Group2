@@ -25,6 +25,7 @@ export class GameScreenView {
   mapGroup = new Konva.Group();
   shopGroup = new Konva.Group();
   startWaveButton: Konva.Group;
+  backButton: Konva.Group;
   readonly prompt: QuestionPrompt;
 
   private mapCols: number;
@@ -42,16 +43,18 @@ export class GameScreenView {
   });
   private messageTimer = 0; // id of the timeout that hides the message
 
-  // onStartWave runs when the player clicks the Start Wave button.
+  // onStartWave and onBack run when the player clicks the Start Wave or Back to maps button.
   constructor(
     mapCols: number,
     mapRows: number,
     onStartWave: () => void,
+    onBack: () => void,
     questions: QuestionService,
   ) {
     this.mapCols = mapCols;
     this.mapRows = mapRows;
     this.startWaveButton = makeButton("Start Wave", onStartWave);
+    this.backButton = makeButton("Back to maps", onBack);
     this.prompt = new QuestionPrompt(questions);
     this.shopGroup.add(this.shopBackground, this.shopTitle);
     this.group.add(
@@ -59,6 +62,7 @@ export class GameScreenView {
       this.hudText,
       this.shopGroup,
       this.startWaveButton,
+      this.backButton,
       this.messageText,
       this.prompt.group,
     );
@@ -101,6 +105,7 @@ export class GameScreenView {
     this.shopGroup.x(width - SHOP_WIDTH);
     this.shopBackground.size({ width: SHOP_WIDTH, height });
     this.startWaveButton.position({ x: width - SHOP_WIDTH + 30, y: height - 80 });
+    this.backButton.position({ x: width - SHOP_WIDTH + 30, y: height - 144 });
 
     // Fit the map into the space left of the shop and below the HUD
     const areaWidth = width - SHOP_WIDTH - 2 * MARGIN;

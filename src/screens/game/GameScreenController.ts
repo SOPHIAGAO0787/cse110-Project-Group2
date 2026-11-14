@@ -1,10 +1,9 @@
 import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { GameModel } from "../../model/GameModel";
-import { loadMap, TOWERS } from "../../model/loadContent";
+import { findMap, TOWERS } from "../../model/loadContent";
 import type { MapConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
-import map1 from "../../data/maps/map1.json";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
@@ -12,11 +11,13 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
+import type { Progress } from "../../model/Progress";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
+  private progress: Progress; // which map to play; every finished game saves its stars here
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -25,13 +26,17 @@ export class GameScreenController implements Screen {
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
 
-  constructor(app: ScreenSwitcher) {
+  // All maps are the same size, so the view made for the first map fits every map.
+  constructor(app: ScreenSwitcher, progress: Progress) {
     this.app = app;
-    this.map = loadMap(map1);
+    this.progress = progress;
+    this.map = findMap(progress.currentMapId);
     this.view = new GameScreenView(
       this.map.cols,
       this.map.rows,
       () => this.model.startNextWave(),
+      // Leaving ends the game without a result, so nothing is recorded on Progress
+      () => this.app.switchTo("maps"),
       this.questions,
     );
     this.group = this.view.group;
@@ -41,8 +46,9 @@ export class GameScreenController implements Screen {
     this.loop = new GameLoop((dt) => this.model.tick(dt));
   }
 
-  // Called every time the player enters the game screen: starts a fresh game.
+  // Called every time the player enters the game screen: starts a fresh game on the chosen map.
   show(): void {
+    this.map = findMap(this.progress.currentMapId);
     this.model = new GameModel(this.map);
 
     // R1: create the enemy view
@@ -77,7 +83,11 @@ export class GameScreenController implements Screen {
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
       const result = this.model.result;
-      if (result) this.app.switchTo("result", result);
+      if (result) {
+        // A win unlocks the next map and its stars show on the map screen
+        this.progress.recordResult(this.map.id, result.stars);
+        this.app.switchTo("result", result);
+      }
     });
 
     events.on("coinsChanged", refreshHud);
