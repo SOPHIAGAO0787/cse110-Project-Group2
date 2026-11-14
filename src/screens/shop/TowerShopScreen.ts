@@ -1,18 +1,19 @@
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 import { TowerShopView } from "./TowerShopView";
+import { PlayerProgress } from "../../model/PlayerProgress";
 
 export class TowerShopScreen implements Screen {
   private view: TowerShopView;
 
-  // Demo state only. This is separate from the gameplay wallet.
-  private coins = 200;
-  private levels = new Map<string, number>();
   private selectedId = SHOP_TOWERS[0]?.def.id ?? "";
 
   group: TowerShopView["group"];
 
-  constructor(app: ScreenSwitcher) {
+  constructor(
+    app: ScreenSwitcher,
+    private progress: PlayerProgress,
+  ) {
     this.view = new TowerShopView({
       onSelect: (id) => {
         this.selectedId = id;
@@ -45,8 +46,8 @@ export class TowerShopScreen implements Screen {
     this.view.render({
       towers: SHOP_TOWERS,
       selectedId: this.selectedId,
-      levels: this.levels,
-      coins: this.coins,
+      levels: this.progress.maxLevels,
+      coins: this.progress.shopCoins,
     });
   }
 
@@ -56,7 +57,7 @@ export class TowerShopScreen implements Screen {
 
     //get the level, check locked or not, get cur level
     // -1 = locked; 0 = level 1; 1 = level 2.
-    const levelIndex = this.levels.get(tower.def.id) ?? -1;
+    const levelIndex = this.progress.maxLevels.get(tower.def.id) ?? -1;
     const locked = levelIndex < 0;
     const current = tower.levels[Math.max(0, levelIndex)];
 
@@ -66,16 +67,16 @@ export class TowerShopScreen implements Screen {
     const cost = locked ? tower.unlockCost : current.upgradeCost;
     if (cost === null) return;
 
-    if (this.coins < cost) {
+    if (this.progress.shopCoins < cost) {
       this.view.showPopup(
-        `You need ${cost} coins, but have ${this.coins}.\nEarn ${cost - this.coins} more coins.`,
+        `You need ${cost} coins, but have ${this.progress.shopCoins}.\nEarn ${cost - this.progress.shopCoins} more coins.`,
       );
       return;
     }
 
     // Temporary successful interaction for the UI demonstration.
-    this.coins -= cost;
-    this.levels.set(tower.def.id, locked ? 0 : levelIndex + 1);
+    this.progress.shopCoins -= cost;
+    this.progress.maxLevels.set(tower.def.id, locked ? 0 : levelIndex + 1);
     this.refresh();
   }
 }

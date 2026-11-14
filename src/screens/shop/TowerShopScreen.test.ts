@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TowerShopView } from "./TowerShopView";
 import { TowerShopScreen } from "./TowerShopScreen";
+import { PlayerProgress } from "../../model/PlayerProgress";
 
 type ShopCallbacks = ConstructorParameters<typeof TowerShopView>[0];
 type ShopState = Parameters<TowerShopView["render"]>[0];
@@ -30,12 +31,14 @@ function displayedState(): ShopState {
 }
 
 describe("Tower shop UI interactions", () => {
+  let progress: PlayerProgress;
+
   beforeEach(() => {
     vi.clearAllMocks();
 
-    new TowerShopScreen({
-      switchTo: vi.fn(),
-    });
+    progress = new PlayerProgress();
+
+    new TowerShopScreen({ switchTo: vi.fn() }, progress);
   });
 
   it("provides the tower's cost and abilities to the view", () => {
@@ -62,29 +65,30 @@ describe("Tower shop UI interactions", () => {
     expect(next.radius).toBeGreaterThan(current.radius);
   });
 
-  it("updates the displayed state after an affordable unlock", () => {
+  it("upgrades Circle and updates shared progress", () => {
     view.clickAction();
 
     const state = displayedState();
 
-    expect(state.coins).toBe(150);
-    expect(state.levels.get("circle")).toBe(0);
+    expect(state.coins).toBe(125);
+    expect(state.levels.get("circle")).toBe(1);
+    expect(progress.shopCoins).toBe(125);
+    expect(progress.getMaxLevel("circle")).toBe(1);
     expect(view.showPopup).not.toHaveBeenCalled();
   });
 
   it("requests a popup without changing coins or level when funds are insufficient", () => {
-    view.clickAction(); // Unlock: 200 - 50 = 150
-    view.clickAction(); // Upgrade: 150 - 75 = 75
+    progress.shopCoins = 50;
 
     const rendersBeforeAttempt = view.render.mock.calls.length;
 
-    view.clickAction(); // Next upgrade costs 125; only 75 remain.
+    view.clickAction(); // The first upgrade costs 75; only 50 are available.
 
     expect(view.showPopup).toHaveBeenCalledWith(
-      "You need 125 coins, but have 75.\nEarn 50 more coins.",
+      "You need 75 coins, but have 50.\nEarn 25 more coins.",
     );
-    expect(displayedState().coins).toBe(75);
-    expect(displayedState().levels.get("circle")).toBe(1);
+    expect(progress.shopCoins).toBe(50);
+    expect(progress.getMaxLevel("circle")).toBe(0);
     expect(view.render).toHaveBeenCalledTimes(rendersBeforeAttempt);
   });
 });

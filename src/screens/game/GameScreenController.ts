@@ -11,6 +11,7 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
+import { PlayerProgress } from "../../model/PlayerProgress";
 import type { Progress } from "../../model/Progress";
 
 // Connects the game model to the screen: input → model, model events → views.
@@ -26,8 +27,12 @@ export class GameScreenController implements Screen {
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
 
-  // All maps are the same size, so the view made for the first map fits every map.
-  constructor(app: ScreenSwitcher, progress: Progress) {
+  // Map progress tracks stars; tower progress tracks shop purchases.
+  constructor(
+    app: ScreenSwitcher,
+    progress: Progress,
+    private towerProgress: PlayerProgress = new PlayerProgress(),
+  ) {
     this.app = app;
     this.progress = progress;
     this.map = findMap(progress.currentMapId);
@@ -45,19 +50,20 @@ export class GameScreenController implements Screen {
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
-    this.model = new GameModel(this.map);
+    this.model = new GameModel(this.map, this.towerProgress);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
   }
 
   // Called every time the player enters the game screen: starts a fresh game on the chosen map.
   show(): void {
     this.map = findMap(this.progress.currentMapId);
-    this.model = new GameModel(this.map);
+    this.model = new GameModel(this.map, this.towerProgress);
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
 
     this.loop = new GameLoop((dt) => {
+      if (!this.active) return;
       this.model.tick(dt);
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
     });
@@ -85,6 +91,10 @@ export class GameScreenController implements Screen {
     const events = this.model.events;
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
+      this.loop.stop();
+      this.view.prompt.cancel();
+      this.cleanupPlacement?.();
+      this.cleanupPlacement = null;
       const result = this.model.result;
       if (result) {
         // A win unlocks the next map and its stars show on the map screen
@@ -138,12 +148,34 @@ export class GameScreenController implements Screen {
 
   private wirePlacement(gridView: GridView): () => void {
     const placement = new PlacementModel();
-    const def = TOWERS.find((d) => d.id === "circle")!;
-    const pv = new PlacementView(def.range.radius);
-    this.view.mapGroup.add(pv.group);
+    let disposed = false;
 
-    const card = new InGameTowerCard(def, pv.menuCircle);
-    this.view.shopGroup.add(card.group);
+    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
+
+    // No unlocked towers means there is nothing to place.
+    if (unlockedTowers.length === 0) {
+      return () => {};
+    }
+
+    const choices = unlockedTowers.map((tower, index) => {
+      const view = new PlacementView(tower.range.radius);
+
+      const card = new InGameTowerCard(tower, view.menuCircle);
+
+      card.group.position({
+        x: 16,
+        y: 64 + index * 352,
+      });
+
+      this.view.mapGroup.add(view.group);
+      this.view.shopGroup.add(card.group);
+
+      return { tower, view, card };
+    });
+
+    // These change when the player selects another tower.
+    let def = choices[0].tower;
+    let pv = choices[0].view;
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
@@ -151,17 +183,16 @@ export class GameScreenController implements Screen {
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);
-      this.loop.stop(); // pause the game while the question is open
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
+      if (disposed || !this.active || this.model.isOver) return false;
       if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
-      if (this.active) this.loop.start(); // don't restart if the player left the screen
       return correct;
     };
 
     let pending = false; // blocks double-triggers while a question is open
     const requestPlace = async () => {
       const s = placement.state;
-      if (s.kind !== "placed" || pending) return;
+      if (s.kind !== "placed" || pending || disposed || this.model.isOver) return;
       const tile = s.pos;
 
       // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
@@ -181,6 +212,8 @@ export class GameScreenController implements Screen {
         pending = false;
       }
 
+      if (disposed || !this.active || this.model.isOver) return;
+
       if (!ok) {
         placement.cancel();
         pv.hide();
@@ -192,7 +225,13 @@ export class GameScreenController implements Screen {
 
       placement.confirm(); // state: idle
       pv.hide();
-      if (this.commitTower(tile)) pv.addTower(tile);
+      const result = this.model.tryPlaceTower(def.id, tile);
+
+      if (result === "ok") {
+        pv.addTower(tile);
+      } else {
+        this.view.showMessage(`Cannot place tower: ${result}`);
+      }
     };
 
     const onDown = () => {
@@ -233,21 +272,33 @@ export class GameScreenController implements Screen {
       }
     };
 
-    card.group.on("pointerdown", onDown);
+    choices.forEach((choice) => {
+      choice.card.group.on("pointerdown", () => {
+        if (pending || this.model.isOver) return;
+
+        placement.cancel();
+        pv.hide();
+
+        def = choice.tower;
+        pv = choice.view;
+        onDown();
+      });
+    });
     stage?.on("pointermove.placement", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
 
     return () => {
       // called from hide()
+      disposed = true;
+      placement.cancel();
       stage?.off(".placement");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
-      card.group.destroy();
+      choices.forEach((choice) => {
+        choice.card.group.destroy();
+        choice.view.group.destroy();
+      });
     };
-  }
-
-  private commitTower(tile: Vec): boolean {
-    return this.model.tryPlaceTower("circle", tile) === "ok";
   }
 }

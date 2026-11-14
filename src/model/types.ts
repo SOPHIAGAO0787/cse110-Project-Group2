@@ -68,7 +68,7 @@ export interface Question {
 
 // What happened when the player tried to place a tower.
 // "blocked" = not a buildable tile, "occupied" = a tower is already there, "funds" = not enough coins
-export type PlaceResult = "ok" | "blocked" | "occupied" | "funds";
+export type PlaceResult = "ok" | "blocked" | "occupied" | "funds" | "locked";
 
 // Everything that happens in a game, announced on the EventBus.
 // enemyId / towerId are the number of one specific enemy or tower in this game.
