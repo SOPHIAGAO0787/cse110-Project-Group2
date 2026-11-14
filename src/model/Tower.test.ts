@@ -2,16 +2,25 @@ import { describe, expect, it } from "vitest";
 import { GameModel } from "./GameModel";
 import { MAX_SPREAD, MIN_SPREAD } from "./geometry/sector";
 import { TOWERS, loadMap } from "./loadContent";
+import { SHOP_TOWERS } from "./shop/loadShopContent";
 import map1 from "../data/maps/map1.json";
 import type { Enemy } from "./Enemy";
 import { Tower } from "./Tower";
+import { TowerProgress } from "./TowerProgress";
 import type { TowerConfig } from "./types";
+
+// A game where every tower is already bought in the Tower Shop (only the circle is by default).
+function unlockedProgress(): TowerProgress {
+  const progress = new TowerProgress();
+  for (const def of TOWERS) progress.maxLevels.set(def.id, 0);
+  return progress;
+}
 
 const NORTH = -Math.PI / 2; // the spawn point (0, 1) is straight above the tile (0, 2)
 
 // A game with one tower on the tile (0, 2), one tile below the enemy spawn.
 function setup(defId = "circle", config?: TowerConfig) {
-  const game = new GameModel(loadMap(map1));
+  const game = new GameModel(loadMap(map1), unlockedProgress());
   expect(game.tryPlaceTower(defId, { x: 0, y: 2 }, config)).toBe("ok");
   const tower = game.towers[0];
   return { game, tower, interval: 1 / tower.fireRate };
@@ -188,7 +197,7 @@ describe("Triangle tower cone", () => {
   });
 
   it("rejects a config of the wrong kind", () => {
-    const game = new GameModel(loadMap(map1));
+    const game = new GameModel(loadMap(map1), unlockedProgress());
     expect(() =>
       game.tryPlaceTower("triangle", { x: 0, y: 2 }, { kind: "circle", radius: 1 }),
     ).toThrow();
@@ -276,7 +285,7 @@ describe("Square tower block", () => {
   });
 
   it("rejects shapes that are not allowed, and costs nothing", () => {
-    const game = new GameModel(loadMap(map1));
+    const game = new GameModel(loadMap(map1), unlockedProgress());
     const coins = game.wallet.coins;
     for (const [w, d] of [
       [1, 6],
@@ -292,7 +301,7 @@ describe("Square tower block", () => {
   });
 
   it("rejects a bad facing or side, and a cone config", () => {
-    const game = new GameModel(loadMap(map1));
+    const game = new GameModel(loadMap(map1), unlockedProgress());
     const t = { x: 0, y: 2 };
     expect(() =>
       game.tryPlaceTower("rectangle", t, { ...block(2, 2), facing: "north" as never }),
@@ -324,5 +333,72 @@ describe("Square tower block", () => {
     const tower = new Tower(1, upgraded, tile, block(2, 4));
     expect(tower.range.contains({ x: 0, y: -1 })).toBe(true); // reaches 4 tiles up
     expect(tower.fireRate).toBeCloseTo((base.fireRatePerSec * 6) / 8);
+  });
+});
+
+describe("Tower upgrades", () => {
+  const shopCircle = SHOP_TOWERS.find((item) => item.def.id === "circle")!;
+
+  it("starts at level 1 (0) and goes up one level per upgrade", () => {
+    const { tower } = setup("circle");
+    expect(tower.level).toBe(0);
+    tower.upgrade(shopCircle.levels[1]);
+    expect(tower.level).toBe(1);
+  });
+
+  it("uses the upgraded damage, attack speed and range during combat", () => {
+    const { game, tower } = setup("circle");
+    const [enemy] = spawn(game);
+    const next = shopCircle.levels[1];
+    const before = tower.reach;
+    enemy.pos = { x: (before + next.radius) / 2, y: 2 }; // beyond the old reach, inside the new one
+    expect(tower.range.contains(enemy.pos)).toBe(false);
+
+    tower.upgrade(next);
+
+    expect(tower.reach).toBe(next.radius);
+    expect(tower.config).toEqual({ kind: "circle", radius: next.radius });
+    expect(tower.range.contains(enemy.pos)).toBe(true);
+    expect(tower.fireRate).toBe(next.attackSpeed);
+    expect(tower.update(0.5 / next.attackSpeed, game.enemies)).toBe(0);
+    expect(tower.update(0.5 / next.attackSpeed + 0.001, game.enemies)).toBe(1);
+    expect(enemy.hp).toBe(enemy.def.hp - next.damage);
+  });
+
+  it("does not change the original tower definition", () => {
+    const { tower } = setup("circle");
+    const before = TOWERS.find((d) => d.id === "circle")!.fireRatePerSec;
+    tower.upgrade(shopCircle.levels[1]);
+    expect(TOWERS.find((d) => d.id === "circle")!.fireRatePerSec).toBe(before);
+  });
+
+  it("changes damage and speed of an aimed tower but keeps the shape the player chose", () => {
+    for (const [id, config] of [
+      ["triangle", coneFacingNorth(MAX_SPREAD)],
+      ["rectangle", { kind: "rect", facing: "up", width: 2, depth: 2, side: 1 }],
+    ] as const) {
+      const { tower } = setup(id, config);
+      const reach = tower.reach;
+
+      tower.upgrade({ damage: 50, attackSpeed: 2, radius: 99, upgradeCost: null });
+
+      expect(tower.level).toBe(1);
+      expect(tower.def.damage).toBe(50);
+      expect(tower.def.fireRatePerSec).toBe(2);
+      expect(tower.config).toMatchObject(config);
+      expect(tower.reach).toBe(reach); // the shop's circle radius does not apply
+    }
+  });
+
+  it("keeps the square tower's rate tied to its area after an upgrade", () => {
+    const { tower } = setup("rectangle", {
+      kind: "rect",
+      facing: "up",
+      width: 2,
+      depth: 2,
+      side: 1,
+    });
+    tower.upgrade({ damage: 20, attackSpeed: 1, radius: 0, upgradeCost: null });
+    expect(tower.fireRate).toBeCloseTo(1 * (6 / 4)); // rateArea 6, block area 4
   });
 });

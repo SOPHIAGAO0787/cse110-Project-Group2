@@ -11,6 +11,7 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
+import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
@@ -19,7 +20,7 @@ import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
-  private progress: Progress; // which map to play; every finished game saves its stars here
+  private progress: Progress; // which map to play and the bonus coins; finished games save stars here
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -30,8 +31,12 @@ export class GameScreenController implements Screen {
   private screenHeight = 0; // last size given to resize(), used to fit the shop cards
   private layoutCards: (() => void) | null = null;
 
-  // All maps are the same size, so the view made for the first map fits every map.
-  constructor(app: ScreenSwitcher, progress: Progress) {
+  // Map progress tracks stars; tower progress tracks shop purchases.
+  constructor(
+    app: ScreenSwitcher,
+    progress: Progress,
+    private towerProgress: TowerProgress = new TowerProgress(),
+  ) {
     this.app = app;
     this.progress = progress;
     this.map = findMap(progress.currentMapId);
@@ -49,20 +54,24 @@ export class GameScreenController implements Screen {
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
-    this.model = new GameModel(this.map);
+    this.model = new GameModel(this.map, this.towerProgress);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
   }
 
   // Called every time the player enters the game screen: starts a fresh game on the chosen map.
   show(): void {
     this.map = findMap(this.progress.currentMapId);
-    this.model = new GameModel(this.map);
+    this.model = new GameModel(this.map, this.towerProgress);
+    // Coins earned in the mini-game are added to the map's starting coins
+    this.model.wallet.add(this.progress.bonusCoins);
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
     const towersView = new TowersView();
     this.loop = new GameLoop((dt) => {
+      if (!this.active) return;
       this.model.tick(dt);
+      if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
       towersView.update(this.model.towers, this.model.enemies, dt); // towers turn towards their targets
     });
@@ -78,6 +87,7 @@ export class GameScreenController implements Screen {
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
+      this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
         this.model.lives.remaining,
@@ -91,10 +101,17 @@ export class GameScreenController implements Screen {
     const events = this.model.events;
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
+      this.loop.stop();
+      this.view.prompt.cancel();
+      this.cleanupPlacement?.();
+      this.cleanupPlacement = null;
+      this.refreshWaveTimers();
       const result = this.model.result;
       if (result) {
         // A win unlocks the next map and its stars show on the map screen
         this.progress.recordResult(this.map.id, result.stars);
+        // This game had the bonus coins. Leaving early (no result) keeps them for the next game.
+        this.progress.useBonusCoins();
         this.app.switchTo("result", result);
       }
     });
@@ -138,6 +155,18 @@ export class GameScreenController implements Screen {
     this.layoutCards?.();
   }
 
+  private refreshWaveTimers(): void {
+    const waves = this.model.waves;
+    this.view.setWaveTimers(
+      this.model.isOver ? null : waves.preparationRemaining,
+      this.model.isOver ? null : waves.lastSpawnRemaining,
+      !this.model.isOver &&
+        !waves.isRunning &&
+        waves.currentWave < waves.totalWaves &&
+        (waves.currentWave === 0 || waves.preparationRemaining !== null),
+    );
+  }
+
   // The game is paused while the settings are open
   private openSettings(): void {
     this.view.settings.open();
@@ -150,6 +179,9 @@ export class GameScreenController implements Screen {
   }
 
   private wirePlacement(gridView: GridView): () => void {
+    const model = this.model;
+    let disposed = false;
+    const canCommit = () => !disposed && this.active && !model.isOver;
     const placement = new PlacementModel();
 
     // One card and one preview per tower kind; picking a card switches which one is active.
@@ -178,9 +210,11 @@ export class GameScreenController implements Screen {
         });
       });
     };
-    this.layoutCards();
-
+    this.layoutCards = null;
+    
     // These change when the player picks another tower.
+    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
+    if (unlockedTowers.length === 0) return () => {};
     let def = choices[0].tower;
     let pv = choices[0].view;
 
@@ -190,17 +224,41 @@ export class GameScreenController implements Screen {
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);
-      this.loop.stop(); // pause the game while the question is open
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
-      if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
-      if (this.active) this.loop.start(); // don't restart if the player left the screen
+      if (!canCommit()) return false;
+      if (correct) model.recordQuestionSolved(); // So1: shown on the result screen
       return correct;
     };
 
     let pending = false; // blocks double-triggers while a question is open
+    const onUpgrade = () => {
+      if (
+        pending ||
+        disposed ||
+        this.model.isOver ||
+        this.view.settings.isOpen() ||
+        placement.state.kind !== "idle"
+      ) {
+        return;
+      }
+
+      const tile = gridView.tileUnderMouse();
+      if (!tile) return;
+
+      const tower = this.model.towers.find(
+        (item) => item.tile.x === tile.x && item.tile.y === tile.y,
+      );
+      if (!tower) return;
+
+      const message = this.model.tryUpgradeTower(tower.id);
+      this.view.showMessage(message);
+    };
+
+    gridView.group.on("click.upgrade tap.upgrade", onUpgrade);
+
     const requestPlace = async () => {
       const s = placement.state;
-      if ((s.kind !== "placed" && s.kind !== "configuring") || pending) return;
+      if (! !canCommit() || (s.kind !== "placed" && s.kind !== "configuring") || pending) return;
       const tile = s.pos;
       const config = s.kind === "configuring" ? s.config : undefined; // e.g. where the triangle aims
 
@@ -221,7 +279,7 @@ export class GameScreenController implements Screen {
         pending = false;
       }
 
-      if (!ok) {
+      if (!ok || !canCommit()) {
         placement.cancel();
         pv.hide();
         return;
@@ -238,10 +296,26 @@ export class GameScreenController implements Screen {
 
       placement.confirm(); // state: idle
       pv.hide();
-      this.model.tryPlaceTower(def.id, tile, config);
+      const result = this.model.tryPlaceTower(def.id, tile, config)
+
+      // TowersView draws successful placements through the towerPlaced event.
+      if (result === "ok") {
+        return;
+      }
+
+      if (result === "funds") {
+        this.view.showMessage("Not enough coins");
+      } else if (result === "locked") {
+        this.view.showMessage("Unlock this tower in the Tower Shop first");
+      } else if (result === "occupied") {
+        this.view.showMessage("There is already a tower on this tile");
+      } else {
+        this.view.showMessage("Can't place a tower here");
+      }
     };
 
     const onDown = () => {
+      if (pending || !canCommit()) return;
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
       gridView.showGrid(true);
@@ -296,23 +370,29 @@ export class GameScreenController implements Screen {
       }
     };
 
-    for (const choice of choices) {
+    choices.forEach((choice) => {
       choice.card.group.on("pointerdown", () => {
-        if (pending) return;
-        placement.cancel(); // drop whatever was being placed with the other tower
+        if (pending || this.model.isOver) return;
+
+        placement.cancel();
         pv.hide();
+
         def = choice.tower;
         pv = choice.view;
         onDown();
       });
-    }
+    });
     stage?.on("pointermove.placement", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
 
     return () => {
-      // called from hide()
+      // Invalidate pending answers before removing input handlers.
+      disposed = true;
+      placement.cancel();
+      pv.hide();
       stage?.off(".placement");
+      gridView.group.off(".upgrade");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
       for (const choice of choices) {

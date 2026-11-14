@@ -5,6 +5,8 @@ import { starRating, type GameResult } from "./GameResult";
 import { ENEMIES, TOWERS } from "./loadContent";
 import { Lives } from "./Lives";
 import { Path } from "./Path";
+import { TowerProgress } from "./TowerProgress";
+import { SHOP_TOWERS } from "./shop/loadShopContent";
 import { Tower } from "./Tower";
 import { defaultConfig, normalizeConfig } from "./towerConfig";
 import type { MapConfig, PlaceResult, TowerConfig, Vec } from "./types";
@@ -35,7 +37,10 @@ export class GameModel {
   private finalWaveCleared = false;
   private finalResult: GameResult | null = null; // set once, when the game ends
 
-  constructor(map: MapConfig) {
+  constructor(
+    map: MapConfig,
+    private progress: TowerProgress = new TowerProgress(),
+  ) {
     this.map = map;
     this.path = new Path(map.path);
     this.grid = new Grid(map);
@@ -127,6 +132,8 @@ export class GameModel {
     // Check the config before anything is spent or occupied, so a bad config can't cost coins.
     const finalConfig = normalizeConfig(def, config ?? defaultConfig(def));
 
+    if (this.progress.getMaxLevel(defId) < 0) return "locked";
+
     if (this.grid.isOccupied(tile)) return "occupied"; // check first: isBuildable is also false when occupied
     if (!this.grid.isBuildable(tile)) return "blocked";
     // Spend after the tile checks, so a bad tile never costs coins
@@ -140,6 +147,48 @@ export class GameModel {
     this.towersPlaced++;
     this.events.emit("towerPlaced", { towerId: tower.id, defId: def.id, tile });
     return "ok";
+  }
+
+  // Upgrades one placed tower, up to the maximum bought in the shop.
+  tryUpgradeTower(towerId: number): string {
+    if (this.isOver) {
+      return "The game has ended.";
+    }
+
+    const tower = this.towers.find((item) => item.id === towerId);
+
+    if (!tower) {
+      return "Tower not found.";
+    }
+
+    const shopTower = SHOP_TOWERS.find((item) => item.def.id === tower.def.id);
+
+    if (!shopTower) {
+      return "Upgrade information not found.";
+    }
+
+    const maxLevel = this.progress.getMaxLevel(tower.def.id);
+
+    if (tower.level >= maxLevel) {
+      return "Buy a higher maximum level in the Tower Shop first.";
+    }
+
+    const currentStats = shopTower.levels[tower.level];
+    const nextStats = shopTower.levels[tower.level + 1];
+
+    if (!nextStats || currentStats.upgradeCost === null) {
+      return "This tower is already at its highest level.";
+    }
+
+    const cost = currentStats.upgradeCost;
+
+    if (!this.wallet.spend(cost)) {
+      return `You need ${cost} coins to upgrade.`;
+    }
+
+    tower.upgrade(nextStats);
+
+    return `${tower.def.name} upgraded to Level ${tower.level + 1}.`;
   }
 
   // Adds one enemy of the given kind (an id from enemies.json, e.g. "basic") at the start of the path.

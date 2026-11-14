@@ -1,5 +1,6 @@
 import type { Enemy } from "./Enemy";
 import { defaultConfig, fireRateFor, makeRange, normalizeConfig, rangeReach } from "./towerConfig";
+import type { ShopLevel } from "./shop/types";
 import type { RangeShape, TowerConfig, TowerDef, Vec } from "./types";
 
 // A placed tower that shoots enemies inside its range.
@@ -9,6 +10,9 @@ export class Tower {
   tile: Vec;
   config: TowerConfig; // what the player chose when placing it (e.g. the triangle's direction)
   range: RangeShape;
+
+  // 0 means Level 1.
+  level = 0;
 
   // How much progress we have made toward the next shot.
   private shotProgress = 0;
@@ -25,6 +29,23 @@ export class Tower {
 
     this.config = normalizeConfig(this.def, config ?? defaultConfig(this.def));
     this.range = makeRange(this.def, tile, this.config);
+  }
+
+  // Applies the next shop level: more damage and a faster fire rate for every tower.
+  // Only the circle's range is a plain radius that the shop level sets; a cone or block
+  // keeps the shape the player chose.
+  upgrade(stats: ShopLevel): void {
+    this.level += 1;
+
+    this.def.damage = stats.damage;
+    this.def.fireRatePerSec = stats.attackSpeed;
+
+    if (this.def.range.kind === "circle" && this.config.kind === "circle") {
+      this.def.range.radius = stats.radius;
+      this.config = { kind: "circle", radius: stats.radius };
+      // Replace the old attack area with the larger one.
+      this.range = makeRange(this.def, this.tile, this.config);
+    }
   }
 
   // How far the range reaches from the tower, in tiles.
