@@ -1,5 +1,6 @@
 import upgradesJson from "../../data/towerUpgrades.json";
 import { TOWERS } from "../loadContent";
+import { rangeReach } from "../towerConfig";
 import type { ShopLevel, ShopTower } from "./types";
 
 // Check for unknown tower IDs and duplicate upgrade records.
@@ -38,7 +39,7 @@ export const SHOP_TOWERS: ShopTower[] = TOWERS.map((def) => {
   const baseLevel: ShopLevel = {
     damage: def.damage,
     attackSpeed: def.fireRatePerSec,
-    radius: def.range.radius,
+    radius: rangeReach(def), // a cone's reach at its default angle
     upgradeCost: upgrades[0]?.cost ?? null,
   };
 

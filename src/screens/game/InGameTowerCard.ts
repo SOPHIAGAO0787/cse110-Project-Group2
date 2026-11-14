@@ -1,10 +1,11 @@
 import Konva from "konva";
+import { describeRange } from "../../model/towerConfig";
 import type { TowerDef } from "../../model/types";
 
 export class InGameTowerCard {
   group = new Konva.Group({ x: 16, y: 64 });
 
-  constructor(def: TowerDef, icon: Konva.Circle) {
+  constructor(def: TowerDef, icon: Konva.Shape) {
     const background = new Konva.Rect({
       width: 228,
       height: 340,
@@ -56,7 +57,7 @@ export class InGameTowerCard {
       text: [
         `Damage: ${def.damage}`,
         `Attack speed: ${def.fireRatePerSec} shots/sec`,
-        `Range: ${def.range.radius} tiles`,
+        `Range: ${describeRange(def)}`,
       ].join("\n"),
       fontSize: 15,
       fill: "white",
@@ -68,7 +69,10 @@ export class InGameTowerCard {
       x: 16,
       y: 292,
       width: 196,
-      text: "Drag onto a green tile.\nPress Enter to answer the question.",
+      text:
+        def.range.kind === "sector"
+          ? "Drag onto a green tile, then aim with the mouse.\nPress Enter to answer the question."
+          : "Drag onto a green tile.\nPress Enter to answer the question.",
       fontSize: 13,
       fill: "#b4b4c8",
       lineHeight: 1.3,
