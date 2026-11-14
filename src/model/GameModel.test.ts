@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GameModel } from "./GameModel";
-import { PlayerProgress } from "./PlayerProgress";
+import { TowerProgress } from "./TowerProgress";
 import { loadMap, TOWERS } from "./loadContent";
 import map1 from "../data/maps/map1.json";
 import type { Vec } from "./types";
@@ -53,7 +53,7 @@ describe("GameModel.tryPlaceTower", () => {
   const pathTile = findTile(map.tiles, "P");
 
   it("rejects a locked tower without spending coins or occupying its tile", () => {
-    const progress = new PlayerProgress();
+    const progress = new TowerProgress();
     progress.maxLevels.delete("circle");
     const model = new GameModel(map, progress);
     const startingCoins = model.wallet.coins;

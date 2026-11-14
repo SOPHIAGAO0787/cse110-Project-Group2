@@ -8,11 +8,12 @@ import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
 import { GridView } from "./GridView";
 import { QuestionPrompt } from "./QuestionPrompt";
+import { GameScreenView } from "./GameScreenView";
 import map from "../../data/maps/map1.json";
 import map2 from "../../data/maps/map2.json";
 import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
-import { PlayerProgress } from "../../model/PlayerProgress";
+import { TowerProgress } from "../../model/TowerProgress";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -33,7 +34,7 @@ let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 let progress: Progress;
-let towerProgress: PlayerProgress;
+let towerProgress: TowerProgress;
 
 function hud(): string {
   const text = controller.group
@@ -67,7 +68,7 @@ beforeEach(() => {
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
   progress = new Progress(MAPS);
-  towerProgress = new PlayerProgress();
+  towerProgress = new TowerProgress();
   controller = new GameScreenController({ switchTo }, progress, towerProgress);
   controller.show();
   model = models[models.length - 1];
@@ -305,6 +306,7 @@ describe("GameScreenController questions during gameplay", () => {
   });
 
   it("rechecks match coins after answering", async () => {
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
     const { answer } = openQuestion();
     model.wallet.spend(model.wallet.coins);
     answer(true);
@@ -312,6 +314,23 @@ describe("GameScreenController questions during gameplay", () => {
 
     expect(model.towers).toHaveLength(0);
     expect(model.wallet.coins).toBe(0);
+    expect(message).toHaveBeenCalledWith("Not enough coins");
+  });
+
+  it.each([
+    ["locked", "Unlock this tower in the Tower Shop first"],
+    ["occupied", "There is already a tower on this tile"],
+    ["blocked", "Can't place a tower here"],
+  ] as const)("shows a readable message when placement is %s", async (result, text) => {
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
+    const { answer } = openQuestion();
+    vi.spyOn(model, "tryPlaceTower").mockReturnValue(result);
+
+    answer(true);
+    await settleAnswer();
+
+    expect(message).toHaveBeenCalledWith(text);
+    expect(model.towers).toHaveLength(0);
   });
 });
 

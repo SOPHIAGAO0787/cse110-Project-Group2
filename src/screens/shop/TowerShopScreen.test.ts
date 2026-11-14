@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TowerShopView } from "./TowerShopView";
 import { TowerShopScreen } from "./TowerShopScreen";
-import { PlayerProgress } from "../../model/PlayerProgress";
+import { TowerProgress } from "../../model/TowerProgress";
 
 type ShopCallbacks = ConstructorParameters<typeof TowerShopView>[0];
 type ShopState = Parameters<TowerShopView["render"]>[0];
@@ -31,12 +31,12 @@ function displayedState(): ShopState {
 }
 
 describe("Tower shop UI interactions", () => {
-  let progress: PlayerProgress;
+  let progress: TowerProgress;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    progress = new PlayerProgress();
+    progress = new TowerProgress();
 
     new TowerShopScreen({ switchTo: vi.fn() }, progress);
   });
