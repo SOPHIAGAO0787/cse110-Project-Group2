@@ -36,6 +36,13 @@ export class GameScreenView {
   private mapRows: number;
   // Starts right of the back arrow
   private hudText = new Konva.Text({ x: 72, y: 14, fontSize: 20, fill: "white" });
+  private timerText = new Konva.Text({
+    x: 20,
+    width: SHOP_WIDTH - 40,
+    fontSize: 18,
+    fill: "white",
+    listening: false,
+  });
   private shopBackground = new Konva.Rect({ fill: "#262637", stroke: "#3a3a52" });
   private shopTitle = new Konva.Text({ x: 20, y: 20, text: "Shop", fontSize: 22, fill: "white" });
   // A short message under the HUD, e.g. "Not enough coins". Hidden until showMessage() is called.
@@ -68,7 +75,7 @@ export class GameScreenView {
     this.settingsButton = makeSettingsButton(onOpenSettings);
     this.prompt = new QuestionPrompt(questions);
     this.settings = new SettingsPanel(onResume, onBack, onMainMenu);
-    this.shopGroup.add(this.shopBackground, this.shopTitle);
+    this.shopGroup.add(this.shopBackground, this.shopTitle, this.timerText);
     this.group.add(
       this.mapGroup,
       this.hudText,
@@ -95,6 +102,19 @@ export class GameScreenView {
     );
   }
 
+  setWaveTimers(preparation: number | null, lastSpawn: number | null, canStart: boolean): void {
+    const seconds = preparation ?? lastSpawn;
+    const text =
+      seconds !== null && Number.isFinite(seconds)
+        ? `${preparation !== null ? "Next Wave In" : "Last Enemy Spawns In"}: ${Math.ceil(Math.max(0, seconds))}s`
+        : "";
+    if (this.timerText.text() !== text) this.timerText.text(text);
+    this.startWaveButton
+      .findOne<Konva.Text>("Text")!
+      .text(preparation !== null ? "Start Next Wave" : "Start Wave");
+    this.startWaveButton.visible(canStart);
+  }
+
   // Shows a message under the HUD for 2 seconds.
   showMessage(text: string): void {
     this.messageText.text(text);
@@ -119,6 +139,7 @@ export class GameScreenView {
     this.shopGroup.x(width - SHOP_WIDTH);
     this.shopBackground.size({ width: SHOP_WIDTH, height });
     this.startWaveButton.position({ x: width - SHOP_WIDTH + 30, y: height - 80 });
+    this.timerText.y(height - 140);
     // The gear sits at the right end of the HUD, just left of the shop
     this.settingsButton.position({ x: width - SHOP_WIDTH - 56, y: 4 });
 
