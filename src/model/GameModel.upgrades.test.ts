@@ -17,6 +17,28 @@ function createGame(maxLevel: number) {
 }
 
 describe("GameModel.tryUpgradeTower", () => {
+  it("emits towerFired when an upgraded tower attacks and awards kill coins", () => {
+    const game = createGame(1);
+    game.wallet.add(200);
+    const tower = game.towers[0];
+    game.tryUpgradeTower(tower.id);
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    enemy.hp = tower.def.damage;
+    const coinsBefore = game.wallet.coins;
+    const fired: number[] = [];
+    game.events.on("towerFired", (event) => fired.push(event.towerId));
+
+    game.tick(0.016);
+
+    expect(fired).toEqual([tower.id]);
+    expect(game.enemies).toHaveLength(0);
+    expect(game.wallet.coins).toBe(coinsBefore + enemy.def.reward);
+
+    game.tick(0.016);
+    expect(fired).toEqual([tower.id]);
+  });
+
   it("spends coins and applies the next level's damage, speed, and range", () => {
     const game = createGame(1);
     game.wallet.add(200);

@@ -10,6 +10,7 @@ import map from "../../data/maps/map1.json";
 import { PlayerProgress } from "../../model/PlayerProgress";
 import { GridView } from "./GridView";
 import { GameScreenView } from "./GameScreenView";
+import { TowersView } from "./TowersView";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -218,6 +219,22 @@ describe("GameScreenController HUD event wiring", () => {
 });
 
 describe("GameScreenController tower upgrades", () => {
+  it("creates one tower sprite and forwards firing events to its animation", () => {
+    const add = vi.spyOn(TowersView.prototype, "add");
+    const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    const tower = model.towers[0];
+
+    expect(add).toHaveBeenCalledExactlyOnceWith(tower);
+    model.spawnEnemy("basic");
+    model.tick(0.016);
+
+    expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
+    controller.hide();
+    model.events.emit("towerFired", { towerId: tower.id });
+    expect(fire).toHaveBeenCalledTimes(1);
+  });
+
   function prepareTower() {
     progress.maxLevels.set("circle", 1);
     model.wallet.add(200);

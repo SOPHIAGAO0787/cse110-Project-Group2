@@ -22,16 +22,17 @@ function createEnemy(id = 1): Enemy {
 }
 
 describe("Tower (R3)", () => {
-  it("waits for its firing interval, then damages an enemy in range", () => {
+  it("fires immediately, then waits for its cooldown", () => {
     const tower = new Tower(1, circle, { x: 0, y: 0 });
     const enemy = createEnemy();
     const interval = 1 / circle.fireRatePerSec;
 
-    tower.update(interval / 2, [enemy]);
-    expect(enemy.hp).toBe(100);
-
-    tower.update(interval / 2, [enemy]);
+    expect(tower.update(0, [enemy])).toBe(true);
     expect(enemy.hp).toBe(100 - circle.damage);
+    expect(tower.update(interval / 2, [enemy])).toBe(false);
+    expect(enemy.hp).toBe(100 - circle.damage);
+    expect(tower.update(interval / 2, [enemy])).toBe(true);
+    expect(enemy.hp).toBe(100 - circle.damage * 2);
   });
 
   it("ignores enemies outside its range", () => {
@@ -78,18 +79,21 @@ describe("Tower (R3)", () => {
     tower.upgrade(next);
     expect(tower.range.contains(enemy.pos)).toBe(true);
 
-    tower.update(1 / next.attackSpeed + 0.001, [enemy]);
+    expect(tower.update(0, [enemy])).toBe(true);
     expect(enemy.hp).toBe(100 - next.damage);
+    expect(tower.update(0.5 / next.attackSpeed, [enemy])).toBe(false);
+    expect(tower.update(0.5 / next.attackSpeed + 0.001, [enemy])).toBe(true);
+    expect(enemy.hp).toBe(100 - next.damage * 2);
   });
 
-  it("does not save up shots while there are no targets", () => {
+  it("fires only once when a target arrives after a long idle period", () => {
     const tower = new Tower(1, circle, { x: 0, y: 0 });
     const enemy = createEnemy();
     tower.update(10, []);
 
     tower.update(0.5 / circle.fireRatePerSec, [enemy]);
 
-    expect(enemy.hp).toBe(100);
+    expect(enemy.hp).toBe(100 - circle.damage);
   });
 
   it("ignores dead enemies and enemies that reached the end", () => {
