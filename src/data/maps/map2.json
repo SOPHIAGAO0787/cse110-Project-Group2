@@ -29,9 +29,23 @@
   ],
   "startingCoins": 100,
   "startingLives": 20,
+
   "waves": [
-    { "groups": [{ "enemy": "basic", "count": 6, "intervalSec": 1.1 }] },
-    { "groups": [{ "enemy": "basic", "count": 9, "intervalSec": 0.9 }] },
-    { "groups": [{ "enemy": "basic", "count": 12, "intervalSec": 0.8 }] }
+    {
+      "groups": [{ "enemy": "basic", "count": 6, "intervalSec": 1.1 }]
+    },
+    {
+      "groups": [
+        { "enemy": "basic", "count": 6, "intervalSec": 0.9 },
+        { "enemy": "fast", "count": 3, "intervalSec": 0.9 }
+      ]
+    },
+    {
+      "groups": [
+        { "enemy": "basic", "count": 6, "intervalSec": 0.8 },
+        { "enemy": "fast", "count": 4, "intervalSec": 0.8 },
+        { "enemy": "tank", "count": 2, "intervalSec": 0.8 }
+      ]
+    }
   ]
 }

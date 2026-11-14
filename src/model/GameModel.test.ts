@@ -410,3 +410,40 @@ describe("GameModel game result (So1)", () => {
     expect(game.result).toEqual(result);
   });
 });
+
+//Enemy difficulty scaling tests
+// Tests that enemies become stronger as the game progresses through waves.
+describe("GameModel enemy difficulty scaling", () => {
+  it("spawns stronger enemies in later waves", () => {
+    const game = new GameModel(loadMap(map1));
+
+    // Wave 1: base stats
+    game.startNextWave();
+    game.tick(0);
+
+    expect(game.waves.currentWave).toBe(1);
+    expect(game.enemies[0].hp).toBe(20);
+    expect(game.enemies[0].def.speed).toBe(1.5);
+
+    // Remove all Wave 1 enemies and allow the wave to clear.
+    // First, spawn all scheduled enemies.
+    while (game.waves.lastSpawnRemaining !== null) {
+      game.tick(0.1);
+    }
+
+    for (const enemy of game.enemies) {
+      enemy.takeDamage(enemy.hp);
+    }
+    game.tick(0);
+
+    expect(game.waves.preparationRemaining).not.toBeNull();
+
+    // Skip the countdown and start Wave 2.
+    game.startNextWave();
+    game.tick(0);
+
+    expect(game.waves.currentWave).toBe(2);
+    expect(game.enemies[0].hp).toBe(23);
+    expect(game.enemies[0].def.speed).toBeCloseTo(1.575);
+  });
+});

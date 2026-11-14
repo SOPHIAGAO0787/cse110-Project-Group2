@@ -27,8 +27,16 @@
   ],
   "startingCoins": 100,
   "startingLives": 20,
+
   "waves": [
-    { "groups": [{ "enemy": "basic", "count": 5, "intervalSec": 1.2 }] },
-    { "groups": [{ "enemy": "basic", "count": 8, "intervalSec": 0.9 }] }
+    {
+      "groups": [{ "enemy": "basic", "count": 5, "intervalSec": 1.2 }]
+    },
+    {
+      "groups": [
+        { "enemy": "basic", "count": 5, "intervalSec": 0.9 },
+        { "enemy": "fast", "count": 3, "intervalSec": 0.9 }
+      ]
+    }
   ]
 }

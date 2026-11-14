@@ -10,6 +10,7 @@ import { Tower } from "./Tower";
 import type { MapConfig, PlaceResult, Vec } from "./types";
 import { Wallet } from "./Wallet";
 import { WaveManager } from "./WaveManager";
+import { scaleEnemyDef } from "./EnemyScaling";
 
 // All the game's state and rules for one map. No Konva here, so it can be tested directly.
 // Keep this class thin: real logic lives in the classes it holds.
@@ -145,18 +146,22 @@ export class GameModel {
     return "ok";
   }
 
-  // Adds one enemy of the given kind (an id from enemies.json, e.g. "basic") at the start of the path.
+  // Adds an enemy using stats scaled to the current wave.
+  // Before the first wave starts, use Wave 1 base stats.
   spawnEnemy(defId: string): void {
-    for (const def of ENEMIES) {
-      if (def.id === defId) {
-        const enemy = new Enemy(this.nextId, def, this.path);
-        this.nextId++;
-        this.enemies.push(enemy);
-        this.events.emit("enemySpawned", { enemyId: enemy.id });
-        return;
-      }
+    const baseDef = ENEMIES.find((def) => def.id == defId);
+
+    if (!baseDef) {
+      throw new Error(`Unknown enemy "${defId}"`);
     }
-    throw new Error(`Unknown enemy "${defId}"`);
+
+    const waveNumber = Math.max(1, this.waves.currentWave);
+    const scaledDef = scaleEnemyDef(baseDef, waveNumber);
+
+    const enemy = new Enemy(this.nextId++, scaledDef, this.path);
+    this.enemies.push(enemy);
+
+    this.events.emit("enemySpawned", { enemyId: enemy.id });
   }
 
   private finish(won: boolean): void {
