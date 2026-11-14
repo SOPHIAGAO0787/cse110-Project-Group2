@@ -12,6 +12,7 @@ import map from "../../data/maps/map1.json";
 import map2 from "../../data/maps/map2.json";
 import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
+import { PlayerProgress } from "../../model/PlayerProgress";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -32,6 +33,7 @@ let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 let progress: Progress;
+let towerProgress: PlayerProgress;
 
 function hud(): string {
   const text = controller.group
@@ -65,7 +67,8 @@ beforeEach(() => {
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
   progress = new Progress(MAPS);
-  controller = new GameScreenController({ switchTo }, progress);
+  towerProgress = new PlayerProgress();
+  controller = new GameScreenController({ switchTo }, progress, towerProgress);
   controller.show();
   model = models[models.length - 1];
 });
@@ -77,6 +80,30 @@ afterEach(() => {
 });
 
 describe("GameScreenController HUD event wiring", () => {
+  it("keeps shared tower unlocks when switching to a different map", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    towerProgress.maxLevels.delete("circle");
+    controller.show();
+    model = models[models.length - 1];
+
+    expect(model.map.id).toBe("map2");
+    expect(model.tryPlaceTower("circle", { x: 0, y: 0 })).toBe("locked");
+    expect(
+      controller.group.find<Konva.Text>("Text").some((text) => text.text() === "Circle Tower"),
+    ).toBe(false);
+
+    towerProgress.maxLevels.set("circle", 0);
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+
+    expect(model.map.id).toBe("map2");
+    expect(
+      controller.group.find<Konva.Text>("Text").some((text) => text.text() === "Circle Tower"),
+    ).toBe(true);
+  });
+
   it("shows the map's starting values before any events", () => {
     expectHud(map.startingCoins, map.startingLives, 0, 0);
   });
