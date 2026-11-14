@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GameModel } from "./GameModel";
-import { PlayerProgress } from "./PlayerProgress";
+import { TowerProgress } from "./TowerProgress";
 import { loadMap, TOWERS } from "./loadContent";
 import map1 from "../data/maps/map1.json";
 import type { Vec } from "./types";
@@ -53,7 +53,7 @@ describe("GameModel.tryPlaceTower", () => {
   const pathTile = findTile(map.tiles, "P");
 
   it("rejects a locked tower without spending coins or occupying its tile", () => {
-    const progress = new PlayerProgress();
+    const progress = new TowerProgress();
     progress.maxLevels.delete("circle");
     const model = new GameModel(map, progress);
     const startingCoins = model.wallet.coins;
@@ -240,6 +240,48 @@ describe("GameModel enemy cleanup (R2)", () => {
     expect(game.waves.enemiesLeft).toBe(0);
     expect(game.waves.isRunning).toBe(false);
     expect(clearedWaves).toEqual([1]);
+  });
+});
+
+// B2: towers shoot enemies in range
+describe("GameModel tower firing (B2)", () => {
+  const tile = { x: 0, y: 2 };
+
+  it("emits towerFired when a tower shoots an enemy in range", () => {
+    const game = new GameModel(loadMap(map1));
+    const fired: number[] = [];
+    game.events.on("towerFired", (e) => fired.push(e.towerId));
+
+    game.tryPlaceTower("circle", tile);
+    game.spawnEnemy("basic");
+    game.tick(0.016);
+
+    expect(fired).toEqual([game.towers[0].id]);
+  });
+
+  it("does not fire when no enemy is in range", () => {
+    const game = new GameModel(loadMap(map1));
+    const fired: number[] = [];
+    game.events.on("towerFired", (e) => fired.push(e.towerId));
+
+    game.tryPlaceTower("circle", tile);
+    game.tick(0.016);
+
+    expect(fired).toEqual([]);
+  });
+
+  it("awards coins when a tower kills an enemy", () => {
+    const game = new GameModel(loadMap(map1));
+    game.tryPlaceTower("circle", tile);
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    enemy.takeDamage(enemy.hp - 1); // one hit from dead
+    const coinsBefore = game.wallet.coins;
+
+    game.tick(0.016);
+
+    expect(game.enemies).toHaveLength(0);
+    expect(game.wallet.coins).toBe(coinsBefore + enemy.def.reward);
   });
 });
 

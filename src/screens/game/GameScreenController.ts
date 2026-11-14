@@ -1,10 +1,9 @@
 import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { GameModel } from "../../model/GameModel";
-import { loadMap, TOWERS } from "../../model/loadContent";
+import { findMap, TOWERS } from "../../model/loadContent";
 import type { MapConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
-import map1 from "../../data/maps/map1.json";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
@@ -12,13 +11,15 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
+import { TowerProgress } from "../../model/TowerProgress";
+import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
-import { PlayerProgress } from "../../model/PlayerProgress";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
+  private progress: Progress; // which map to play; every finished game saves its stars here
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -27,34 +28,43 @@ export class GameScreenController implements Screen {
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
 
+  // Map progress tracks stars; tower progress tracks shop purchases.
   constructor(
     app: ScreenSwitcher,
-    private progress: PlayerProgress = new PlayerProgress(),
+    progress: Progress,
+    private towerProgress: TowerProgress = new TowerProgress(),
   ) {
     this.app = app;
-    this.map = loadMap(map1);
+    this.progress = progress;
+    this.map = findMap(progress.currentMapId);
     this.view = new GameScreenView(
       this.map.cols,
       this.map.rows,
       () => this.model.startNextWave(),
+      // Leaving ends the game without a result, so nothing is recorded on Progress
+      () => this.app.switchTo("maps"),
+      () => this.openSettings(),
+      () => this.closeSettings(),
+      () => this.app.switchTo("menu"),
       this.questions,
     );
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
-    this.model = new GameModel(this.map, this.progress);
+    this.model = new GameModel(this.map, this.towerProgress);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
   }
 
-  // Called every time the player enters the game screen: starts a fresh game.
+  // Called every time the player enters the game screen: starts a fresh game on the chosen map.
   show(): void {
-    this.model = new GameModel(this.map, this.progress);
+    this.map = findMap(this.progress.currentMapId);
+    this.model = new GameModel(this.map, this.towerProgress);
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
     const towersView = new TowersView();
-
     this.loop = new GameLoop((dt) => {
+      if (!this.active) return;
       this.model.tick(dt);
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
     });
@@ -83,21 +93,35 @@ export class GameScreenController implements Screen {
     const events = this.model.events;
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
+      this.loop.stop();
+      this.view.prompt.cancel();
+      this.cleanupPlacement?.();
+      this.cleanupPlacement = null;
       const result = this.model.result;
-      if (result) this.app.switchTo("result", result);
+      if (result) {
+        // A win unlocks the next map and its stars show on the map screen
+        this.progress.recordResult(this.map.id, result.stars);
+        this.app.switchTo("result", result);
+      }
     });
 
     events.on("coinsChanged", refreshHud);
     events.on("livesChanged", refreshHud);
     events.on("waveStarted", refreshHud);
+    // Once a round has started, leaving goes through the settings instead
+    events.on("waveStarted", () => this.view.backButton.visible(false));
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
-    events.on("enemyLeaked", refreshHud);
+    events.on("enemyLeaked", refreshHud); //listeners for add/fire
     events.on("towerPlaced", ({ towerId }) => {
-      const tower = this.model.towers.find((item) => item.id === towerId);
+      const tower = this.model.towers.find((t) => t.id === towerId);
       if (tower) towersView.add(tower);
     });
     events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
+
+    // A new game starts unpaused, with the back arrow showing
+    this.view.settings.close();
+    this.view.backButton.visible(true);
 
     this.active = true;
     this.group.visible(true);
@@ -118,11 +142,22 @@ export class GameScreenController implements Screen {
     this.view.resize(width, height);
   }
 
+  // The game is paused while the settings are open
+  private openSettings(): void {
+    this.view.settings.open();
+    this.loop.stop();
+  }
+
+  private closeSettings(): void {
+    this.view.settings.close();
+    this.loop.start();
+  }
+
   private wirePlacement(gridView: GridView): () => void {
     const placement = new PlacementModel();
     let disposed = false;
 
-    const unlockedTowers = TOWERS.filter((tower) => this.progress.getMaxLevel(tower.id) >= 0);
+    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
 
     // No unlocked towers means there is nothing to place.
     if (unlockedTowers.length === 0) {
@@ -155,18 +190,21 @@ export class GameScreenController implements Screen {
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);
-      this.loop.stop(); // pause the game while the question is open
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
-      if (disposed || !this.active) return false;
+      if (disposed || !this.active || this.model.isOver) return false;
       if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
-      if (this.active) this.loop.start(); // don't restart if the player left the screen
       return correct;
     };
 
     let pending = false; // blocks double-triggers while a question is open
-
     const onUpgrade = () => {
-      if (pending || disposed || this.model.isOver || placement.state.kind !== "idle") {
+      if (
+        pending ||
+        disposed ||
+        this.model.isOver ||
+        this.view.settings.isOpen() ||
+        placement.state.kind !== "idle"
+      ) {
         return;
       }
 
@@ -221,14 +259,26 @@ export class GameScreenController implements Screen {
       pv.hide();
       const result = this.model.tryPlaceTower(def.id, tile);
 
-      if (result !== "ok") {
-        this.view.showMessage(`Cannot place tower: ${result}`);
+      // TowersView draws successful placements through the towerPlaced event.
+      if (result === "ok") {
+        return;
+      }
+
+      if (result === "funds") {
+        this.view.showMessage("Not enough coins");
+      } else if (result === "locked") {
+        this.view.showMessage("Unlock this tower in the Tower Shop first");
+      } else if (result === "occupied") {
+        this.view.showMessage("There is already a tower on this tile");
+      } else {
+        this.view.showMessage("Can't place a tower here");
       }
     };
 
     const onDown = () => {
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
+      gridView.showGrid(true);
     };
 
     const onMove = () => {
@@ -238,6 +288,7 @@ export class GameScreenController implements Screen {
     };
 
     const onUp = () => {
+      gridView.showGrid(false); // also when Escape already ended the drag
       if (placement.state.kind !== "dragging") return;
       const tile = gridView.tileUnderMouse();
       if (tile && canPlace(tile)) {
@@ -251,6 +302,9 @@ export class GameScreenController implements Screen {
 
     const onKey = (e: KeyboardEvent) => {
       if (pending) return; // while a question is open, the prompt owns the keyboard
+      if (this.view.settings.isOpen()) {
+        return; // paused: Enter must not open a question behind the settings
+      }
       if (e.key === "Enter") {
         void requestPlace();
       } else if (e.key === "Escape") {

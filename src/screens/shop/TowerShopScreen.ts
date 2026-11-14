@@ -1,7 +1,7 @@
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 import { TowerShopView } from "./TowerShopView";
-import { PlayerProgress } from "../../model/PlayerProgress";
+import { TowerProgress } from "../../model/TowerProgress";
 
 export class TowerShopScreen implements Screen {
   private view: TowerShopView;
@@ -12,7 +12,7 @@ export class TowerShopScreen implements Screen {
 
   constructor(
     app: ScreenSwitcher,
-    private progress: PlayerProgress,
+    private progress: TowerProgress,
   ) {
     this.view = new TowerShopView({
       onSelect: (id) => {

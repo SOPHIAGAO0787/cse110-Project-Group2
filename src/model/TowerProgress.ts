@@ -1,4 +1,4 @@
-export class PlayerProgress {
+export class TowerProgress {
   shopCoins = 200; // FIX: needs to be connected to the database in sprint3
 
   // Stored values are array indexes:

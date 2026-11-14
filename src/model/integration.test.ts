@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import map1 from "../data/maps/map1.json";
 import { GameModel } from "./GameModel";
-import { ENEMIES, loadMap } from "./loadContent";
+import { ENEMIES, loadMap, MAPS } from "./loadContent";
+import { Progress } from "./Progress";
+
+// The stars a finished game earned
+function finalStars(game: GameModel): number {
+  const result = game.result;
+  if (result === null) {
+    throw new Error("The game is not over yet");
+  }
+  return result.stars;
+}
 
 // These tests run a real game on map1 with no screen, to check that the parts work together.
 // Each one needs two tasks. Whichever of the two merges second turns its test on.
@@ -93,8 +103,52 @@ describe("Integration: a game on map1", () => {
     expect(game.towers).toHaveLength(2);
   });
 
+  it("winning map1 unlocks map2, and losing does not (So1, #68)", () => {
+    const progress = new Progress(MAPS);
+
+    const lost = new GameModel(loadMap(map1));
+    lost.lives.remaining = 0;
+    lost.tick(0);
+    progress.recordResult("map1", finalStars(lost));
+    expect(progress.isUnlocked("map2")).toBe(false);
+
+    const won = new GameModel(loadMap(map1));
+    won.events.emit("waveCleared", { wave: map1.waves.length });
+    won.tick(0);
+    progress.recordResult("map1", finalStars(won));
+    expect(progress.isUnlocked("map2")).toBe(true);
+    expect(progress.starsFor("map1")).toBe(3);
+  });
+
   it.todo("a tower next to the path kills a passing enemy (B1, R3)");
   it.todo(
     "a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)",
   );
+});
+
+describe("Integration: every map", () => {
+  // loadMap only checks the corners of the path, so walk an enemy over every map to check the road
+  // between them too: every step stays on a 'P' tile and moves no farther than its speed allows.
+  it("an enemy walks smoothly along the road on every map, then costs one life (R1, R2, #68)", () => {
+    const step = 0.05; // seconds per tick, about 3 frames
+    for (const map of MAPS) {
+      const game = new GameModel(map);
+      game.spawnEnemy("basic");
+      const enemy = game.enemies[0];
+      let last = enemy.pos;
+
+      while (game.enemies.length > 0) {
+        game.tick(step);
+        const tileX = Math.round(enemy.pos.x);
+        const tileY = Math.round(enemy.pos.y);
+        expect(map.tiles[tileY][tileX], `${map.id} at (${tileX}, ${tileY})`).toBe("P");
+        const moved = Math.hypot(enemy.pos.x - last.x, enemy.pos.y - last.y);
+        expect(moved).toBeLessThanOrEqual(enemy.def.speed * step + 0.001);
+        last = enemy.pos;
+      }
+
+      expect(last).toEqual(map.path[map.path.length - 1]);
+      expect(game.lives.remaining).toBe(map.startingLives - 1);
+    }
+  });
 });

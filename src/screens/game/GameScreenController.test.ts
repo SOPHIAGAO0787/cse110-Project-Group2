@@ -6,27 +6,20 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
-import map from "../../data/maps/map1.json";
-import { PlayerProgress } from "../../model/PlayerProgress";
 import { GridView } from "./GridView";
+import { QuestionPrompt } from "./QuestionPrompt";
 import { GameScreenView } from "./GameScreenView";
+import map from "../../data/maps/map1.json";
+import map2 from "../../data/maps/map2.json";
+import { MAPS } from "../../model/loadContent";
+import { Progress } from "../../model/Progress";
+import { TowerProgress } from "../../model/TowerProgress";
 import { TowersView } from "./TowersView";
+import { PlacementView } from "./PlacementView";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
 const models = vi.hoisted(() => [] as GameModel[]);
-const grids = vi.hoisted(() => [] as GridView[]);
-vi.mock("./GridView", async (importOriginal) => {
-  const original = await importOriginal<typeof import("./GridView")>();
-  return {
-    GridView: class extends original.GridView {
-      constructor(...args: ConstructorParameters<typeof original.GridView>) {
-        super(...args);
-        grids.push(this);
-      }
-    },
-  };
-});
 vi.mock("../../model/GameModel", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../model/GameModel")>();
   return {
@@ -42,7 +35,8 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
 let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
-let progress: PlayerProgress;
+let progress: Progress;
+let towerProgress: TowerProgress;
 
 function hud(): string {
   const text = controller.group
@@ -58,26 +52,26 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
   );
 }
 
-// Clicks the real Start Wave button on the screen.
-function clickStartWave(): void {
-  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Start Wave");
+// Clicks the real button with this label on the screen, e.g. "Start Wave".
+function clickButton(text: string): void {
+  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === text);
   if (label === undefined) {
-    throw new Error("Start Wave button is missing from the screen");
+    throw new Error(`${text} button is missing from the screen`);
   }
   const button = label.getParent();
   if (button === null) {
-    throw new Error("Start Wave label has no button group");
+    throw new Error(`${text} label has no button group`);
   }
   button.fire("click");
 }
 
 beforeEach(() => {
   models.length = 0;
-  grids.length = 0;
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
-  progress = new PlayerProgress();
-  controller = new GameScreenController({ switchTo }, progress);
+  progress = new Progress(MAPS);
+  towerProgress = new TowerProgress();
+  controller = new GameScreenController({ switchTo }, progress, towerProgress);
   controller.show();
   model = models[models.length - 1];
 });
@@ -89,6 +83,30 @@ afterEach(() => {
 });
 
 describe("GameScreenController HUD event wiring", () => {
+  it("keeps shared tower unlocks when switching to a different map", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    towerProgress.maxLevels.delete("circle");
+    controller.show();
+    model = models[models.length - 1];
+
+    expect(model.map.id).toBe("map2");
+    expect(model.tryPlaceTower("circle", { x: 0, y: 0 })).toBe("locked");
+    expect(
+      controller.group.find<Konva.Text>("Text").some((text) => text.text() === "Circle Tower"),
+    ).toBe(false);
+
+    towerProgress.maxLevels.set("circle", 0);
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+
+    expect(model.map.id).toBe("map2");
+    expect(
+      controller.group.find<Konva.Text>("Text").some((text) => text.text() === "Circle Tower"),
+    ).toBe(true);
+  });
+
   it("shows the map's starting values before any events", () => {
     expectHud(map.startingCoins, map.startingLives, 0, 0);
   });
@@ -189,7 +207,7 @@ describe("GameScreenController HUD event wiring", () => {
   });
 
   it("Start Wave updates the HUD through both waves", () => {
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 5");
 
     // Spawn all of wave 1, then kill one enemy and let the rest leak.
@@ -205,7 +223,7 @@ describe("GameScreenController HUD event wiring", () => {
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
 
     // Wave 2 has 8 enemies. Clicking again after the last wave changes nothing.
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
     model.tick(7);
     const wave2 = model.enemies.slice(model.enemies.length - 8);
@@ -213,105 +231,131 @@ describe("GameScreenController HUD event wiring", () => {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
   });
 });
 
-describe("GameScreenController tower upgrades", () => {
-  it("creates one tower sprite and forwards firing events to its animation", () => {
+describe("GameScreenController questions during gameplay", () => {
+  function openQuestion() {
+    let answer!: (correct: boolean) => void;
+    vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    const ask = vi.spyOn(QuestionPrompt.prototype, "ask").mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const title = controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => text.text() === "Circle Tower")!;
+    const card = title.getParent()!;
+    card.fire("pointerdown");
+    window.dispatchEvent(new Event("pointerup"));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(ask).toHaveBeenCalledTimes(1);
+    return { answer, ask, card };
+  }
+
+  async function settleAnswer() {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  }
+
+  it("uses TowersView for placement and firing without adding a duplicate marker", async () => {
     const add = vi.spyOn(TowersView.prototype, "add");
     const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
-    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
-    const tower = model.towers[0];
+    const oldMarker = vi.spyOn(PlacementView.prototype, "addTower");
+    const { answer } = openQuestion();
 
+    answer(true);
+    await settleAnswer();
+
+    expect(model.towers).toHaveLength(1);
+    const tower = model.towers[0];
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
+    expect(oldMarker).not.toHaveBeenCalled();
+
     model.spawnEnemy("basic");
     model.tick(0.016);
-
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
+
     controller.hide();
     model.events.emit("towerFired", { towerId: tower.id });
     expect(fire).toHaveBeenCalledTimes(1);
   });
 
-  function prepareTower() {
-    progress.maxLevels.set("circle", 1);
-    model.wallet.add(200);
-    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+  it("keeps the loop running while a question is pending and places once after answering", async () => {
+    const stop = vi.spyOn(GameLoop.prototype, "stop");
+    const start = vi.spyOn(GameLoop.prototype, "start").mockClear();
+    model.startNextWave();
+    model.tick(0);
+    const { answer, ask, card } = openQuestion();
+    const distanceBefore = model.enemies[0].distance;
 
-    const grid = grids[grids.length - 1];
-    vi.spyOn(grid, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
-    return grid;
-  }
+    model.tick(0.5);
+    expect(model.enemies[0].distance).toBeGreaterThan(distanceBefore);
+    card.fire("pointerdown");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(stop).not.toHaveBeenCalled();
 
-  it.each(["click", "tap"])("upgrades the clicked tower on %s and shows the result", (event) => {
-    const grid = prepareTower();
-    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
-    const coinsBefore = model.wallet.coins;
-
-    grid.group.fire(event);
-
-    expect(model.towers[0].level).toBe(1);
-    expect(model.wallet.coins).toBe(coinsBefore - 75);
-    expect(message).toHaveBeenCalledWith("Circle Tower upgraded to Level 2.");
+    answer(true);
+    await settleAnswer();
+    expect(model.towers).toHaveLength(1);
+    expect(start).not.toHaveBeenCalled();
   });
 
-  it("ignores clicks on an empty tile", () => {
-    const grid = prepareTower();
-    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
-    const upgrade = vi.spyOn(model, "tryUpgradeTower");
-
-    grid.group.fire("click");
-
-    expect(upgrade).not.toHaveBeenCalled();
-  });
-
-  it("shows a rejected upgrade without spending coins", () => {
-    const grid = prepareTower();
-    progress.maxLevels.set("circle", 0);
-    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
-    const coinsBefore = model.wallet.coins;
-
-    grid.group.fire("click");
-
-    expect(model.towers[0].level).toBe(0);
-    expect(model.wallet.coins).toBe(coinsBefore);
-    expect(message).toHaveBeenCalledWith("Buy a higher maximum level in the Tower Shop first.");
-  });
-
-  it("does not upgrade while dragging a placement card", () => {
-    const grid = prepareTower();
-    const upgrade = vi.spyOn(model, "tryUpgradeTower");
-    const title = controller.group
-      .find<Konva.Text>("Text")
-      .find((text) => text.text() === "Circle Tower")!;
-    title.getParent()!.fire("pointerdown");
-
-    grid.group.fire("click");
-
-    expect(upgrade).not.toHaveBeenCalled();
-  });
-
-  it("disconnects upgrade clicks when the screen is hidden", () => {
-    const grid = prepareTower();
-    const upgrade = vi.spyOn(model, "tryUpgradeTower");
-
-    controller.hide();
-    grid.group.fire("click");
-
-    expect(upgrade).not.toHaveBeenCalled();
-  });
-
-  it("ignores clicks after the game ends", () => {
-    const grid = prepareTower();
+  it("rejects a correct answer if the game ends while the question is open", async () => {
+    const cancel = vi.spyOn(QuestionPrompt.prototype, "cancel");
+    const { answer } = openQuestion();
     model.lives.remaining = 0;
     model.tick(0);
-    const upgrade = vi.spyOn(model, "tryUpgradeTower");
 
-    grid.group.fire("click");
+    expect(cancel).toHaveBeenCalled();
+    answer(true);
+    await settleAnswer();
+    expect(model.towers).toHaveLength(0);
+  });
 
-    expect(upgrade).not.toHaveBeenCalled();
+  it("rejects an old answer after leaving and starting a fresh game", async () => {
+    const { answer } = openQuestion();
+    const oldModel = model;
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+
+    answer(true);
+    await settleAnswer();
+    expect(oldModel.towers).toHaveLength(0);
+    expect(model.towers).toHaveLength(0);
+  });
+
+  it("rechecks match coins after answering", async () => {
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
+    const { answer } = openQuestion();
+    model.wallet.spend(model.wallet.coins);
+    answer(true);
+    await settleAnswer();
+
+    expect(model.towers).toHaveLength(0);
+    expect(model.wallet.coins).toBe(0);
+    expect(message).toHaveBeenCalledWith("Not enough coins");
+  });
+
+  it.each([
+    ["locked", "Unlock this tower in the Tower Shop first"],
+    ["occupied", "There is already a tower on this tile"],
+    ["blocked", "Can't place a tower here"],
+  ] as const)("shows a readable message when placement is %s", async (result, text) => {
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
+    const { answer } = openQuestion();
+    vi.spyOn(model, "tryPlaceTower").mockReturnValue(result);
+
+    answer(true);
+    await settleAnswer();
+
+    expect(message).toHaveBeenCalledWith(text);
+    expect(model.towers).toHaveLength(0);
   });
 });
 
@@ -325,5 +369,111 @@ describe("GameScreenController game over (So1)", () => {
     expect(switchTo).toHaveBeenCalledTimes(1);
     expect(switchTo).toHaveBeenCalledWith("result", model.result);
     expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
+  });
+
+  it("records a win so the next map unlocks", () => {
+    // Clearing the last wave with every life left is a 3-star win
+    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: true, stars: 3 });
+    expect(progress.starsFor("map1")).toBe(3);
+    expect(progress.isUnlocked("map2")).toBe(true);
+  });
+
+  it("records a loss without unlocking the next map", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: false });
+    expect(progress.isUnlocked("map2")).toBe(false);
+  });
+});
+
+// Clicks the icon button with this name, e.g. "back" or "settings"
+function clickIcon(name: string): void {
+  const button = controller.group.findOne("." + name);
+  if (button === undefined) {
+    throw new Error(`${name} button is missing from the screen`);
+  }
+  button.fire("click");
+}
+
+describe("GameScreenController back arrow", () => {
+  it("goes back to the map screen without recording a result", () => {
+    clickIcon("back");
+
+    expect(switchTo).toHaveBeenCalledWith("maps");
+    expect(model.result).toBeNull();
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
+  it("hides once the first wave starts and shows again in a new game", () => {
+    const back = controller.group.findOne(".back");
+    expect(back?.visible()).toBe(true);
+
+    clickButton("Start Wave");
+    expect(back?.visible()).toBe(false);
+
+    controller.hide();
+    controller.show();
+    expect(back?.visible()).toBe(true);
+  });
+});
+
+describe("GameScreenController settings", () => {
+  function settingsOpen(): boolean {
+    const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Settings");
+    if (title === undefined) {
+      throw new Error("Settings title is missing from the screen");
+    }
+    return title.isVisible();
+  }
+
+  it("pauses the game while open and goes on after Resume", () => {
+    const stop = vi.spyOn(GameLoop.prototype, "stop");
+    const start = vi.spyOn(GameLoop.prototype, "start");
+
+    clickIcon("settings");
+    expect(settingsOpen()).toBe(true);
+    expect(stop).toHaveBeenCalled();
+
+    start.mockClear(); // show() already started the loop once
+    clickButton("Resume");
+    expect(settingsOpen()).toBe(false);
+    expect(start).toHaveBeenCalled();
+  });
+
+  it("goes back to the map screen", () => {
+    clickIcon("settings");
+    clickButton("Back to maps");
+    expect(switchTo).toHaveBeenCalledWith("maps");
+  });
+
+  it("goes to the main menu without recording a result", () => {
+    clickIcon("settings");
+    clickButton("Main menu");
+    expect(switchTo).toHaveBeenCalledWith("menu");
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
+  it("is closed again when a new game starts", () => {
+    clickIcon("settings");
+    controller.hide();
+    controller.show();
+    expect(settingsOpen()).toBe(false);
+  });
+});
+
+describe("GameScreenController map choice", () => {
+  it("plays the map picked on the map screen", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    controller.show();
+    model = models[models.length - 1];
+
+    // map2 starts at a different corner and has one more wave than map1
+    expect(model.path.pointAt(0)).toEqual(map2.path[0]);
+    expect(hud()).toContain(`Wave: 0/${map2.waves.length}`);
   });
 });

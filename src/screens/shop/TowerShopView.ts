@@ -65,10 +65,11 @@ export class TowerShopView {
 
       this.button(
         this.content,
-        level < 0 ? `View · ${tower.unlockCost} coins to unlock` : "View",
+        selected ? "Selected" : level < 0 ? `View · ${tower.unlockCost} coins to unlock` : "View",
         28,
         150 + index * 100,
         () => this.callbacks.onSelect(tower.def.id),
+        !selected,
       );
     });
 
@@ -245,8 +246,11 @@ export class TowerShopView {
     x: number,
     y: number,
     onClick: () => void,
+    enabled = true,
   ): void {
     const button = makeButton(label, onClick);
+    button.listening(enabled);
+    button.opacity(enabled ? 1 : 0.6);
 
     // Fit longer shop labels inside the existing shared button.
     button.findOne<Konva.Text>("Text")?.fontSize(14);
