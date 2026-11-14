@@ -16,7 +16,7 @@ export class MenuScreen implements Screen {
 
   constructor(app: ScreenSwitcher) {
     this.app = app;
-    this.playButton = makeButton("Play Map 1", () => this.app.switchTo("game"));
+    this.playButton = makeButton("Play", () => this.app.switchTo("maps"));
     this.shopButton = makeButton("Tower Shop", () => this.app.switchTo("shop"));
     this.group.add(this.title, this.playButton, this.shopButton);
   }

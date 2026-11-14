@@ -1,1 +1,26 @@
-[{ "id": "basic", "name": "Air Molecule", "hp": 20, "speed": 1.5, "reward": 5, "color": "#7fb3ff" }]
+[
+  {
+    "id": "basic",
+    "name": "Air Molecule",
+    "hp": 20,
+    "speed": 1.5,
+    "reward": 5,
+    "color": "#7fb3ff"
+  },
+  {
+    "id": "fast",
+    "name": "Fast Molecule",
+    "hp": 12,
+    "speed": 2.5,
+    "reward": 7,
+    "color": "#ff7fb3"
+  },
+  {
+    "id": "tank",
+    "name": "Tank Molecule",
+    "hp": 50,
+    "speed": 0.8,
+    "reward": 12,
+    "color": "#b3ff7f"
+  }
+]

@@ -10,6 +10,8 @@ import type { MapConfig } from "./types";
 const map: MapConfig = {
   id: "test",
   name: "test",
+  colors: { buildable: "#00ff00", path: "#996633", blocked: "#000000" },
+  decoration: "trees",
   cols: 3,
   rows: 3,
   tiles: ["#P.", "###", "###"],
