@@ -345,12 +345,34 @@ describe("GameScreenController mini-game bonus coins", () => {
     expect(progress.bonusCoins).toBe(0);
   });
 
-  it("keeps the bonus when the player leaves before the game ends", () => {
+  it("keeps the bonus when the player leaves with the back arrow", () => {
     progress.addMiniGameReward(3);
     const bonus = progress.bonusCoins;
     startNewGame();
     clickIcon("back");
 
+    expect(progress.bonusCoins).toBe(bonus);
+  });
+
+  it("keeps the bonus when the player leaves with Settings → Back to maps", () => {
+    progress.addMiniGameReward(3);
+    const bonus = progress.bonusCoins;
+    startNewGame();
+    clickIcon("settings");
+    clickButton("Back to maps");
+
+    expect(switchTo).toHaveBeenCalledWith("maps");
+    expect(progress.bonusCoins).toBe(bonus);
+  });
+
+  it("keeps the bonus when the player leaves with Settings → Main menu", () => {
+    progress.addMiniGameReward(3);
+    const bonus = progress.bonusCoins;
+    startNewGame();
+    clickIcon("settings");
+    clickButton("Main menu");
+
+    expect(switchTo).toHaveBeenCalledWith("menu");
     expect(progress.bonusCoins).toBe(bonus);
   });
 });
