@@ -235,13 +235,78 @@ describe("GameScreenController game over (So1)", () => {
   });
 });
 
-describe("GameScreenController Back to maps", () => {
+// Clicks the icon button with this name, e.g. "back" or "settings"
+function clickIcon(name: string): void {
+  const button = controller.group.findOne("." + name);
+  if (button === undefined) {
+    throw new Error(`${name} button is missing from the screen`);
+  }
+  button.fire("click");
+}
+
+describe("GameScreenController back arrow", () => {
   it("goes back to the map screen without recording a result", () => {
-    clickButton("Back to maps");
+    clickIcon("back");
 
     expect(switchTo).toHaveBeenCalledWith("maps");
     expect(model.result).toBeNull();
     expect(progress.starsFor("map1")).toBe(0);
+  });
+
+  it("hides once the first wave starts and shows again in a new game", () => {
+    const back = controller.group.findOne(".back");
+    expect(back?.visible()).toBe(true);
+
+    clickButton("Start Wave");
+    expect(back?.visible()).toBe(false);
+
+    controller.hide();
+    controller.show();
+    expect(back?.visible()).toBe(true);
+  });
+});
+
+describe("GameScreenController settings", () => {
+  function settingsOpen(): boolean {
+    const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Settings");
+    if (title === undefined) {
+      throw new Error("Settings title is missing from the screen");
+    }
+    return title.isVisible();
+  }
+
+  it("pauses the game while open and goes on after Resume", () => {
+    const stop = vi.spyOn(GameLoop.prototype, "stop");
+    const start = vi.spyOn(GameLoop.prototype, "start");
+
+    clickIcon("settings");
+    expect(settingsOpen()).toBe(true);
+    expect(stop).toHaveBeenCalled();
+
+    start.mockClear(); // show() already started the loop once
+    clickButton("Resume");
+    expect(settingsOpen()).toBe(false);
+    expect(start).toHaveBeenCalled();
+  });
+
+  it("goes back to the map screen", () => {
+    clickIcon("settings");
+    clickButton("Back to maps");
+    expect(switchTo).toHaveBeenCalledWith("maps");
+  });
+
+  it("goes to the main menu without recording a result", () => {
+    clickIcon("settings");
+    clickButton("Main menu");
+    expect(switchTo).toHaveBeenCalledWith("menu");
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
+  it("is closed again when a new game starts", () => {
+    clickIcon("settings");
+    controller.hide();
+    controller.show();
+    expect(settingsOpen()).toBe(false);
   });
 });
 

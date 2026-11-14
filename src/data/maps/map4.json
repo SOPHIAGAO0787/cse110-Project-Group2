@@ -1,6 +1,8 @@
 {
   "id": "map4",
   "name": "Prism Peaks",
+  "colors": { "buildable": "#eef3f8", "path": "#9aa5b1", "blocked": "#6b7785" },
+  "decoration": "mountains",
   "cols": 16,
   "rows": 10,
   "tiles": [

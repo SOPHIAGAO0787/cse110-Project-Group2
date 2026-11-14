@@ -1,6 +1,8 @@
 {
   "id": "map2",
   "name": "Angle Canyon",
+  "colors": { "buildable": "#e8c27a", "path": "#c97a3d", "blocked": "#a0552e" },
+  "decoration": "rocks",
   "cols": 16,
   "rows": 10,
   "tiles": [

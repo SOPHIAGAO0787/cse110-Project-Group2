@@ -17,6 +17,27 @@ export const QUESTIONS = questionsJson as Question[];
 export function loadMap(data: unknown): MapConfig {
   const map = data as MapConfig;
 
+  // Without all three colors some tiles would be drawn with no fill
+  if (
+    map.colors === undefined ||
+    map.colors === null ||
+    typeof map.colors.buildable !== "string" ||
+    typeof map.colors.path !== "string" ||
+    typeof map.colors.blocked !== "string"
+  ) {
+    throw new Error(`${map.id}: colors needs buildable, path and blocked`);
+  }
+
+  const decoration = map.decoration;
+  if (
+    decoration !== "trees" &&
+    decoration !== "rocks" &&
+    decoration !== "waves" &&
+    decoration !== "mountains"
+  ) {
+    throw new Error(`${map.id}: unknown decoration "${decoration}"`);
+  }
+
   if (map.tiles.length !== map.rows) {
     throw new Error(`${map.id}: has ${map.tiles.length} rows of tiles but rows is ${map.rows}`);
   }

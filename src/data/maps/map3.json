@@ -1,6 +1,8 @@
 {
   "id": "map3",
   "name": "Area Archipelago",
+  "colors": { "buildable": "#e9d8a6", "path": "#b98b5a", "blocked": "#3fa7d6" },
+  "decoration": "waves",
   "cols": 16,
   "rows": 10,
   "tiles": [

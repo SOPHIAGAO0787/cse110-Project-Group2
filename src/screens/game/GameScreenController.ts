@@ -37,6 +37,9 @@ export class GameScreenController implements Screen {
       () => this.model.startNextWave(),
       // Leaving ends the game without a result, so nothing is recorded on Progress
       () => this.app.switchTo("maps"),
+      () => this.openSettings(),
+      () => this.closeSettings(),
+      () => this.app.switchTo("menu"),
       this.questions,
     );
     this.group = this.view.group;
@@ -93,9 +96,15 @@ export class GameScreenController implements Screen {
     events.on("coinsChanged", refreshHud);
     events.on("livesChanged", refreshHud);
     events.on("waveStarted", refreshHud);
+    // Once a round has started, leaving goes through the settings instead
+    events.on("waveStarted", () => this.view.backButton.visible(false));
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
+
+    // A new game starts unpaused, with the back arrow showing
+    this.view.settings.close();
+    this.view.backButton.visible(true);
 
     this.active = true;
     this.group.visible(true);
@@ -114,6 +123,17 @@ export class GameScreenController implements Screen {
 
   resize(width: number, height: number): void {
     this.view.resize(width, height);
+  }
+
+  // The game is paused while the settings are open
+  private openSettings(): void {
+    this.view.settings.open();
+    this.loop.stop();
+  }
+
+  private closeSettings(): void {
+    this.view.settings.close();
+    this.loop.start();
   }
 
   private wirePlacement(gridView: GridView): () => void {
@@ -178,6 +198,7 @@ export class GameScreenController implements Screen {
     const onDown = () => {
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
+      gridView.showGrid(true);
     };
 
     const onMove = () => {
@@ -187,6 +208,7 @@ export class GameScreenController implements Screen {
     };
 
     const onUp = () => {
+      gridView.showGrid(false); // also when Escape already ended the drag
       if (placement.state.kind !== "dragging") return;
       const tile = gridView.tileUnderMouse();
       if (tile && canPlace(tile)) {
@@ -200,6 +222,9 @@ export class GameScreenController implements Screen {
 
     const onKey = (e: KeyboardEvent) => {
       if (pending) return; // while a question is open, the prompt owns the keyboard
+      if (this.view.settings.isOpen()) {
+        return; // paused: Enter must not open a question behind the settings
+      }
       if (e.key === "Enter") {
         void requestPlace();
       } else if (e.key === "Escape") {

@@ -78,13 +78,12 @@ describe("MapSelectScreen", () => {
     expect(switchTo).toHaveBeenCalledWith("game");
   });
 
-  it("goes back to the menu", () => {
-    const back = findText(screen.group, "Back");
-    if (back === null) {
-      throw new Error("Back button is missing");
+  it("goes back to the menu with the back arrow", () => {
+    const back = screen.group.findOne(".back");
+    if (back === undefined) {
+      throw new Error("Back arrow is missing");
     }
-    const button = back.getParent() as Konva.Group;
-    button.fire("click");
+    back.fire("click");
     expect(switchTo).toHaveBeenCalledWith("menu");
   });
 
