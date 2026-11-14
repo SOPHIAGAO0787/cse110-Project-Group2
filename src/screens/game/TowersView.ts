@@ -13,7 +13,6 @@ interface TowerSprite {
 class CircleSprite implements TowerSprite {
   group = new Konva.Group({ listening: false });
   private body = new Konva.Circle({ radius: TILE / 2, fill: "#2a5d99" });
-  private radiusPx: number;
   private shakeAnim: Konva.Animation | null = null;
   private startShake(): void {
     this.shakeAnim?.stop();
@@ -31,8 +30,7 @@ class CircleSprite implements TowerSprite {
     this.shakeAnim.start();
   }
 
-  constructor(def: TowerDef) {
-    this.radiusPx = def.range.radius * TILE;
+  constructor(private def: TowerDef) {
     this.group.add(this.body);
   }
 
@@ -49,7 +47,7 @@ class CircleSprite implements TowerSprite {
     new Konva.Tween({
       node: ring,
       duration: 0.25,
-      radius: this.radiusPx,
+      radius: this.def.range.radius * TILE,
       opacity: 0,
       easing: Konva.Easings.EaseOut,
       onFinish: () => ring.destroy(),

@@ -1,23 +1,42 @@
 import { CircleRange } from "./geometry/CircleRange";
 import type { Enemy } from "./Enemy";
+import type { ShopLevel } from "./shop/types";
 import type { RangeShape, TowerDef, Vec } from "./types";
 
-// A placed tower that shoots enemies inside its range.
 export class Tower {
   id: number;
   def: TowerDef;
   tile: Vec;
   range: RangeShape;
 
-  constructor(id: number, def: TowerDef, tile: Vec) {
-    this.id = id;
-    this.def = def;
-    this.tile = tile;
-    // Only circle towers exist in Sprint 1. New shapes will check def.range.kind here.
-    this.range = new CircleRange(tile, def.range.radius);
-  }
+  // 0 means Level 1.
+  level = 0;
 
   private cooldown = 0; // seconds until the next shot
+
+  constructor(id: number, def: TowerDef, tile: Vec) {
+    this.id = id;
+    this.tile = tile;
+
+    // Make a separate copy for this tower.
+    this.def = {
+      ...def,
+      range: { ...def.range },
+    };
+
+    this.range = new CircleRange(tile, this.def.range.radius);
+  }
+
+  upgrade(stats: ShopLevel): void {
+    this.level += 1;
+
+    this.def.damage = stats.damage;
+    this.def.fireRatePerSec = stats.attackSpeed;
+    this.def.range.radius = stats.radius;
+
+    // Replace the old attack area with the larger one.
+    this.range = new CircleRange(this.tile, stats.radius);
+  }
 
   update(dt: number, enemies: Enemy[]): boolean {
     this.cooldown = Math.max(0, this.cooldown - dt);

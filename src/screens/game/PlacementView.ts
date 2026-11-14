@@ -10,21 +10,10 @@ export class PlacementView {
 
   private ghost = new Konva.Circle({ radius: TILE / 2, opacity: 0.6, visible: false });
   private range = new Konva.Circle({ stroke: "#4a90d9", fill: "#4a90d933", visible: false });
-  private towers = new Konva.Group(); // holds the placed-tower markers
 
   constructor(radiusTiles: number) {
     this.range.radius(radiusTiles * TILE);
-    this.group.add(this.towers, this.range, this.ghost);
-  }
-
-  addTower(tile: Vec): void {
-    this.towers.add(
-      new Konva.Circle({
-        ...tileToPixel(tile, TILE),
-        radius: TILE / 2,
-        fill: "#2a5d99",
-      }),
-    );
+    this.group.add(this.range, this.ghost);
   }
 
   show(tile: Vec, valid: boolean): void {
