@@ -9,6 +9,9 @@ import { GameLoop } from "../../core/GameLoop";
 import { GridView } from "./GridView";
 import { QuestionPrompt } from "./QuestionPrompt";
 import map from "../../data/maps/map1.json";
+import map2 from "../../data/maps/map2.json";
+import { MAPS } from "../../model/loadContent";
+import { Progress } from "../../model/Progress";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -28,6 +31,7 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
 let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
+let progress: Progress;
 
 function hud(): string {
   const text = controller.group
@@ -43,15 +47,15 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
   );
 }
 
-// Clicks the real Start Wave button on the screen.
-function clickStartWave(): void {
-  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Start Wave");
+// Clicks the real button with this label on the screen, e.g. "Start Wave".
+function clickButton(text: string): void {
+  const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === text);
   if (label === undefined) {
-    throw new Error("Start Wave button is missing from the screen");
+    throw new Error(`${text} button is missing from the screen`);
   }
   const button = label.getParent();
   if (button === null) {
-    throw new Error("Start Wave label has no button group");
+    throw new Error(`${text} label has no button group`);
   }
   button.fire("click");
 }
@@ -60,7 +64,8 @@ beforeEach(() => {
   models.length = 0;
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
-  controller = new GameScreenController({ switchTo });
+  progress = new Progress(MAPS);
+  controller = new GameScreenController({ switchTo }, progress);
   controller.show();
   model = models[models.length - 1];
 });
@@ -172,7 +177,7 @@ describe("GameScreenController HUD event wiring", () => {
   });
 
   it("Start Wave updates the HUD through both waves", () => {
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 5");
 
     // Spawn all of wave 1, then kill one enemy and let the rest leak.
@@ -188,7 +193,7 @@ describe("GameScreenController HUD event wiring", () => {
     expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
 
     // Wave 2 has 8 enemies. Clicking again after the last wave changes nothing.
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
     model.tick(7);
     const wave2 = model.enemies.slice(model.enemies.length - 8);
@@ -196,7 +201,7 @@ describe("GameScreenController HUD event wiring", () => {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
-    clickStartWave();
+    clickButton("Start Wave");
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
   });
 });
@@ -293,5 +298,111 @@ describe("GameScreenController game over (So1)", () => {
     expect(switchTo).toHaveBeenCalledTimes(1);
     expect(switchTo).toHaveBeenCalledWith("result", model.result);
     expect(model.result).toMatchObject({ won: false, towersPlaced: 1, remainingLives: 0 });
+  });
+
+  it("records a win so the next map unlocks", () => {
+    // Clearing the last wave with every life left is a 3-star win
+    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: true, stars: 3 });
+    expect(progress.starsFor("map1")).toBe(3);
+    expect(progress.isUnlocked("map2")).toBe(true);
+  });
+
+  it("records a loss without unlocking the next map", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: false });
+    expect(progress.isUnlocked("map2")).toBe(false);
+  });
+});
+
+// Clicks the icon button with this name, e.g. "back" or "settings"
+function clickIcon(name: string): void {
+  const button = controller.group.findOne("." + name);
+  if (button === undefined) {
+    throw new Error(`${name} button is missing from the screen`);
+  }
+  button.fire("click");
+}
+
+describe("GameScreenController back arrow", () => {
+  it("goes back to the map screen without recording a result", () => {
+    clickIcon("back");
+
+    expect(switchTo).toHaveBeenCalledWith("maps");
+    expect(model.result).toBeNull();
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
+  it("hides once the first wave starts and shows again in a new game", () => {
+    const back = controller.group.findOne(".back");
+    expect(back?.visible()).toBe(true);
+
+    clickButton("Start Wave");
+    expect(back?.visible()).toBe(false);
+
+    controller.hide();
+    controller.show();
+    expect(back?.visible()).toBe(true);
+  });
+});
+
+describe("GameScreenController settings", () => {
+  function settingsOpen(): boolean {
+    const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Settings");
+    if (title === undefined) {
+      throw new Error("Settings title is missing from the screen");
+    }
+    return title.isVisible();
+  }
+
+  it("pauses the game while open and goes on after Resume", () => {
+    const stop = vi.spyOn(GameLoop.prototype, "stop");
+    const start = vi.spyOn(GameLoop.prototype, "start");
+
+    clickIcon("settings");
+    expect(settingsOpen()).toBe(true);
+    expect(stop).toHaveBeenCalled();
+
+    start.mockClear(); // show() already started the loop once
+    clickButton("Resume");
+    expect(settingsOpen()).toBe(false);
+    expect(start).toHaveBeenCalled();
+  });
+
+  it("goes back to the map screen", () => {
+    clickIcon("settings");
+    clickButton("Back to maps");
+    expect(switchTo).toHaveBeenCalledWith("maps");
+  });
+
+  it("goes to the main menu without recording a result", () => {
+    clickIcon("settings");
+    clickButton("Main menu");
+    expect(switchTo).toHaveBeenCalledWith("menu");
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
+  it("is closed again when a new game starts", () => {
+    clickIcon("settings");
+    controller.hide();
+    controller.show();
+    expect(settingsOpen()).toBe(false);
+  });
+});
+
+describe("GameScreenController map choice", () => {
+  it("plays the map picked on the map screen", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    controller.show();
+    model = models[models.length - 1];
+
+    // map2 starts at a different corner and has one more wave than map1
+    expect(model.path.pointAt(0)).toEqual(map2.path[0]);
+    expect(hud()).toContain(`Wave: 0/${map2.waves.length}`);
   });
 });

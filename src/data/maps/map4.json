@@ -1,0 +1,36 @@
+{
+  "id": "map4",
+  "name": "Prism Peaks",
+  "colors": { "buildable": "#eef3f8", "path": "#9aa5b1", "blocked": "#6b7785" },
+  "decoration": "mountains",
+  "cols": 16,
+  "rows": 10,
+  "tiles": [
+    "................",
+    "PPPPPPPPPPPPPP..",
+    "....###..###.P..",
+    ".............P##",
+    "..PPPPPPPPPPPP##",
+    "##P.###..###....",
+    "##P.............",
+    "..PPPPPPPPPPPPPP",
+    ".....####.......",
+    "................"
+  ],
+  "path": [
+    { "x": 0, "y": 1 },
+    { "x": 13, "y": 1 },
+    { "x": 13, "y": 4 },
+    { "x": 2, "y": 4 },
+    { "x": 2, "y": 7 },
+    { "x": 15, "y": 7 }
+  ],
+  "startingCoins": 100,
+  "startingLives": 20,
+  "waves": [
+    { "groups": [{ "enemy": "basic", "count": 8, "intervalSec": 1.0 }] },
+    { "groups": [{ "enemy": "basic", "count": 12, "intervalSec": 0.8 }] },
+    { "groups": [{ "enemy": "basic", "count": 14, "intervalSec": 0.7 }] },
+    { "groups": [{ "enemy": "basic", "count": 18, "intervalSec": 0.6 }] }
+  ]
+}

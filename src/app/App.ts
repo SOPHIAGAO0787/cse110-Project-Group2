@@ -1,8 +1,11 @@
 import Konva from "konva";
 import { GameScreenController } from "../screens/game/GameScreenController";
+import { MapSelectScreen } from "../screens/MapSelectScreen";
 import { MenuScreen } from "../screens/MenuScreen";
 import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResult } from "../model/GameResult";
+import { MAPS } from "../model/loadContent";
+import { Progress } from "../model/Progress";
 import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 import { PlayerProgress } from "../model/PlayerProgress";
@@ -11,21 +14,25 @@ import { PlayerProgress } from "../model/PlayerProgress";
 export class App implements ScreenSwitcher {
   private stage: Konva.Stage;
   private layer = new Konva.Layer();
+  // Shared by the map screen and the game screen: which map to play and each map's best stars
+  private progress = new Progress(MAPS);
   private menu: MenuScreen;
+  private maps: MapSelectScreen;
   private game: GameScreenController;
   private result: ResultScreen;
   private current: Screen;
   private shop: TowerShopScreen;
-  private progress = new PlayerProgress();
+  private towerProgress = new PlayerProgress();
 
   constructor(containerId: string) {
     this.stage = new Konva.Stage({ container: containerId });
     this.stage.add(this.layer);
 
     this.menu = new MenuScreen(this);
-    this.game = new GameScreenController(this, this.progress);
+    this.maps = new MapSelectScreen(this, this.progress);
+    this.game = new GameScreenController(this, this.progress, this.towerProgress);
     this.result = new ResultScreen(this);
-    this.shop = new TowerShopScreen(this, this.progress);
+    this.shop = new TowerShopScreen(this, this.towerProgress);
     for (const screen of this.allScreens()) {
       this.layer.add(screen.group);
       screen.group.visible(false);
@@ -41,6 +48,8 @@ export class App implements ScreenSwitcher {
     this.current.hide();
     if (name === "menu") {
       this.current = this.menu;
+    } else if (name === "maps") {
+      this.current = this.maps;
     } else if (name === "game") {
       this.current = this.game;
     } else if (name === "shop") {
@@ -52,7 +61,7 @@ export class App implements ScreenSwitcher {
   }
 
   private allScreens(): Screen[] {
-    return [this.menu, this.game, this.result, this.shop];
+    return [this.menu, this.maps, this.game, this.result, this.shop];
   }
 
   private resize(): void {
