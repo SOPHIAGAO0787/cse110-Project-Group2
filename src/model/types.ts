@@ -9,9 +9,15 @@ export interface Vec {
   y: number;
 }
 
+export type Decoration = "trees" | "rocks" | "waves" | "mountains";
+
 export interface MapConfig {
   id: string;
   name: string;
+  // Fill colors for each kind of tile, so every map has its own look
+  colors: { buildable: string; path: string; blocked: string };
+  // What is drawn here and there on the blocked tiles
+  decoration: Decoration;
   cols: number;
   rows: number;
   // One string per row: '#' buildable, 'P' enemy path, '.' blocked
