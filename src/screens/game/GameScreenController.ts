@@ -11,6 +11,7 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
+import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
 
@@ -27,8 +28,12 @@ export class GameScreenController implements Screen {
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
 
-  // All maps are the same size, so the view made for the first map fits every map.
-  constructor(app: ScreenSwitcher, progress: Progress) {
+  // Map progress tracks stars; tower progress tracks shop purchases.
+  constructor(
+    app: ScreenSwitcher,
+    progress: Progress,
+    private towerProgress: TowerProgress = new TowerProgress(),
+  ) {
     this.app = app;
     this.progress = progress;
     this.map = findMap(progress.currentMapId);
@@ -46,14 +51,14 @@ export class GameScreenController implements Screen {
     this.group = this.view.group;
 
     // A real game is created in show(). These are only here so the fields are never empty.
-    this.model = new GameModel(this.map);
+    this.model = new GameModel(this.map, this.towerProgress);
     this.loop = new GameLoop((dt) => this.model.tick(dt));
   }
 
   // Called every time the player enters the game screen: starts a fresh game on the chosen map.
   show(): void {
     this.map = findMap(this.progress.currentMapId);
-    this.model = new GameModel(this.map);
+    this.model = new GameModel(this.map, this.towerProgress);
     // Coins earned in the mini-game are added to the map's starting coins
     this.model.wallet.add(this.progress.bonusCoins);
 
@@ -172,12 +177,33 @@ export class GameScreenController implements Screen {
     let disposed = false;
     const canCommit = () => !disposed && this.active && !model.isOver;
     const placement = new PlacementModel();
-    const def = TOWERS.find((d) => d.id === "circle")!;
-    const pv = new PlacementView(def.range.radius);
-    this.view.mapGroup.add(pv.group);
 
-    const card = new InGameTowerCard(def, pv.menuCircle);
-    this.view.shopGroup.add(card.group);
+    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
+
+    // No unlocked towers means there is nothing to place.
+    if (unlockedTowers.length === 0) {
+      return () => {};
+    }
+
+    const choices = unlockedTowers.map((tower, index) => {
+      const view = new PlacementView(tower.range.radius);
+
+      const card = new InGameTowerCard(tower, view.menuCircle);
+
+      card.group.position({
+        x: 16,
+        y: 64 + index * 352,
+      });
+
+      this.view.mapGroup.add(view.group);
+      this.view.shopGroup.add(card.group);
+
+      return { tower, view, card };
+    });
+
+    // These change when the player selects another tower.
+    let def = choices[0].tower;
+    let pv = choices[0].view;
 
     const stage = this.group.getStage();
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
@@ -225,7 +251,22 @@ export class GameScreenController implements Screen {
 
       placement.confirm(); // state: idle
       pv.hide();
-      this.commitTower(tile);
+      const result = this.model.tryPlaceTower(def.id, tile);
+
+      // TowersView draws successful placements through the towerPlaced event.
+      if (result === "ok") {
+        return;
+      }
+
+      if (result === "funds") {
+        this.view.showMessage("Not enough coins");
+      } else if (result === "locked") {
+        this.view.showMessage("Unlock this tower in the Tower Shop first");
+      } else if (result === "occupied") {
+        this.view.showMessage("There is already a tower on this tile");
+      } else {
+        this.view.showMessage("Can't place a tower here");
+      }
     };
 
     const onDown = () => {
@@ -267,7 +308,18 @@ export class GameScreenController implements Screen {
       }
     };
 
-    card.group.on("pointerdown", onDown);
+    choices.forEach((choice) => {
+      choice.card.group.on("pointerdown", () => {
+        if (pending || this.model.isOver) return;
+
+        placement.cancel();
+        pv.hide();
+
+        def = choice.tower;
+        pv = choice.view;
+        onDown();
+      });
+    });
     stage?.on("pointermove.placement", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
@@ -280,11 +332,10 @@ export class GameScreenController implements Screen {
       stage?.off(".placement");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
-      card.group.destroy();
+      choices.forEach((choice) => {
+        choice.card.group.destroy();
+        choice.view.group.destroy();
+      });
     };
-  }
-
-  private commitTower(tile: Vec): boolean {
-    return this.model.tryPlaceTower("circle", tile) === "ok";
   }
 }
