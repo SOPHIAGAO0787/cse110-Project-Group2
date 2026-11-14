@@ -52,7 +52,7 @@ describe("TowersView", () => {
     view.add(tower);
     view.fire(tower.id);
     expect(tweens.find((config) => config.radius !== undefined)?.radius).toBe(
-      rangeReach(circle.def) * TILE
+      rangeReach(circle.def) * TILE,
     );
 
     tweens.length = 0;

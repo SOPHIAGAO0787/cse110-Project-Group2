@@ -184,7 +184,7 @@ export class GameScreenController implements Screen {
     const canCommit = () => !disposed && this.active && !model.isOver;
     const placement = new PlacementModel();
 
- this.layoutCards = null;
+    this.layoutCards = null;
 
     // Only the towers bought in the Tower Shop can be placed.
     const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
