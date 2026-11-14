@@ -17,7 +17,7 @@ import type { Progress } from "../../model/Progress";
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
-  private progress: Progress; // which map to play; every finished game saves its stars here
+  private progress: Progress; // which map to play and the bonus coins; finished games save stars here
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -53,6 +53,8 @@ export class GameScreenController implements Screen {
   show(): void {
     this.map = findMap(this.progress.currentMapId);
     this.model = new GameModel(this.map);
+    // Coins earned in the mini-game are added to the map's starting coins
+    this.model.wallet.add(this.progress.bonusCoins);
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
@@ -89,6 +91,8 @@ export class GameScreenController implements Screen {
       if (result) {
         // A win unlocks the next map and its stars show on the map screen
         this.progress.recordResult(this.map.id, result.stars);
+        // This game had the bonus coins. Leaving early (no result) keeps them for the next game.
+        this.progress.useBonusCoins();
         this.app.switchTo("result", result);
       }
     });

@@ -13,7 +13,7 @@ import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 export class App implements ScreenSwitcher {
   private stage: Konva.Stage;
   private layer = new Konva.Layer();
-  // Shared by the map screen and the game screen: which map to play and each map's best stars
+  // Shared by the menu, map and game screens: the chosen map, each map's best stars, bonus coins
   private progress = new Progress(MAPS);
   private menu: MenuScreen;
   private maps: MapSelectScreen;
@@ -26,7 +26,7 @@ export class App implements ScreenSwitcher {
     this.stage = new Konva.Stage({ container: containerId });
     this.stage.add(this.layer);
 
-    this.menu = new MenuScreen(this);
+    this.menu = new MenuScreen(this, this.progress);
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress);
     this.result = new ResultScreen(this);
