@@ -319,7 +319,7 @@ describe("GameScreenController questions during gameplay", () => {
     ).toHaveLength(1);
 
     model.spawnEnemy("basic");
-    model.tick(0.016);
+    model.tick(1 / tower.fireRate);
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
 
     controller.hide();
@@ -609,6 +609,11 @@ describe("GameScreenController map choice", () => {
 });
 
 describe("GameScreenController shop cards", () => {
+  beforeEach(() => {
+    controller.hide();
+    for (const tower of TOWERS) towerProgress.maxLevels.set(tower.id, 0);
+    controller.show();
+  });
   const CARD_HEIGHT = 340;
 
   // The cards, top to bottom, found by the tower name on each.
@@ -658,6 +663,7 @@ describe("GameScreenController shop cards", () => {
     }
   });
 });
+
 describe("GameScreenController tower upgrades", () => {
   it("creates one tower sprite and forwards firing events to its animation", () => {
     const add = vi.spyOn(TowersView.prototype, "add");
@@ -667,7 +673,7 @@ describe("GameScreenController tower upgrades", () => {
 
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
     model.spawnEnemy("basic");
-    model.tick(0.016);
+    model.tick(1 / tower.fireRate);
 
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
     controller.hide();

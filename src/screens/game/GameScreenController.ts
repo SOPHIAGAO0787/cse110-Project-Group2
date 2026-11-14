@@ -184,8 +184,18 @@ export class GameScreenController implements Screen {
     const canCommit = () => !disposed && this.active && !model.isOver;
     const placement = new PlacementModel();
 
+ this.layoutCards = null;
+
+    // Only the towers bought in the Tower Shop can be placed.
+    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
+
+    // No unlocked towers means there is nothing to place.
+    if (unlockedTowers.length === 0) {
+      return () => {};
+    }
+
     // One card and one preview per tower kind; picking a card switches which one is active.
-    const choices = TOWERS.map((tower) => {
+    const choices = unlockedTowers.map((tower) => {
       const view = new PlacementView(tower);
       const card = new InGameTowerCard(tower, view.menuIcon);
       this.view.mapGroup.add(view.group);
@@ -210,11 +220,9 @@ export class GameScreenController implements Screen {
         });
       });
     };
-    this.layoutCards = null;
-    
+    this.layoutCards();
+
     // These change when the player picks another tower.
-    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
-    if (unlockedTowers.length === 0) return () => {};
     let def = choices[0].tower;
     let pv = choices[0].view;
 
@@ -258,7 +266,7 @@ export class GameScreenController implements Screen {
 
     const requestPlace = async () => {
       const s = placement.state;
-      if (! !canCommit() || (s.kind !== "placed" && s.kind !== "configuring") || pending) return;
+      if (!canCommit() || (s.kind !== "placed" && s.kind !== "configuring") || pending) return;
       const tile = s.pos;
       const config = s.kind === "configuring" ? s.config : undefined; // e.g. where the triangle aims
 
@@ -296,8 +304,7 @@ export class GameScreenController implements Screen {
 
       placement.confirm(); // state: idle
       pv.hide();
-      const result = this.model.tryPlaceTower(def.id, tile, config)
-
+      const result = this.model.tryPlaceTower(def.id, tile, config);
       // TowersView draws successful placements through the towerPlaced event.
       if (result === "ok") {
         return;
