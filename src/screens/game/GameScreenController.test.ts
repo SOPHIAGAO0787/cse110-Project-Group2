@@ -7,10 +7,26 @@ import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
 import map from "../../data/maps/map1.json";
+import { PlayerProgress } from "../../model/PlayerProgress";
+import { GridView } from "./GridView";
+import { GameScreenView } from "./GameScreenView";
+import { TowersView } from "./TowersView";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
 const models = vi.hoisted(() => [] as GameModel[]);
+const grids = vi.hoisted(() => [] as GridView[]);
+vi.mock("./GridView", async (importOriginal) => {
+  const original = await importOriginal<typeof import("./GridView")>();
+  return {
+    GridView: class extends original.GridView {
+      constructor(...args: ConstructorParameters<typeof original.GridView>) {
+        super(...args);
+        grids.push(this);
+      }
+    },
+  };
+});
 vi.mock("../../model/GameModel", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../model/GameModel")>();
   return {
@@ -26,6 +42,7 @@ vi.mock("../../model/GameModel", async (importOriginal) => {
 let controller: GameScreenController;
 let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
+let progress: PlayerProgress;
 
 function hud(): string {
   const text = controller.group
@@ -56,9 +73,11 @@ function clickStartWave(): void {
 
 beforeEach(() => {
   models.length = 0;
+  grids.length = 0;
   vi.spyOn(GameLoop.prototype, "start").mockImplementation(() => {});
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
-  controller = new GameScreenController({ switchTo });
+  progress = new PlayerProgress();
+  controller = new GameScreenController({ switchTo }, progress);
   controller.show();
   model = models[models.length - 1];
 });
@@ -196,6 +215,103 @@ describe("GameScreenController HUD event wiring", () => {
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
     clickStartWave();
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
+  });
+});
+
+describe("GameScreenController tower upgrades", () => {
+  it("creates one tower sprite and forwards firing events to its animation", () => {
+    const add = vi.spyOn(TowersView.prototype, "add");
+    const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    const tower = model.towers[0];
+
+    expect(add).toHaveBeenCalledExactlyOnceWith(tower);
+    model.spawnEnemy("basic");
+    model.tick(0.016);
+
+    expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
+    controller.hide();
+    model.events.emit("towerFired", { towerId: tower.id });
+    expect(fire).toHaveBeenCalledTimes(1);
+  });
+
+  function prepareTower() {
+    progress.maxLevels.set("circle", 1);
+    model.wallet.add(200);
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+
+    const grid = grids[grids.length - 1];
+    vi.spyOn(grid, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    return grid;
+  }
+
+  it.each(["click", "tap"])("upgrades the clicked tower on %s and shows the result", (event) => {
+    const grid = prepareTower();
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
+    const coinsBefore = model.wallet.coins;
+
+    grid.group.fire(event);
+
+    expect(model.towers[0].level).toBe(1);
+    expect(model.wallet.coins).toBe(coinsBefore - 75);
+    expect(message).toHaveBeenCalledWith("Circle Tower upgraded to Level 2.");
+  });
+
+  it("ignores clicks on an empty tile", () => {
+    const grid = prepareTower();
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    const upgrade = vi.spyOn(model, "tryUpgradeTower");
+
+    grid.group.fire("click");
+
+    expect(upgrade).not.toHaveBeenCalled();
+  });
+
+  it("shows a rejected upgrade without spending coins", () => {
+    const grid = prepareTower();
+    progress.maxLevels.set("circle", 0);
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
+    const coinsBefore = model.wallet.coins;
+
+    grid.group.fire("click");
+
+    expect(model.towers[0].level).toBe(0);
+    expect(model.wallet.coins).toBe(coinsBefore);
+    expect(message).toHaveBeenCalledWith("Buy a higher maximum level in the Tower Shop first.");
+  });
+
+  it("does not upgrade while dragging a placement card", () => {
+    const grid = prepareTower();
+    const upgrade = vi.spyOn(model, "tryUpgradeTower");
+    const title = controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => text.text() === "Circle Tower")!;
+    title.getParent()!.fire("pointerdown");
+
+    grid.group.fire("click");
+
+    expect(upgrade).not.toHaveBeenCalled();
+  });
+
+  it("disconnects upgrade clicks when the screen is hidden", () => {
+    const grid = prepareTower();
+    const upgrade = vi.spyOn(model, "tryUpgradeTower");
+
+    controller.hide();
+    grid.group.fire("click");
+
+    expect(upgrade).not.toHaveBeenCalled();
+  });
+
+  it("ignores clicks after the game ends", () => {
+    const grid = prepareTower();
+    model.lives.remaining = 0;
+    model.tick(0);
+    const upgrade = vi.spyOn(model, "tryUpgradeTower");
+
+    grid.group.fire("click");
+
+    expect(upgrade).not.toHaveBeenCalled();
   });
 });
 

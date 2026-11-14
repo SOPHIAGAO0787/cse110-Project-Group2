@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import type Konva from "konva";
 import { EnemiesView } from "./EnemiesView";
 import { Enemy } from "../../model/Enemy";
 import { Path } from "../../model/Path";
@@ -6,6 +7,23 @@ import type { EnemyDef } from "../../model/types";
 import { TILE } from "./GameScreenView";
 
 describe("EnemiesView", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("flashes red after damage, then returns to the enemy color", () => {
+    const now = vi.spyOn(performance, "now").mockReturnValue(100);
+    const view = new EnemiesView();
+    const enemy = createEnemy();
+    view.sync([enemy]);
+    enemy.takeDamage(5);
+    view.sync([enemy]);
+    const circle = view.group.getChildren()[0] as Konva.Circle;
+    expect(circle.fill()).toBe("#ff3b3b");
+
+    now.mockReturnValue(221);
+    view.sync([enemy]);
+    expect(circle.fill()).toBe(enemy.def.color);
+  });
+
   const enemyDef: EnemyDef = {
     id: "basic",
     name: "Basic Enemy",
