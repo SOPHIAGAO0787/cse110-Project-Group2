@@ -29,7 +29,7 @@ describe("GameModel.tryUpgradeTower", () => {
     const fired: number[] = [];
     game.events.on("towerFired", (event) => fired.push(event.towerId));
 
-    game.tick(0.016);
+    game.tick(1 / tower.fireRate + 0.001);
 
     expect(fired).toEqual([tower.id]);
     expect(game.enemies).toHaveLength(0);

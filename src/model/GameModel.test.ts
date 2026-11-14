@@ -289,6 +289,12 @@ describe("GameModel tower firing (B2)", () => {
   });
 });
 
+function unlockedProgress(): TowerProgress {                //unlock helper
+  const progress = new TowerProgress();
+  for (const def of TOWERS) progress.maxLevels.set(def.id, 0);
+  return progress;
+}
+
 // Placing a triangle with the direction the player chose
 describe("GameModel.tryPlaceTower with a config", () => {
   const map = loadMap(map1);
@@ -296,13 +302,13 @@ describe("GameModel.tryPlaceTower with a config", () => {
   const cone = { kind: "sector", facing: 0, spread: Math.PI / 4 } as const;
 
   it("places a triangle and keeps the chosen direction", () => {
-    const model = new GameModel(map);
+    const model = new GameModel(map, unlockedProgress())
     expect(model.tryPlaceTower("triangle", buildTile, cone)).toBe("ok");
     expect(model.towers[0].config).toEqual(cone);
   });
 
   it("uses a default direction when none is given", () => {
-    const model = new GameModel(map);
+    const model = new GameModel(map, unlockedProgress())
     expect(model.tryPlaceTower("triangle", buildTile)).toBe("ok");
     expect(model.towers[0].config.kind).toBe("sector");
   });
@@ -329,20 +335,20 @@ describe("GameModel with the square tower", () => {
   const def = TOWERS.find((d) => d.id === "rectangle")!;
 
   it("places it and keeps the chosen block", () => {
-    const model = new GameModel(map);
+    const model = new GameModel(map, unlockedProgress())
     expect(model.tryPlaceTower("rectangle", buildTile, block)).toBe("ok");
     expect(model.towers[0].config).toEqual(block);
     expect(model.wallet.coins).toBe(map.startingCoins - def.cost);
   });
 
   it("uses a default block when none is given", () => {
-    const model = new GameModel(map);
+    const model = new GameModel(map, unlockedProgress())
     expect(model.tryPlaceTower("rectangle", buildTile)).toBe("ok");
     expect(model.towers[0].config.kind).toBe("rect");
   });
 
   it("a block that is not allowed throws without costing coins or using the tile", () => {
-    const model = new GameModel(map);
+    const model = new GameModel(map, unlockedProgress())
     const coins = model.wallet.coins;
 
     expect(() => model.tryPlaceTower("rectangle", buildTile, { ...block, width: 1 })).toThrow();
@@ -354,14 +360,14 @@ describe("GameModel with the square tower", () => {
   });
 
   it("is refused with too few coins, like any tower", () => {
-    const model = new GameModel(map);
+    const model = new GameModel(map, unlockedProgress())
     model.wallet.spend(model.wallet.coins - (def.cost - 1));
     expect(model.tryPlaceTower("rectangle", buildTile, block)).toBe("funds");
     expect(model.towers).toHaveLength(0);
   });
 
   it("fires at an enemy in its block and awards the kill, once per interval of its area", () => {
-    const game = new GameModel(map);
+    const game = new GameModel(map, unlockedProgress())
     const tile = { x: 0, y: 2 }; // the enemies spawn at (0, 1), right above it
     const up = { kind: "rect", facing: "up", width: 2, depth: 2, side: 1 } as const;
     expect(game.tryPlaceTower("rectangle", tile, up)).toBe("ok");
@@ -380,7 +386,7 @@ describe("GameModel with the square tower", () => {
   });
 
   it("does not fire at an enemy outside its block", () => {
-    const game = new GameModel(map);
+    const game = new GameModel(map, unlockedProgress())
     // the block is below the tile (0, 2), but the enemy starts above it
     game.tryPlaceTower(
       "rectangle",
