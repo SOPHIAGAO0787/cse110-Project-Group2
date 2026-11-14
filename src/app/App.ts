@@ -8,7 +8,7 @@ import { MAPS } from "../model/loadContent";
 import { Progress } from "../model/Progress";
 import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
-import { PlayerProgress } from "../model/PlayerProgress";
+import { TowerProgress } from "../model/TowerProgress";
 
 // Owns the Konva stage and switches between screens.
 export class App implements ScreenSwitcher {
@@ -22,7 +22,7 @@ export class App implements ScreenSwitcher {
   private result: ResultScreen;
   private current: Screen;
   private shop: TowerShopScreen;
-  private towerProgress = new PlayerProgress();
+  private towerProgress = new TowerProgress();
 
   constructor(containerId: string) {
     this.stage = new Konva.Stage({ container: containerId });

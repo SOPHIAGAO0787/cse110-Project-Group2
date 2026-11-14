@@ -5,7 +5,7 @@ import { starRating, type GameResult } from "./GameResult";
 import { ENEMIES, TOWERS } from "./loadContent";
 import { Lives } from "./Lives";
 import { Path } from "./Path";
-import { PlayerProgress } from "./PlayerProgress";
+import { TowerProgress } from "./TowerProgress";
 import { Tower } from "./Tower";
 import type { MapConfig, PlaceResult, Vec } from "./types";
 import { Wallet } from "./Wallet";
@@ -37,7 +37,7 @@ export class GameModel {
 
   constructor(
     map: MapConfig,
-    private progress: PlayerProgress = new PlayerProgress(),
+    private progress: TowerProgress = new TowerProgress(),
   ) {
     this.map = map;
     this.path = new Path(map.path);

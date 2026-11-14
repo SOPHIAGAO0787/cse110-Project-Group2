@@ -11,7 +11,7 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
-import { PlayerProgress } from "../../model/PlayerProgress";
+import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 
 // Connects the game model to the screen: input → model, model events → views.
@@ -31,7 +31,7 @@ export class GameScreenController implements Screen {
   constructor(
     app: ScreenSwitcher,
     progress: Progress,
-    private towerProgress: PlayerProgress = new PlayerProgress(),
+    private towerProgress: TowerProgress = new TowerProgress(),
   ) {
     this.app = app;
     this.progress = progress;
@@ -229,8 +229,14 @@ export class GameScreenController implements Screen {
 
       if (result === "ok") {
         pv.addTower(tile);
+      } else if (result === "funds") {
+        this.view.showMessage("Not enough coins");
+      } else if (result === "locked") {
+        this.view.showMessage("Unlock this tower in the Tower Shop first");
+      } else if (result === "occupied") {
+        this.view.showMessage("There is already a tower on this tile");
       } else {
-        this.view.showMessage(`Cannot place tower: ${result}`);
+        this.view.showMessage("Can't place a tower here");
       }
     };
 
