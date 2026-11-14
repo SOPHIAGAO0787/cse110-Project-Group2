@@ -40,4 +40,24 @@ export class PlacementView {
     this.ghost.visible(false);
     this.range.visible(false);
   }
+
+  pulse(tile: Vec, radiusTiles: number): void {
+    const ring = new Konva.Circle({
+      ...tileToPixel(tile, TILE),
+      radius: 0,
+      stroke: "#4a90d9",
+      strokeWidth: 3,
+      opacity: 0.8,
+      listening: false,
+    });
+    this.group.add(ring);
+    new Konva.Tween({
+      node: ring,
+      duration: 0.25,
+      radius: radiusTiles * TILE, // grows to the tower's full radius
+      opacity: 0, // fades out as it reaches the edge
+      easing: Konva.Easings.EaseOut,
+      onFinish: () => ring.destroy(),
+    }).play();
+  }
 }

@@ -13,6 +13,7 @@ import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
 import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
+import { TowersView } from "./TowersView";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -61,7 +62,7 @@ export class GameScreenController implements Screen {
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
-
+    const towersView = new TowersView();
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
       this.model.tick(dt);
@@ -73,6 +74,7 @@ export class GameScreenController implements Screen {
 
     //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
+    this.view.mapGroup.add(towersView.group);
     this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
 
     this.cleanupPlacement = this.wirePlacement(gridView);
@@ -110,7 +112,12 @@ export class GameScreenController implements Screen {
     events.on("waveStarted", () => this.view.backButton.visible(false));
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
-    events.on("enemyLeaked", refreshHud);
+    events.on("enemyLeaked", refreshHud); //listeners for add/fire
+    events.on("towerPlaced", ({ towerId }) => {
+      const tower = this.model.towers.find((t) => t.id === towerId);
+      if (tower) towersView.add(tower);
+    });
+    events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
 
     // A new game starts unpaused, with the back arrow showing
     this.view.settings.close();
@@ -227,9 +234,12 @@ export class GameScreenController implements Screen {
       pv.hide();
       const result = this.model.tryPlaceTower(def.id, tile);
 
+      // TowersView draws successful placements through the towerPlaced event.
       if (result === "ok") {
-        pv.addTower(tile);
-      } else if (result === "funds") {
+        return;
+      }
+
+      if (result === "funds") {
         this.view.showMessage("Not enough coins");
       } else if (result === "locked") {
         this.view.showMessage("Unlock this tower in the Tower Shop first");
