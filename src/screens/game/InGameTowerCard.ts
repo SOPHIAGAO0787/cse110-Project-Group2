@@ -71,8 +71,8 @@ export class InGameTowerCard {
       width: 196,
       text:
         def.range.kind === "sector"
-          ? "Drag onto a green tile, then aim with the mouse.\nPress Enter to answer the question."
-          : "Drag onto a green tile.\nPress Enter to answer the question.",
+          ? "Drag onto a tile that turns green, then aim with the mouse.\nPress Enter to answer the question."
+          : "Drag onto a tile that turns green.\nPress Enter to answer the question.",
       fontSize: 13,
       fill: "#b4b4c8",
       lineHeight: 1.3,
