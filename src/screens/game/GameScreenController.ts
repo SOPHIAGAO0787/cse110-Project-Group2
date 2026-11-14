@@ -12,6 +12,7 @@ import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
+import { TowersView } from "./TowersView";
 import { PlayerProgress } from "../../model/PlayerProgress";
 
 // Connects the game model to the screen: input → model, model events → views.
@@ -51,6 +52,7 @@ export class GameScreenController implements Screen {
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
+    const towersView = new TowersView();
 
     this.loop = new GameLoop((dt) => {
       this.model.tick(dt);
@@ -62,6 +64,7 @@ export class GameScreenController implements Screen {
 
     //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
+    this.view.mapGroup.add(towersView.group);
     this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
 
     this.cleanupPlacement = this.wirePlacement(gridView);
@@ -90,6 +93,11 @@ export class GameScreenController implements Screen {
     events.on("waveCleared", refreshHud);
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud);
+    events.on("towerPlaced", ({ towerId }) => {
+      const tower = this.model.towers.find((item) => item.id === towerId);
+      if (tower) towersView.add(tower);
+    });
+    events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
 
     this.active = true;
     this.group.visible(true);
@@ -213,9 +221,7 @@ export class GameScreenController implements Screen {
       pv.hide();
       const result = this.model.tryPlaceTower(def.id, tile);
 
-      if (result === "ok") {
-        pv.addTower(tile);
-      } else {
+      if (result !== "ok") {
         this.view.showMessage(`Cannot place tower: ${result}`);
       }
     };

@@ -12,8 +12,7 @@ export class Tower {
   // 0 means Level 1.
   level = 0;
 
-  // How much progress we have made toward the next shot.
-  private shotProgress = 0;
+  private cooldown = 0; // seconds until the next shot
 
   constructor(id: number, def: TowerDef, tile: Vec) {
     this.id = id;
@@ -39,51 +38,21 @@ export class Tower {
     this.range = new CircleRange(this.tile, stats.radius);
   }
 
-  private findTarget(enemies: Enemy[]): Enemy | undefined {
-    let target: Enemy | undefined;
+  update(dt: number, enemies: Enemy[]): boolean {
+    this.cooldown = Math.max(0, this.cooldown - dt);
+    if (this.cooldown > 0) return false;
 
-    for (const enemy of enemies) {
-      if (enemy.isDead() || enemy.reachedEnd()) {
-        continue;
-      }
+    const inRange = enemies.filter(
+      (e) => !e.isDead() && !e.reachedEnd() && this.range.contains(e.pos),
+    );
+    if (inRange.length === 0) return false;
 
-      if (!this.range.contains(enemy.pos)) {
-        continue;
-      }
-
-      if (!target || enemy.distance > target.distance) {
-        target = enemy;
-      } else if (enemy.distance === target.distance && enemy.id < target.id) {
-        target = enemy;
-      }
-    }
-
-    return target;
-  }
-
-  update(dt: number, enemies: Enemy[]): void {
-    if (!Number.isFinite(dt) || dt <= 0) {
-      return;
-    }
-
-    // Do not save up shots while there are no targets.
-    if (!this.findTarget(enemies)) {
-      this.shotProgress = 0;
-      return;
-    }
-
-    this.shotProgress += dt * this.def.fireRatePerSec;
-
-    while (this.shotProgress >= 1) {
-      const target = this.findTarget(enemies);
-
-      if (!target) {
-        this.shotProgress = 0;
-        break;
-      }
-
-      target.takeDamage(this.def.damage);
-      this.shotProgress -= 1;
-    }
+    // single target: furthest along the path, ties go to the lowest id
+    const target = inRange.reduce((best, e) =>
+      e.distance > best.distance || (e.distance === best.distance && e.id < best.id) ? e : best,
+    );
+    target.takeDamage(this.def.damage);
+    this.cooldown = 1 / this.def.fireRatePerSec;
+    return true;
   }
 }

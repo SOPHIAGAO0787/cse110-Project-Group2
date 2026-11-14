@@ -68,7 +68,9 @@ export class GameModel {
 
     // 3. Towers shoot enemies in range (R3)
     for (const tower of this.towers) {
-      tower.update(dt, this.enemies);
+      if (tower.update(dt, this.enemies)) {
+        this.events.emit("towerFired", { towerId: tower.id });
+      }
     }
 
     // 4. R2: Remove dead enemies and enemies that reached the end.
