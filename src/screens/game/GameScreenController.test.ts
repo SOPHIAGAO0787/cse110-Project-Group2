@@ -324,7 +324,7 @@ describe("GameScreenController mini-game bonus coins", () => {
     expectHud(map.startingCoins + progress.bonusCoins, map.startingLives, 0, 0);
   });
 
-  it("uses up the bonus when the game ends", () => {
+  it("uses up the bonus when the game is lost", () => {
     progress.addMiniGameReward(3);
     startNewGame();
     model.lives.remaining = 0;
@@ -333,6 +333,16 @@ describe("GameScreenController mini-game bonus coins", () => {
     expect(progress.bonusCoins).toBe(0);
     startNewGame();
     expectHud(map.startingCoins, map.startingLives, 0, 0);
+  });
+
+  it("uses up the bonus when the game is won", () => {
+    progress.addMiniGameReward(3);
+    startNewGame();
+    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.tick(0);
+
+    expect(model.result).toMatchObject({ won: true });
+    expect(progress.bonusCoins).toBe(0);
   });
 
   it("keeps the bonus when the player leaves before the game ends", () => {
