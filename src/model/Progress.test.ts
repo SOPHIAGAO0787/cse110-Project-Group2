@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAPS } from "./loadContent";
-import { Progress } from "./Progress";
+import { COINS_PER_CORRECT_ANSWER, Progress } from "./Progress";
 
 describe("Progress", () => {
   it("starts on the first map with only that map unlocked", () => {
@@ -56,5 +56,50 @@ describe("Progress", () => {
   it("throws for an unknown map", () => {
     const progress = new Progress(MAPS);
     expect(() => progress.isUnlocked("map9")).toThrow(/map9/);
+  });
+});
+
+describe("Progress mini-game rewards", () => {
+  it("starts with no bonus coins", () => {
+    const progress = new Progress(MAPS);
+    expect(progress.bonusCoins).toBe(0);
+  });
+
+  it("gives coins for each correct answer and adds up rounds", () => {
+    const progress = new Progress(MAPS);
+    progress.addMiniGameReward(3);
+    progress.addMiniGameReward(2);
+    expect(progress.bonusCoins).toBe(5 * COINS_PER_CORRECT_ANSWER);
+  });
+
+  it("gives nothing for a round with no correct answers", () => {
+    const progress = new Progress(MAPS);
+    progress.addMiniGameReward(0);
+    progress.addMiniGameReward(-1);
+    expect(progress.bonusCoins).toBe(0);
+  });
+
+  it("clears the bonus once a game uses it", () => {
+    const progress = new Progress(MAPS);
+    progress.addMiniGameReward(4);
+    progress.useBonusCoins();
+    expect(progress.bonusCoins).toBe(0);
+  });
+
+  it("never changes stars or unlocks", () => {
+    const progress = new Progress(MAPS);
+    progress.addMiniGameReward(10);
+    expect(progress.isUnlocked("map2")).toBe(false);
+    for (const map of MAPS) {
+      expect(progress.starsFor(map.id)).toBe(0);
+    }
+  });
+
+  it("keeps the bonus when a game is won or lost", () => {
+    const progress = new Progress(MAPS);
+    progress.addMiniGameReward(2);
+    progress.recordResult("map1", 3);
+    progress.recordResult("map2", 0);
+    expect(progress.bonusCoins).toBe(2 * COINS_PER_CORRECT_ANSWER);
   });
 });

@@ -19,7 +19,7 @@ import { TowersView } from "./TowersView";
 export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
-  private progress: Progress; // which map to play; every finished game saves its stars here
+  private progress: Progress; // which map to play and the bonus coins; finished games save stars here
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -59,6 +59,8 @@ export class GameScreenController implements Screen {
   show(): void {
     this.map = findMap(this.progress.currentMapId);
     this.model = new GameModel(this.map, this.towerProgress);
+    // Coins earned in the mini-game are added to the map's starting coins
+    this.model.wallet.add(this.progress.bonusCoins);
 
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
@@ -66,6 +68,7 @@ export class GameScreenController implements Screen {
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
       this.model.tick(dt);
+      if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
     });
     this.view.mapGroup.destroyChildren();
@@ -80,6 +83,7 @@ export class GameScreenController implements Screen {
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
+      this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
         this.model.lives.remaining,
@@ -97,10 +101,13 @@ export class GameScreenController implements Screen {
       this.view.prompt.cancel();
       this.cleanupPlacement?.();
       this.cleanupPlacement = null;
+      this.refreshWaveTimers();
       const result = this.model.result;
       if (result) {
         // A win unlocks the next map and its stars show on the map screen
         this.progress.recordResult(this.map.id, result.stars);
+        // This game had the bonus coins. Leaving early (no result) keeps them for the next game.
+        this.progress.useBonusCoins();
         this.app.switchTo("result", result);
       }
     });
@@ -142,6 +149,18 @@ export class GameScreenController implements Screen {
     this.view.resize(width, height);
   }
 
+  private refreshWaveTimers(): void {
+    const waves = this.model.waves;
+    this.view.setWaveTimers(
+      this.model.isOver ? null : waves.preparationRemaining,
+      this.model.isOver ? null : waves.lastSpawnRemaining,
+      !this.model.isOver &&
+        !waves.isRunning &&
+        waves.currentWave < waves.totalWaves &&
+        (waves.currentWave === 0 || waves.preparationRemaining !== null),
+    );
+  }
+
   // The game is paused while the settings are open
   private openSettings(): void {
     this.view.settings.open();
@@ -154,8 +173,10 @@ export class GameScreenController implements Screen {
   }
 
   private wirePlacement(gridView: GridView): () => void {
-    const placement = new PlacementModel();
+    const model = this.model;
     let disposed = false;
+    const canCommit = () => !disposed && this.active && !model.isOver;
+    const placement = new PlacementModel();
 
     const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
 
@@ -191,8 +212,8 @@ export class GameScreenController implements Screen {
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
-      if (disposed || !this.active || this.model.isOver) return false;
-      if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
+      if (!canCommit()) return false;
+      if (correct) model.recordQuestionSolved(); // So1: shown on the result screen
       return correct;
     };
 
@@ -224,7 +245,7 @@ export class GameScreenController implements Screen {
 
     const requestPlace = async () => {
       const s = placement.state;
-      if (s.kind !== "placed" || pending || disposed || this.model.isOver) return;
+      if (!canCommit() || s.kind !== "placed" || pending) return;
       const tile = s.pos;
 
       // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
@@ -244,9 +265,7 @@ export class GameScreenController implements Screen {
         pending = false;
       }
 
-      if (disposed || !this.active || this.model.isOver) return;
-
-      if (!ok) {
+      if (!ok || !canCommit()) {
         placement.cancel();
         pv.hide();
         return;
@@ -276,6 +295,7 @@ export class GameScreenController implements Screen {
     };
 
     const onDown = () => {
+      if (pending || !canCommit()) return;
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
       gridView.showGrid(true);
@@ -330,9 +350,10 @@ export class GameScreenController implements Screen {
     window.addEventListener("keydown", onKey);
 
     return () => {
-      // called from hide()
+      // Invalidate pending answers before removing input handlers.
       disposed = true;
       placement.cancel();
+      pv.hide();
       stage?.off(".placement");
       gridView.group.off(".upgrade");
       window.removeEventListener("pointerup", onUp);
