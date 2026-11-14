@@ -337,11 +337,13 @@ describe("GameScreenController mini-game bonus coins", () => {
 
   it("uses up the bonus when the game is won", () => {
     progress.addMiniGameReward(3);
+    const bonus = progress.bonusCoins;
     startNewGame();
     model.events.emit("waveCleared", { wave: map.waves.length });
     model.tick(0);
 
-    expect(model.result).toMatchObject({ won: true });
+    // The bonus was part of this game's coins, so it counts in the final coins
+    expect(model.result).toMatchObject({ won: true, finalCoins: map.startingCoins + bonus });
     expect(progress.bonusCoins).toBe(0);
   });
 
@@ -352,6 +354,20 @@ describe("GameScreenController mini-game bonus coins", () => {
     clickIcon("back");
 
     expect(progress.bonusCoins).toBe(bonus);
+    startNewGame();
+    expectHud(map.startingCoins + bonus, map.startingLives, 0, 0);
+  });
+
+  it("keeps the whole bonus even if the player spent coins before leaving", () => {
+    progress.addMiniGameReward(3);
+    const bonus = progress.bonusCoins;
+    startNewGame();
+    model.wallet.spend(bonus);
+    clickIcon("back");
+
+    expect(progress.bonusCoins).toBe(bonus);
+    startNewGame();
+    expectHud(map.startingCoins + bonus, map.startingLives, 0, 0);
   });
 
   it("keeps the bonus when the player leaves with Settings → Back to maps", () => {
@@ -363,6 +379,8 @@ describe("GameScreenController mini-game bonus coins", () => {
 
     expect(switchTo).toHaveBeenCalledWith("maps");
     expect(progress.bonusCoins).toBe(bonus);
+    startNewGame();
+    expectHud(map.startingCoins + bonus, map.startingLives, 0, 0);
   });
 
   it("keeps the bonus when the player leaves with Settings → Main menu", () => {
@@ -374,6 +392,8 @@ describe("GameScreenController mini-game bonus coins", () => {
 
     expect(switchTo).toHaveBeenCalledWith("menu");
     expect(progress.bonusCoins).toBe(bonus);
+    startNewGame();
+    expectHud(map.startingCoins + bonus, map.startingLives, 0, 0);
   });
 });
 
