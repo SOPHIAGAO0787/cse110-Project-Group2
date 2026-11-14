@@ -100,5 +100,14 @@ describe("PlacementModel", () => {
       m.cancel();
       expect(m.state.kind).toBe("idle");
     });
+
+    it("keeps a square tower's block, and replaces it when the pointer moves", () => {
+      const m = dropped();
+      const first = { kind: "rect", facing: "up", width: 2, depth: 2, side: 1 } as const;
+      const second = { kind: "rect", facing: "left", width: 3, depth: 2, side: -1 } as const;
+      m.configure(first);
+      m.configure(second);
+      expect(m.state).toEqual({ kind: "configuring", pos: tile, config: second });
+    });
   });
 });

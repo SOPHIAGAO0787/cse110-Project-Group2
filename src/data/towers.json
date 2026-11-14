@@ -27,6 +27,6 @@
     "damage": 12,
     "fireRatePerSec": 0.7,
     "attack": "first",
-    "range": { "kind": "rect", "maxArea": 6, "rateArea": 6 }
+    "range": { "kind": "rect", "maxArea": 8, "rateArea": 6 }
   }
 ]

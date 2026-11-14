@@ -304,6 +304,82 @@ describe("GameModel.tryPlaceTower with a config", () => {
   });
 });
 
+// The square tower: a block of tiles chosen by the player
+describe("GameModel with the square tower", () => {
+  const map = loadMap(map1);
+  const buildTile = findTile(map.tiles, "#");
+  const block = { kind: "rect", facing: "right", width: 2, depth: 3, side: -1 } as const;
+  const def = TOWERS.find((d) => d.id === "rectangle")!;
+
+  it("places it and keeps the chosen block", () => {
+    const model = new GameModel(map);
+    expect(model.tryPlaceTower("rectangle", buildTile, block)).toBe("ok");
+    expect(model.towers[0].config).toEqual(block);
+    expect(model.wallet.coins).toBe(map.startingCoins - def.cost);
+  });
+
+  it("uses a default block when none is given", () => {
+    const model = new GameModel(map);
+    expect(model.tryPlaceTower("rectangle", buildTile)).toBe("ok");
+    expect(model.towers[0].config.kind).toBe("rect");
+  });
+
+  it("a block that is not allowed throws without costing coins or using the tile", () => {
+    const model = new GameModel(map);
+    const coins = model.wallet.coins;
+
+    expect(() => model.tryPlaceTower("rectangle", buildTile, { ...block, width: 1 })).toThrow();
+    expect(() => model.tryPlaceTower("rectangle", buildTile, { ...block, depth: 4 })).toThrow();
+
+    expect(model.wallet.coins).toBe(coins);
+    expect(model.grid.isOccupied(buildTile)).toBe(false);
+    expect(model.towers).toHaveLength(0);
+  });
+
+  it("is refused with too few coins, like any tower", () => {
+    const model = new GameModel(map);
+    model.wallet.spend(model.wallet.coins - (def.cost - 1));
+    expect(model.tryPlaceTower("rectangle", buildTile, block)).toBe("funds");
+    expect(model.towers).toHaveLength(0);
+  });
+
+  it("fires at an enemy in its block and awards the kill, once per interval of its area", () => {
+    const game = new GameModel(map);
+    const tile = { x: 0, y: 2 }; // the enemies spawn at (0, 1), right above it
+    const up = { kind: "rect", facing: "up", width: 2, depth: 2, side: 1 } as const;
+    expect(game.tryPlaceTower("rectangle", tile, up)).toBe("ok");
+    const fired: number[] = [];
+    game.events.on("towerFired", (e) => fired.push(e.towerId));
+
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    const interval = 1 / game.towers[0].fireRate;
+
+    game.tick(interval / 2);
+    expect(fired).toEqual([]); // not yet
+    game.tick(interval / 2 + 0.001);
+    expect(fired).toEqual([game.towers[0].id]);
+    expect(enemy.hp).toBe(enemy.def.hp - def.damage);
+  });
+
+  it("does not fire at an enemy outside its block", () => {
+    const game = new GameModel(map);
+    // the block is below the tile (0, 2), but the enemy starts above it
+    game.tryPlaceTower(
+      "rectangle",
+      { x: 0, y: 2 },
+      { kind: "rect", facing: "down", width: 2, depth: 2, side: 1 },
+    );
+    const fired: number[] = [];
+    game.events.on("towerFired", (e) => fired.push(e.towerId));
+    game.spawnEnemy("basic");
+
+    game.tick(0.001);
+    expect(fired).toEqual([]);
+    expect(game.enemies[0].hp).toBe(game.enemies[0].def.hp);
+  });
+});
+
 // So1: the game ends in victory or defeat and records its stats for the result screen.
 // map1 has two waves with 13 enemies in total, so with no towers every enemy leaks:
 // 14 lives survive with 1 left, 13 or fewer lose.

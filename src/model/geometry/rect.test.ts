@@ -67,6 +67,12 @@ describe("rectZone", () => {
     expect(rectZone(tile, "right", 2, 3, 1)).toEqual({ col: 6, row: 5, cols: 3, rows: 2 });
   });
 
+  it("puts the extra tiles of a 4-wide block on the chosen side", () => {
+    // the tower is above the 1st column (extra tiles to the right) or the 4th (to the left)
+    expect(rectZone(tile, "up", 4, 2, 1)).toEqual({ col: 5, row: 3, cols: 4, rows: 2 });
+    expect(rectZone(tile, "up", 4, 2, -1)).toEqual({ col: 2, row: 3, cols: 4, rows: 2 });
+  });
+
   it("flips sideways for left and right too (side follows +y)", () => {
     expect(rectZone(tile, "right", 2, 2, 1)).toEqual({ col: 6, row: 5, cols: 2, rows: 2 });
     expect(rectZone(tile, "right", 2, 2, -1)).toEqual({ col: 6, row: 4, cols: 2, rows: 2 });
@@ -119,6 +125,32 @@ describe("rectFromPointer", () => {
     expect(area(2.5)).toBe(6);
     expect(area(10)).toBe(6);
     expect(area(0.2)).toBe(4); // closer than the first step: still the smallest
+  });
+
+  it("changes size exactly one step further out", () => {
+    const area = (distance: number) => {
+      const c = rectFromPointer(tile, { x: 5, y: 5 - distance }, 6);
+      return c.width * c.depth;
+    };
+    expect(area(1.99)).toBe(4);
+    expect(area(2)).toBe(6);
+    expect(rectFromPointer(tile, { x: 5, y: 2.9 }, 6)).toMatchObject({ width: 3, depth: 2 });
+    expect(rectFromPointer(tile, { x: 5, y: 1.9 }, 6)).toMatchObject({ width: 2, depth: 3 });
+  });
+
+  it("breaks a tie between the two axes in favour of up or down", () => {
+    expect(rectFromPointer(tile, { x: 8, y: 2 }, 6).facing).toBe("up");
+    expect(rectFromPointer(tile, { x: 2, y: 8 }, 6).facing).toBe("down");
+  });
+
+  it("only ever picks a block the ladder allows, wherever the pointer is", () => {
+    const allowed = rectSizes(6).map((s) => `${s.width}x${s.depth}`);
+    for (let x = -3; x <= 13; x += 0.7) {
+      for (let y = -3; y <= 13; y += 0.7) {
+        const { width, depth } = rectFromPointer(tile, { x, y }, 6);
+        expect(allowed).toContain(`${width}x${depth}`);
+      }
+    }
   });
 
   it("uses a bigger ladder when the max area is bigger", () => {

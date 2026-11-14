@@ -5,6 +5,8 @@ import {
   defaultConfig,
   describeRange,
   fireRateFor,
+  makeRange,
+  normalizeConfig,
   rangeReach,
 } from "./towerConfig";
 
@@ -62,5 +64,26 @@ describe("square tower config", () => {
       fireRateFor(rectangle, { kind: "rect", facing: "up", width: 2, depth: 2, side: 1 }),
     ).toBeCloseTo(base * 1.5);
     expect(fireRateFor(circle)).toBe(circle.fireRatePerSec);
+  });
+});
+
+describe("every tower in towers.json", () => {
+  it.each(TOWERS.map((def) => [def.id, def] as const))(
+    "%s has a default that is valid, has a range and a fire rate",
+    (_id, def) => {
+      const config = defaultConfig(def);
+      expect(normalizeConfig(def, config)).toEqual(config);
+      expect(makeRange(def, { x: 5, y: 5 }, config).contains({ x: 5, y: 5 })).toBeTypeOf("boolean");
+      expect(rangeReach(def, config)).toBeGreaterThan(0);
+      expect(fireRateFor(def, config)).toBeGreaterThan(0);
+      expect(describeRange(def).length).toBeGreaterThan(0);
+    },
+  );
+
+  it("only takes a config of its own kind", () => {
+    const other = { kind: "circle", radius: 1 } as const;
+    expect(() => normalizeConfig(rectangle, other)).toThrow();
+    expect(() => normalizeConfig(triangle, defaultConfig(rectangle))).toThrow();
+    expect(() => normalizeConfig(circle, defaultConfig(rectangle))).toThrow();
   });
 });

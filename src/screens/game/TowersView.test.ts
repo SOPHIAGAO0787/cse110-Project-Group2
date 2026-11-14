@@ -146,4 +146,24 @@ describe("TowersView square tower", () => {
     expect(flash.width()).toBe(3 * TILE);
     expect(flash.height()).toBe(2 * TILE);
   });
+
+  it("stays put when an enemy walks past (only the triangle turns)", () => {
+    const view = new TowersView();
+    const tower = new Tower(1, rectangle, { x: 0, y: 2 }, config);
+    view.add(tower);
+    const enemy = new Enemy(
+      1,
+      ENEMIES[0],
+      new Path([
+        { x: 0, y: 0 },
+        { x: 5, y: 0 },
+      ]),
+    );
+    enemy.pos = { x: 2, y: 1 }; // inside its block, off to one side
+    expect(tower.aimTarget([enemy])).toBe(enemy);
+    const body = (view.group.getChildren()[0] as Konva.Group).getChildren()[0] as Konva.Group;
+
+    view.update([tower], [enemy], 0.5);
+    expect(body.rotation()).toBe(0);
+  });
 });

@@ -51,6 +51,18 @@ describe("loadShopContent", () => {
     ]);
   });
 
+  it("lists every tower, including the square tower, with its base stats", async () => {
+    const { SHOP_TOWERS } = await import("./loadShopContent");
+    const square = SHOP_TOWERS.find((item) => item.def.id === "rectangle")!;
+
+    expect(SHOP_TOWERS.map((item) => item.def.id)).toEqual(["circle", "triangle", "rectangle"]);
+    expect(square.levels[0]).toMatchObject({
+      damage: square.def.damage,
+      attackSpeed: square.def.fireRatePerSec,
+      radius: rangeReach(square.def),
+    });
+  });
+
   it("keeps the base level when there is no upgrade record", async () => {
     const { SHOP_TOWERS } = await loadShop([]);
     const tower = SHOP_TOWERS.find((item) => item.def.id === "circle")!;
