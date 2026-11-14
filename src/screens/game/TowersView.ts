@@ -3,7 +3,8 @@ import { TILE } from "./GameScreenView";
 import { tileToPixel } from "./coords";
 import type { Enemy } from "../../model/Enemy";
 import type { Tower } from "../../model/Tower";
-import type { Vec } from "../../model/types";
+import { rectZone } from "../../model/geometry/rect";
+import type { Facing, Vec } from "../../model/types";
 
 const toDegrees = (radians: number) => (radians * 180) / Math.PI;
 
@@ -14,6 +15,8 @@ interface TowerSprite {
   // Called every frame with where the tower's target is (null if none); dt is in seconds.
   update?(target: Vec | null, dt: number): void;
 }
+
+const FACING_DEGREES: Record<Facing, number> = { right: 0, down: 90, left: 180, up: 270 };
 
 const TURN_SPEED = 10; // radians per second, how fast a triangle swings towards its target
 
@@ -160,6 +163,75 @@ class TriangleSprite implements TowerSprite {
   }
 }
 
+class RectSprite implements TowerSprite {
+  group = new Konva.Group({ listening: false });
+  // A square with a barrel on the side it fires towards. The body's origin is the tower's centre,
+  // so squashing and shaking it works like the other towers.
+  private body = new Konva.Group({ listening: false });
+  private tower: Tower;
+
+  constructor(tower: Tower) {
+    const cfg = tower.config;
+    if (cfg.kind !== "rect") throw new Error("RectSprite needs a rect config");
+    this.tower = tower;
+
+    const size = TILE * 0.8;
+    this.body.add(
+      new Konva.Rect({
+        x: -size / 2,
+        y: -size / 2,
+        width: size,
+        height: size,
+        cornerRadius: 4,
+        fill: "#b5651d",
+      }),
+      new Konva.Rect({
+        x: size / 2 - 2,
+        y: -TILE * 0.1,
+        width: TILE * 0.2,
+        height: TILE * 0.2,
+        fill: "#7a420f",
+      }),
+    );
+    this.body.rotation(FACING_DEGREES[cfg.facing]); // the barrel starts out pointing right
+    this.group.add(this.body);
+  }
+
+  // The block this tower hits, as a rectangle relative to the tower's centre (in pixels).
+  private zoneRect(): Konva.Rect {
+    const cfg = this.tower.config;
+    if (cfg.kind !== "rect") throw new Error("RectSprite needs a rect config");
+    const { col, row, cols, rows } = rectZone(
+      this.tower.tile,
+      cfg.facing,
+      cfg.width,
+      cfg.depth,
+      cfg.side,
+    );
+    return new Konva.Rect({
+      x: (col - 0.5 - this.tower.tile.x) * TILE,
+      y: (row - 0.5 - this.tower.tile.y) * TILE,
+      width: cols * TILE,
+      height: rows * TILE,
+      fill: "#e8a14a",
+      opacity: 0.5,
+      listening: false,
+    });
+  }
+
+  fire(): void {
+    const flash = this.zoneRect();
+    this.group.add(flash);
+    new Konva.Tween({
+      node: flash,
+      duration: 0.2,
+      opacity: 0,
+      onFinish: () => flash.destroy(),
+    }).play();
+    pop(this.body);
+  }
+}
+
 // One place that picks a visual for a tower.
 function makeSprite(tower: Tower): TowerSprite {
   switch (tower.def.range.kind) {
@@ -167,6 +239,8 @@ function makeSprite(tower: Tower): TowerSprite {
       return new CircleSprite(tower);
     case "sector":
       return new TriangleSprite(tower);
+    case "rect":
+      return new RectSprite(tower);
   }
 }
 

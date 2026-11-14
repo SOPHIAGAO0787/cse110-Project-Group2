@@ -55,14 +55,25 @@ export interface TowerDef {
   range: RangeDef;
 }
 
+// The direction a rectangle tower fires in. "up" is towards row 0, like the screen.
+export type Facing = "up" | "down" | "left" | "right";
+
 // The shape of a tower's range as written in towers.json.
 export type RangeDef =
   | { kind: "circle"; radius: number } // radius in tiles
-  | { kind: "sector"; area: number }; // triangle: the cone's area in tiles², its reach follows from the angle
+  | { kind: "sector"; area: number } // triangle: the cone's area in tiles², its reach follows from the angle
+  // Square tower: a block of whole tiles next to the tower.
+  // maxArea is the biggest block the player may choose (upgrades raise it);
+  // rateArea is the area at which the tower fires at fireRatePerSec (a smaller block fires faster).
+  | { kind: "rect"; maxArea: number; rateArea: number };
 
 // What the player chooses when placing a tower. Angles are in radians.
 export type TowerConfig =
-  { kind: "circle"; radius: number } | { kind: "sector"; facing: number; spread: number }; // facing: 0 = right, y grows downward
+  | { kind: "circle"; radius: number }
+  | { kind: "sector"; facing: number; spread: number } // facing: 0 = right, y grows downward
+  // width runs across the facing direction, depth along it, both in whole tiles.
+  // side says which way the extra tile goes when width is even: +1 towards +x (+y when facing left/right), -1 the other way.
+  | { kind: "rect"; facing: Facing; width: number; depth: number; side: 1 | -1 };
 
 // "Is this point inside the tower's range?" Each tower shape implements this.
 export interface RangeShape {

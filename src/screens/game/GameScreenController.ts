@@ -13,8 +13,7 @@ import { EnemiesView } from "./EnemiesView";
 import { InGameTowerCard } from "./InGameTowerCard";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
-import { sectorFromPointer } from "../../model/geometry/sector";
-import { defaultConfig } from "../../model/towerConfig";
+import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -28,6 +27,8 @@ export class GameScreenController implements Screen {
   private cleanupPlacement: (() => void) | null = null;
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
+  private screenHeight = 0; // last size given to resize(), used to fit the shop cards
+  private layoutCards: (() => void) | null = null;
 
   // All maps are the same size, so the view made for the first map fits every map.
   constructor(app: ScreenSwitcher, progress: Progress) {
@@ -132,7 +133,9 @@ export class GameScreenController implements Screen {
   }
 
   resize(width: number, height: number): void {
+    this.screenHeight = height;
     this.view.resize(width, height);
+    this.layoutCards?.();
   }
 
   // The game is paused while the settings are open
@@ -150,14 +153,32 @@ export class GameScreenController implements Screen {
     const placement = new PlacementModel();
 
     // One card and one preview per tower kind; picking a card switches which one is active.
-    const choices = TOWERS.map((tower, index) => {
+    const choices = TOWERS.map((tower) => {
       const view = new PlacementView(tower);
       const card = new InGameTowerCard(tower, view.menuIcon);
-      card.group.position({ x: 16, y: 64 + index * 352 });
       this.view.mapGroup.add(view.group);
       this.view.shopGroup.add(card.group);
       return { tower, view, card };
     });
+
+    // Stack the cards under the shop title, shrinking them all if they would run off the screen
+    // (the Start Wave button sits at the bottom).
+    const CARD_STEP = 352;
+    const SHOP_TOP = 64;
+    const SHOP_BOTTOM = 100;
+    this.layoutCards = () => {
+      const room = this.screenHeight - SHOP_TOP - SHOP_BOTTOM;
+      const scale =
+        this.screenHeight > 0 ? Math.min(1, Math.max(0.4, room / (choices.length * CARD_STEP))) : 1;
+      choices.forEach(({ card }, index) => {
+        card.group.scale({ x: scale, y: scale });
+        card.group.position({
+          x: 16 + (228 * (1 - scale)) / 2,
+          y: SHOP_TOP + index * CARD_STEP * scale,
+        });
+      });
+    };
+    this.layoutCards();
 
     // These change when the player picks another tower.
     let def = choices[0].tower;
@@ -232,14 +253,14 @@ export class GameScreenController implements Screen {
       if (s.kind === "dragging") {
         const tile = gridView.tileUnderMouse();
         if (tile) pv.show(tile, canPlace(tile));
-      } else if (s.kind === "configuring" && s.config.kind === "sector") {
-        // Aim at the mouse: the closer it is to the tower, the wider the cone.
+      } else if (s.kind === "configuring") {
+        // Aim at the mouse: the cone's width or the block's size follows how far it is from the tower.
         const pointer = gridView.pointerInTiles();
         if (!pointer) return;
-        const { facing, spread } = sectorFromPointer(s.pos, pointer);
-        const config = { kind: "sector", facing, spread } as const;
+        const config = configFromPointer(def, s.pos, pointer);
+        if (!config) return;
         placement.configure(config);
-        pv.showSector(s.pos, config);
+        pv.showConfig(s.pos, config);
       }
     };
 
@@ -251,10 +272,10 @@ export class GameScreenController implements Screen {
         placement.endDrag(tile, true); // state: placed, ghost stays
         pv.show(tile, true);
         const config = defaultConfig(def);
-        if (config.kind === "sector") {
-          // a cone tower still needs aiming: show the default cone and follow the mouse from here
+        if (config.kind !== "circle") {
+          // a cone or block tower still needs aiming: show the default and follow the mouse from here
           placement.configure(config);
-          pv.showSector(tile, config);
+          pv.showConfig(tile, config);
         }
       } else {
         placement.cancel();

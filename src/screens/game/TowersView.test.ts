@@ -12,6 +12,7 @@ import { TowersView } from "./TowersView";
 
 const circle = TOWERS.find((d) => d.id === "circle")!;
 const triangle = TOWERS.find((d) => d.id === "triangle")!;
+const rectangle = TOWERS.find((d) => d.id === "rectangle")!;
 
 describe("TowersView", () => {
   it("puts a sprite at the centre of the tower's tile", () => {
@@ -110,5 +111,39 @@ describe("TowersView", () => {
       view.update([tower], [enemyAt({ x: 1, y: 3 })], 1); // straight below, the cone faces right
       expect(body.rotation()).toBeCloseTo(0);
     });
+  });
+});
+
+describe("TowersView square tower", () => {
+  const config = { kind: "rect", facing: "right", width: 2, depth: 3, side: -1 } as const;
+
+  it("points the barrel the way the block extends", () => {
+    const view = new TowersView();
+    view.add(new Tower(1, rectangle, { x: 1, y: 1 }, config));
+    const sprite = view.group.getChildren()[0] as Konva.Group;
+    const body = sprite.getChildren()[0] as Konva.Group;
+    expect(body.rotation()).toBe(0); // right is how the barrel is drawn
+
+    const up = new TowersView();
+    up.add(new Tower(2, rectangle, { x: 1, y: 1 }, { ...config, facing: "up" }));
+    const upBody = (up.group.getChildren()[0] as Konva.Group).getChildren()[0] as Konva.Group;
+    expect(upBody.rotation()).toBe(270);
+  });
+
+  it("flashes exactly the block it hits when it fires", () => {
+    const view = new TowersView();
+    view.add(new Tower(1, rectangle, { x: 1, y: 1 }, config));
+    const sprite = view.group.getChildren()[0] as Konva.Group;
+    const before = sprite.getChildren().length;
+
+    view.fire(1);
+
+    const flash = sprite.getChildren()[before] as Konva.Rect;
+    // facing right from (1, 1): 3 wide along x, 2 tall, side -1 puts the extra row above the tower.
+    // Relative to the tower's centre: starts half a tile after it, and one tile above.
+    expect(flash.x()).toBe(0.5 * TILE);
+    expect(flash.y()).toBe(-1.5 * TILE);
+    expect(flash.width()).toBe(3 * TILE);
+    expect(flash.height()).toBe(2 * TILE);
   });
 });

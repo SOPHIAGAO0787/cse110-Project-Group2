@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { GameModel } from "./GameModel";
 import { MAX_SPREAD, MIN_SPREAD } from "./geometry/sector";
-import { loadMap } from "./loadContent";
+import { TOWERS, loadMap } from "./loadContent";
 import map1 from "../data/maps/map1.json";
 import type { Enemy } from "./Enemy";
-import type { Tower } from "./Tower";
+import { Tower } from "./Tower";
 import type { TowerConfig } from "./types";
 
 const NORTH = -Math.PI / 2; // the spawn point (0, 1) is straight above the tile (0, 2)
@@ -14,7 +14,7 @@ function setup(defId = "circle", config?: TowerConfig) {
   const game = new GameModel(loadMap(map1));
   expect(game.tryPlaceTower(defId, { x: 0, y: 2 }, config)).toBe("ok");
   const tower = game.towers[0];
-  return { game, tower, interval: 1 / tower.def.fireRatePerSec };
+  return { game, tower, interval: 1 / tower.fireRate };
 }
 
 function spawn(game: GameModel, count = 1): Enemy[] {
@@ -203,5 +203,126 @@ describe("Tower defaults", () => {
       radius: tower.def.range.kind === "circle" ? tower.def.range.radius : 0,
     });
     expect(tower.reach).toBe(2.5);
+  });
+});
+
+type RectConfig = Extract<TowerConfig, { kind: "rect" }>;
+
+describe("Square tower block", () => {
+  // The tower stands on (0, 2). Facing up with width 2 and depth 3, the block is columns 0–1, rows -1–1.
+  const block = (width: number, depth: number): RectConfig => ({
+    kind: "rect",
+    facing: "up",
+    width,
+    depth,
+    side: 1,
+  });
+
+  it("hits the front-most enemy inside its block, and nothing outside it", () => {
+    const { game, tower, interval } = setup("rectangle", block(2, 3));
+    const [rear, front, outside] = spawn(game, 3);
+    rear.pos = { x: 0, y: 1 };
+    rear.distance = 1;
+    front.pos = { x: 1, y: 0 }; // the other column of the block
+    front.distance = 2;
+    outside.pos = { x: 2, y: 1 }; // just to the right of the block
+    outside.distance = 9;
+
+    expect(tower.update(interval, game.enemies)).toBe(1);
+
+    expect(front.hp).toBe(front.def.hp - tower.def.damage);
+    expect(rear.hp).toBe(rear.def.hp); // single target
+    expect(outside.hp).toBe(outside.def.hp);
+  });
+
+  it("does not reach past the end of its block", () => {
+    const { game, tower } = setup("rectangle", block(2, 2)); // rows 0–1
+    const [enemy] = spawn(game);
+    enemy.pos = { x: 0, y: -1 };
+    expect(tower.aimTarget(game.enemies)).toBeUndefined();
+    enemy.pos = { x: 0, y: 0 };
+    expect(tower.aimTarget(game.enemies)).toBe(enemy);
+  });
+
+  it("flips an even-width block to the other side of the tower", () => {
+    const left = setup("rectangle", { ...block(2, 2), side: -1 }).tower; // columns -1–0
+    const right = setup("rectangle", block(2, 2)).tower; // columns 0–1
+    expect(left.range.contains({ x: -1, y: 1 })).toBe(true);
+    expect(left.range.contains({ x: 1, y: 1 })).toBe(false);
+    expect(right.range.contains({ x: 1, y: 1 })).toBe(true);
+    expect(right.range.contains({ x: -1, y: 1 })).toBe(false);
+  });
+
+  it("fires faster the smaller the block, from the area", () => {
+    const small = setup("rectangle", block(2, 2)).tower;
+    const big = setup("rectangle", block(2, 3)).tower;
+    const def = big.def;
+    const range = def.range.kind === "rect" ? def.range : { rateArea: 0, maxArea: 0 };
+
+    expect(small.fireRate).toBeGreaterThan(big.fireRate);
+    expect(small.fireRate).toBeCloseTo((def.fireRatePerSec * range.rateArea) / 4);
+    expect(big.fireRate).toBeCloseTo((def.fireRatePerSec * range.rateArea) / 6);
+    // the other towers do not depend on what the player chose
+    expect(setup("circle").tower.fireRate).toBe(setup("circle").tower.def.fireRatePerSec);
+  });
+
+  it("really fires at the rate of its area", () => {
+    const { game, tower } = setup("rectangle", block(2, 2));
+    const [enemy] = spawn(game);
+    enemy.pos = { x: 0, y: 1 };
+    // 1 second at fireRate shots/sec
+    const shots = tower.update(1 / tower.fireRate + 1e-9, game.enemies);
+    expect(shots).toBe(1);
+  });
+
+  it("rejects shapes that are not allowed, and costs nothing", () => {
+    const game = new GameModel(loadMap(map1));
+    const coins = game.wallet.coins;
+    for (const [w, d] of [
+      [1, 6],
+      [6, 1],
+      [2, 4],
+      [3, 3],
+      [2.5, 2],
+    ]) {
+      expect(() => game.tryPlaceTower("rectangle", { x: 0, y: 2 }, block(w, d))).toThrow();
+    }
+    expect(game.wallet.coins).toBe(coins);
+    expect(game.towers).toHaveLength(0);
+  });
+
+  it("rejects a bad facing or side, and a cone config", () => {
+    const game = new GameModel(loadMap(map1));
+    const t = { x: 0, y: 2 };
+    expect(() =>
+      game.tryPlaceTower("rectangle", t, { ...block(2, 2), facing: "north" as never }),
+    ).toThrow();
+    expect(() =>
+      game.tryPlaceTower("rectangle", t, { ...block(2, 2), side: 0 as never }),
+    ).toThrow();
+    expect(() => game.tryPlaceTower("rectangle", t, coneFacingNorth(1))).toThrow();
+  });
+
+  it("treats the side of an odd width as irrelevant", () => {
+    const { tower } = setup("rectangle", { ...block(3, 2), side: -1 });
+    expect(tower.config).toMatchObject({ width: 3, side: 1 });
+  });
+
+  it("defaults to the biggest block facing up", () => {
+    const { tower } = setup("rectangle");
+    expect(tower.config).toMatchObject({ kind: "rect", facing: "up" });
+    const { width, depth } = tower.config as Extract<TowerConfig, { kind: "rect" }>;
+    expect(width * depth).toBe(6);
+  });
+
+  it("allows bigger blocks once maxArea is raised (upgrades)", () => {
+    const base = TOWERS.find((d) => d.id === "rectangle")!;
+    const upgraded = { ...base, range: { kind: "rect" as const, maxArea: 8, rateArea: 6 } };
+    const tile = { x: 0, y: 2 };
+
+    expect(() => new Tower(1, base, tile, block(2, 4))).toThrow();
+    const tower = new Tower(1, upgraded, tile, block(2, 4));
+    expect(tower.range.contains({ x: 0, y: -1 })).toBe(true); // reaches 4 tiles up
+    expect(tower.fireRate).toBeCloseTo((base.fireRatePerSec * 6) / 8);
   });
 });

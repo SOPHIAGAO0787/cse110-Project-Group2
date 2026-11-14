@@ -1,5 +1,5 @@
 import type { Enemy } from "./Enemy";
-import { defaultConfig, makeRange, normalizeConfig, rangeReach } from "./towerConfig";
+import { defaultConfig, fireRateFor, makeRange, normalizeConfig, rangeReach } from "./towerConfig";
 import type { RangeShape, TowerConfig, TowerDef, Vec } from "./types";
 
 // A placed tower that shoots enemies inside its range.
@@ -32,6 +32,11 @@ export class Tower {
     return rangeReach(this.def, this.config);
   }
 
+  // Shots per second. It depends on what the player chose (a smaller rectangle fires faster).
+  get fireRate(): number {
+    return fireRateFor(this.def, this.config);
+  }
+
   // The enemies the next shot hits: everyone in range for an "all" tower,
   // otherwise only the one furthest along the path (ties go to the lowest id).
   private findTargets(enemies: Enemy[]): Enemy[] {
@@ -60,12 +65,13 @@ export class Tower {
     // With no targets the tower reloads, but keeps at most one shot ready so shots can't pile up.
     // (Resetting to 0 instead would stop a tower from ever firing at enemies that cross its
     // cone faster than one firing interval.)
+    const rate = this.fireRate;
     if (this.findTargets(enemies).length === 0) {
-      this.shotProgress = Math.min(1, this.shotProgress + dt * this.def.fireRatePerSec);
+      this.shotProgress = Math.min(1, this.shotProgress + dt * rate);
       return 0;
     }
 
-    this.shotProgress += dt * this.def.fireRatePerSec;
+    this.shotProgress += dt * rate;
 
     let shots = 0;
     while (this.shotProgress >= 1) {

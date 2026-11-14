@@ -53,6 +53,23 @@ describe("InGameTowerCard", () => {
     expect(displayedText()).toContain("Press Enter to answer the question.");
   });
 
+  it("tells the player to aim for towers that are aimed", () => {
+    const aimed: TowerDef[] = [
+      { ...tower, id: "triangle", range: { kind: "sector", area: 7.5 } },
+      { ...tower, id: "rectangle", range: { kind: "rect", maxArea: 6, rateArea: 6 } },
+    ];
+    for (const def of aimed) {
+      const aimedCard = new InGameTowerCard(def, new Konva.Circle({ radius: 24 }));
+      const text = aimedCard.group
+        .find<Konva.Text>("Text")
+        .map((t) => t.text())
+        .join("\n");
+      expect(text).toContain("then aim with the mouse");
+      aimedCard.group.destroy();
+    }
+    expect(displayedText()).not.toContain("aim");
+  });
+
   it("keeps the existing placement icon inside the card", () => {
     expect(icon.getParent()).toBe(card.group);
   });

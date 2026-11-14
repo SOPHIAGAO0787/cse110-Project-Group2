@@ -18,5 +18,15 @@
     "fireRatePerSec": 0.8,
     "attack": "first",
     "range": { "kind": "sector", "area": 7.5 }
+  },
+  {
+    "id": "rectangle",
+    "name": "Square Tower",
+    "description": "Hits the front-most enemy in an aimed block of tiles. Smaller blocks fire faster.",
+    "cost": 100,
+    "damage": 12,
+    "fireRatePerSec": 0.7,
+    "attack": "first",
+    "range": { "kind": "rect", "maxArea": 6, "rateArea": 6 }
   }
 ]
