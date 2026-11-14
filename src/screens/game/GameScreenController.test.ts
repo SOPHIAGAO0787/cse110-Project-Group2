@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { GameScreenController } from "./GameScreenController";
 import { GameModel } from "../../model/GameModel";
 import { GameLoop } from "../../core/GameLoop";
+import { GridView } from "./GridView";
+import { QuestionPrompt } from "./QuestionPrompt";
 import map from "../../data/maps/map1.json";
 
 // Capture real model instances without exposing the controller's private fields.
@@ -196,6 +198,88 @@ describe("GameScreenController HUD event wiring", () => {
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
     clickStartWave();
     expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
+  });
+});
+
+describe("GameScreenController questions during gameplay", () => {
+  function openQuestion() {
+    let answer!: (correct: boolean) => void;
+    vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    const ask = vi.spyOn(QuestionPrompt.prototype, "ask").mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const title = controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => text.text() === "Circle Tower")!;
+    const card = title.getParent()!;
+    card.fire("pointerdown");
+    window.dispatchEvent(new Event("pointerup"));
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(ask).toHaveBeenCalledTimes(1);
+    return { answer, ask, card };
+  }
+
+  async function settleAnswer() {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  }
+
+  it("keeps the loop running while a question is pending and places once after answering", async () => {
+    const stop = vi.spyOn(GameLoop.prototype, "stop");
+    const start = vi.spyOn(GameLoop.prototype, "start").mockClear();
+    model.startNextWave();
+    model.tick(0);
+    const { answer, ask, card } = openQuestion();
+    const distanceBefore = model.enemies[0].distance;
+
+    model.tick(0.5);
+    expect(model.enemies[0].distance).toBeGreaterThan(distanceBefore);
+    card.fire("pointerdown");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(stop).not.toHaveBeenCalled();
+
+    answer(true);
+    await settleAnswer();
+    expect(model.towers).toHaveLength(1);
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("rejects a correct answer if the game ends while the question is open", async () => {
+    const cancel = vi.spyOn(QuestionPrompt.prototype, "cancel");
+    const { answer } = openQuestion();
+    model.lives.remaining = 0;
+    model.tick(0);
+
+    expect(cancel).toHaveBeenCalled();
+    answer(true);
+    await settleAnswer();
+    expect(model.towers).toHaveLength(0);
+  });
+
+  it("rejects an old answer after leaving and starting a fresh game", async () => {
+    const { answer } = openQuestion();
+    const oldModel = model;
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+
+    answer(true);
+    await settleAnswer();
+    expect(oldModel.towers).toHaveLength(0);
+    expect(model.towers).toHaveLength(0);
+  });
+
+  it("rechecks match coins after answering", async () => {
+    const { answer } = openQuestion();
+    model.wallet.spend(model.wallet.coins);
+    answer(true);
+    await settleAnswer();
+
+    expect(model.towers).toHaveLength(0);
+    expect(model.wallet.coins).toBe(0);
   });
 });
 
