@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadMap } from "./loadContent";
+import { findMap, loadMap, MAPS } from "./loadContent";
 import map1 from "../data/maps/map1.json";
 
 // A tiny valid map: path runs left to right along row 1
@@ -7,6 +7,8 @@ function validMap() {
   return {
     id: "test",
     name: "Test",
+    colors: { buildable: "#00ff00", path: "#996633", blocked: "#000000" },
+    decoration: "trees",
     cols: 4,
     rows: 3,
     tiles: ["#...", "PPPP", "...#"],
@@ -34,6 +36,26 @@ describe("loadMap", () => {
   it("rejects a map whose row count doesn't match rows", () => {
     const map = { ...validMap(), rows: 4 };
     expect(() => loadMap(map)).toThrow(/rows/);
+  });
+
+  it("rejects a map without colors", () => {
+    const map = { ...validMap(), colors: undefined };
+    expect(() => loadMap(map)).toThrow(/colors/);
+  });
+
+  it("rejects a map whose colors are null", () => {
+    const map = { ...validMap(), colors: null };
+    expect(() => loadMap(map)).toThrow(/colors/);
+  });
+
+  it("rejects a map missing one of its colors", () => {
+    const map = { ...validMap(), colors: { buildable: "#00ff00", path: "#996633" } };
+    expect(() => loadMap(map)).toThrow(/colors/);
+  });
+
+  it("rejects an unknown decoration", () => {
+    const map = { ...validMap(), decoration: "flowers" };
+    expect(() => loadMap(map)).toThrow(/flowers/);
   });
 
   it("rejects a row with the wrong width", () => {
@@ -67,5 +89,38 @@ describe("loadMap", () => {
       ],
     };
     expect(() => loadMap(map)).toThrow(/\(3, 0\)/);
+  });
+});
+
+describe("MAPS", () => {
+  it("has four maps with different ids", () => {
+    expect(MAPS).toHaveLength(4);
+    const ids: string[] = [];
+    for (const map of MAPS) {
+      expect(ids).not.toContain(map.id);
+      ids.push(map.id);
+    }
+  });
+
+  // The game screen's layout is made for this size
+  it("makes every map 16 by 10 tiles", () => {
+    for (const map of MAPS) {
+      expect(map.cols).toBe(16);
+      expect(map.rows).toBe(10);
+    }
+  });
+
+  it("starts with map1", () => {
+    expect(MAPS[0].id).toBe("map1");
+  });
+});
+
+describe("findMap", () => {
+  it("finds a map by its id", () => {
+    expect(findMap("map2").name).toBe("Angle Canyon");
+  });
+
+  it("throws for an unknown id", () => {
+    expect(() => findMap("map9")).toThrow(/map9/);
   });
 });
