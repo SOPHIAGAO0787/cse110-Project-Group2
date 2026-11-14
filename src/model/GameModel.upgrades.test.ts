@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import map1 from "../data/maps/map1.json";
 import { GameModel } from "./GameModel";
 import { loadMap } from "./loadContent";
-import { PlayerProgress } from "./PlayerProgress";
+import { TowerProgress } from "./TowerProgress";
 import { SHOP_TOWERS } from "./shop/loadShopContent";
 
 const circle = SHOP_TOWERS.find((tower) => tower.def.id === "circle")!;
 
 function createGame(maxLevel: number) {
-  const progress = new PlayerProgress();
+  const progress = new TowerProgress();
   progress.maxLevels.set("circle", maxLevel);
 
   const game = new GameModel(loadMap(map1), progress);
