@@ -14,6 +14,8 @@ import map2 from "../../data/maps/map2.json";
 import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
 import { TowerProgress } from "../../model/TowerProgress";
+import { TowersView } from "./TowersView";
+import { PlacementView } from "./PlacementView";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -258,6 +260,29 @@ describe("GameScreenController questions during gameplay", () => {
   async function settleAnswer() {
     for (let i = 0; i < 5; i++) await Promise.resolve();
   }
+
+  it("uses TowersView for placement and firing without adding a duplicate marker", async () => {
+    const add = vi.spyOn(TowersView.prototype, "add");
+    const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
+    const oldMarker = vi.spyOn(PlacementView.prototype, "addTower");
+    const { answer } = openQuestion();
+
+    answer(true);
+    await settleAnswer();
+
+    expect(model.towers).toHaveLength(1);
+    const tower = model.towers[0];
+    expect(add).toHaveBeenCalledExactlyOnceWith(tower);
+    expect(oldMarker).not.toHaveBeenCalled();
+
+    model.spawnEnemy("basic");
+    model.tick(0.016);
+    expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
+
+    controller.hide();
+    model.events.emit("towerFired", { towerId: tower.id });
+    expect(fire).toHaveBeenCalledTimes(1);
+  });
 
   it("keeps the loop running while a question is pending and places once after answering", async () => {
     const stop = vi.spyOn(GameLoop.prototype, "stop");
