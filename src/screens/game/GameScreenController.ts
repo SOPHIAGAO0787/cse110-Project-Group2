@@ -53,6 +53,7 @@ export class GameScreenController implements Screen {
     const enemiesView = new EnemiesView();
 
     this.loop = new GameLoop((dt) => {
+      if (!this.active) return;
       this.model.tick(dt);
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
     });
@@ -80,6 +81,10 @@ export class GameScreenController implements Screen {
     const events = this.model.events;
     // So1: the model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
+      this.loop.stop();
+      this.view.prompt.cancel();
+      this.cleanupPlacement?.();
+      this.cleanupPlacement = null;
       const result = this.model.result;
       if (result) this.app.switchTo("result", result);
     });
@@ -147,11 +152,9 @@ export class GameScreenController implements Screen {
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec): Promise<boolean> => {
       const question = this.questions.questionFor(def);
-      this.loop.stop(); // pause the game while the question is open
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
-      if (disposed || !this.active) return false;
+      if (disposed || !this.active || this.model.isOver) return false;
       if (correct) this.model.recordQuestionSolved(); // So1: shown on the result screen
-      if (this.active) this.loop.start(); // don't restart if the player left the screen
       return correct;
     };
 
