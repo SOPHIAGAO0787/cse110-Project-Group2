@@ -43,6 +43,11 @@ describe("loadMap", () => {
     expect(() => loadMap(map)).toThrow(/colors/);
   });
 
+  it("rejects a map whose colors are null", () => {
+    const map = { ...validMap(), colors: null };
+    expect(() => loadMap(map)).toThrow(/colors/);
+  });
+
   it("rejects a map missing one of its colors", () => {
     const map = { ...validMap(), colors: { buildable: "#00ff00", path: "#996633" } };
     expect(() => loadMap(map)).toThrow(/colors/);

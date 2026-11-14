@@ -20,6 +20,7 @@ export function loadMap(data: unknown): MapConfig {
   // Without all three colors some tiles would be drawn with no fill
   if (
     map.colors === undefined ||
+    map.colors === null ||
     typeof map.colors.buildable !== "string" ||
     typeof map.colors.path !== "string" ||
     typeof map.colors.blocked !== "string"
