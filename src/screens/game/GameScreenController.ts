@@ -14,6 +14,7 @@ import { InGameTowerCard } from "./InGameTowerCard";
 import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
+import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -27,6 +28,8 @@ export class GameScreenController implements Screen {
   private cleanupPlacement: (() => void) | null = null;
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
+  private screenHeight = 0; // last size given to resize(), used to fit the shop cards
+  private layoutCards: (() => void) | null = null;
 
   // Map progress tracks stars; tower progress tracks shop purchases.
   constructor(
@@ -70,6 +73,7 @@ export class GameScreenController implements Screen {
       this.model.tick(dt);
       if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
+      towersView.update(this.model.towers, this.model.enemies, dt); // towers turn towards their targets
     });
     this.view.mapGroup.destroyChildren();
 
@@ -146,7 +150,9 @@ export class GameScreenController implements Screen {
   }
 
   resize(width: number, height: number): void {
+    this.screenHeight = height;
     this.view.resize(width, height);
+    this.layoutCards?.();
   }
 
   private refreshWaveTimers(): void {
@@ -178,6 +184,9 @@ export class GameScreenController implements Screen {
     const canCommit = () => !disposed && this.active && !model.isOver;
     const placement = new PlacementModel();
 
+    this.layoutCards = null;
+
+    // Only the towers bought in the Tower Shop can be placed.
     const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
 
     // No unlocked towers means there is nothing to place.
@@ -185,23 +194,35 @@ export class GameScreenController implements Screen {
       return () => {};
     }
 
-    const choices = unlockedTowers.map((tower, index) => {
-      const view = new PlacementView(tower.range.radius);
-
-      const card = new InGameTowerCard(tower, view.menuCircle);
-
-      card.group.position({
-        x: 16,
-        y: 64 + index * 352,
-      });
-
+    // One card and one preview per tower kind; picking a card switches which one is active.
+    const choices = unlockedTowers.map((tower) => {
+      const view = new PlacementView(tower);
+      const card = new InGameTowerCard(tower, view.menuIcon);
       this.view.mapGroup.add(view.group);
       this.view.shopGroup.add(card.group);
-
       return { tower, view, card };
     });
 
-    // These change when the player selects another tower.
+    // Stack the cards under the shop title, shrinking them all if they would run off the screen
+    // (the Start Wave button sits at the bottom).
+    const CARD_STEP = 352;
+    const SHOP_TOP = 64;
+    const SHOP_BOTTOM = 100;
+    this.layoutCards = () => {
+      const room = this.screenHeight - SHOP_TOP - SHOP_BOTTOM;
+      const scale =
+        this.screenHeight > 0 ? Math.min(1, Math.max(0.4, room / (choices.length * CARD_STEP))) : 1;
+      choices.forEach(({ card }, index) => {
+        card.group.scale({ x: scale, y: scale });
+        card.group.position({
+          x: 16 + (228 * (1 - scale)) / 2,
+          y: SHOP_TOP + index * CARD_STEP * scale,
+        });
+      });
+    };
+    this.layoutCards();
+
+    // These change when the player picks another tower.
     let def = choices[0].tower;
     let pv = choices[0].view;
 
@@ -245,8 +266,9 @@ export class GameScreenController implements Screen {
 
     const requestPlace = async () => {
       const s = placement.state;
-      if (!canCommit() || s.kind !== "placed" || pending) return;
+      if (!canCommit() || (s.kind !== "placed" && s.kind !== "configuring") || pending) return;
       const tile = s.pos;
+      const config = s.kind === "configuring" ? s.config : undefined; // e.g. where the triangle aims
 
       // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
       // tryPlaceTower checks again, because coins can change while the question is open.
@@ -272,12 +294,17 @@ export class GameScreenController implements Screen {
       }
 
       const now = placement.state;
-      if (now.kind !== "placed" || now.pos.x !== tile.x || now.pos.y !== tile.y) return;
+      if (
+        (now.kind !== "placed" && now.kind !== "configuring") ||
+        now.pos.x !== tile.x ||
+        now.pos.y !== tile.y
+      ) {
+        return;
+      }
 
       placement.confirm(); // state: idle
       pv.hide();
-      const result = this.model.tryPlaceTower(def.id, tile);
-
+      const result = this.model.tryPlaceTower(def.id, tile, config);
       // TowersView draws successful placements through the towerPlaced event.
       if (result === "ok") {
         return;
@@ -302,9 +329,20 @@ export class GameScreenController implements Screen {
     };
 
     const onMove = () => {
-      if (placement.state.kind !== "dragging") return;
-      const tile = gridView.tileUnderMouse();
-      if (tile) pv.show(tile, canPlace(tile));
+      if (pending) return; // the preview stays put while a question is open
+      const s = placement.state;
+      if (s.kind === "dragging") {
+        const tile = gridView.tileUnderMouse();
+        if (tile) pv.show(tile, canPlace(tile));
+      } else if (s.kind === "configuring") {
+        // Aim at the mouse: the cone's width or the block's size follows how far it is from the tower.
+        const pointer = gridView.pointerInTiles();
+        if (!pointer) return;
+        const config = configFromPointer(def, s.pos, pointer);
+        if (!config) return;
+        placement.configure(config);
+        pv.showConfig(s.pos, config);
+      }
     };
 
     const onUp = () => {
@@ -314,6 +352,12 @@ export class GameScreenController implements Screen {
       if (tile && canPlace(tile)) {
         placement.endDrag(tile, true); // state: placed, ghost stays
         pv.show(tile, true);
+        const config = defaultConfig(def);
+        if (config.kind !== "circle") {
+          // a cone or block tower still needs aiming: show the default and follow the mouse from here
+          placement.configure(config);
+          pv.showConfig(tile, config);
+        }
       } else {
         placement.cancel();
         pv.hide();
@@ -358,10 +402,10 @@ export class GameScreenController implements Screen {
       gridView.group.off(".upgrade");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
-      choices.forEach((choice) => {
+      for (const choice of choices) {
         choice.card.group.destroy();
         choice.view.group.destroy();
-      });
+      }
     };
   }
 }

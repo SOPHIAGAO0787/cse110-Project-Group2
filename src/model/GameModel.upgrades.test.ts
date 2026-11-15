@@ -29,7 +29,7 @@ describe("GameModel.tryUpgradeTower", () => {
     const fired: number[] = [];
     game.events.on("towerFired", (event) => fired.push(event.towerId));
 
-    game.tick(0.016);
+    game.tick(1 / tower.fireRate + 0.001);
 
     expect(fired).toEqual([tower.id]);
     expect(game.enemies).toHaveLength(0);
@@ -51,7 +51,7 @@ describe("GameModel.tryUpgradeTower", () => {
     expect(tower.level).toBe(1);
     expect(tower.def.damage).toBe(next.damage);
     expect(tower.def.fireRatePerSec).toBe(next.attackSpeed);
-    expect(tower.def.range.radius).toBe(next.radius);
+    expect(tower.reach).toBe(next.radius);
     expect(tower.range.contains({ x: next.radius, y: 2 })).toBe(true);
     expect(game.wallet.coins).toBe(coinsBefore - circle.levels[0].upgradeCost!);
   });

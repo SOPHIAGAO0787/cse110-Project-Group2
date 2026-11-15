@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { rangeReach } from "../towerConfig";
 
 // A circle tower with two upgrades.
 function validConfig() {
@@ -42,12 +43,24 @@ describe("loadShopContent", () => {
       {
         damage: tower.def.damage,
         attackSpeed: tower.def.fireRatePerSec,
-        radius: tower.def.range.radius,
+        radius: rangeReach(tower.def),
         upgradeCost: 75,
       },
       { damage: 8, attackSpeed: 1.2, radius: 2.8, upgradeCost: 125 },
       { damage: 10, attackSpeed: 1.5, radius: 3, upgradeCost: null },
     ]);
+  });
+
+  it("lists every tower, including the square tower, with its base stats", async () => {
+    const { SHOP_TOWERS } = await import("./loadShopContent");
+    const square = SHOP_TOWERS.find((item) => item.def.id === "rectangle")!;
+
+    expect(SHOP_TOWERS.map((item) => item.def.id)).toEqual(["circle", "triangle", "rectangle"]);
+    expect(square.levels[0]).toMatchObject({
+      damage: square.def.damage,
+      attackSpeed: square.def.fireRatePerSec,
+      radius: rangeReach(square.def),
+    });
   });
 
   it("keeps the base level when there is no upgrade record", async () => {

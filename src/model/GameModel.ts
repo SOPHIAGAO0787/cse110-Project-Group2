@@ -8,7 +8,8 @@ import { Path } from "./Path";
 import { TowerProgress } from "./TowerProgress";
 import { SHOP_TOWERS } from "./shop/loadShopContent";
 import { Tower } from "./Tower";
-import type { MapConfig, PlaceResult, Vec } from "./types";
+import { defaultConfig, normalizeConfig } from "./towerConfig";
+import type { MapConfig, PlaceResult, TowerConfig, Vec } from "./types";
 import { Wallet } from "./Wallet";
 import { WaveManager } from "./WaveManager";
 
@@ -68,7 +69,7 @@ export class GameModel {
 
     // 3. Towers shoot enemies in range (R3)
     for (const tower of this.towers) {
-      if (tower.update(dt, this.enemies)) {
+      if (tower.update(dt, this.enemies) > 0) {
         this.events.emit("towerFired", { towerId: tower.id });
       }
     }
@@ -125,9 +126,11 @@ export class GameModel {
   }
 
   // Places a tower if the tile is free and the player can afford it, otherwise says why not.
-  tryPlaceTower(defId: string, tile: Vec): PlaceResult {
+  tryPlaceTower(defId: string, tile: Vec, config?: TowerConfig): PlaceResult {
     const def = TOWERS.find((d) => d.id === defId);
     if (!def) throw new Error(`Unknown tower "${defId}"`);
+    // Check the config before anything is spent or occupied, so a bad config can't cost coins.
+    const finalConfig = normalizeConfig(def, config ?? defaultConfig(def));
 
     if (this.progress.getMaxLevel(defId) < 0) return "locked";
 
@@ -139,7 +142,7 @@ export class GameModel {
     }
 
     this.grid.occupy(tile);
-    const tower = new Tower(this.nextTowerId++, def, tile);
+    const tower = new Tower(this.nextTowerId++, def, tile, finalConfig);
     this.towers.push(tower);
     this.towersPlaced++;
     this.events.emit("towerPlaced", { towerId: tower.id, defId: def.id, tile });

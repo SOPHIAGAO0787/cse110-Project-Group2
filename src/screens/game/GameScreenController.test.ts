@@ -319,7 +319,7 @@ describe("GameScreenController questions during gameplay", () => {
     ).toHaveLength(1);
 
     model.spawnEnemy("basic");
-    model.tick(0.016);
+    model.tick(1 / tower.fireRate);
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
 
     controller.hide();
@@ -608,6 +608,62 @@ describe("GameScreenController map choice", () => {
   });
 });
 
+describe("GameScreenController shop cards", () => {
+  beforeEach(() => {
+    controller.hide();
+    for (const tower of TOWERS) towerProgress.maxLevels.set(tower.id, 0);
+    controller.show();
+  });
+  const CARD_HEIGHT = 340;
+
+  // The cards, top to bottom, found by the tower name on each.
+  function cards(): Konva.Group[] {
+    return ["Circle Tower", "Triangle Tower", "Square Tower"].map((name) => {
+      const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === name);
+      if (title === undefined) throw new Error(`${name} card is missing from the shop`);
+      return title.getParent() as Konva.Group;
+    });
+  }
+
+  it("has a card for every tower, in the order of towers.json", () => {
+    expect(cards()).toHaveLength(3);
+  });
+
+  it.each([600, 800, 1080])(
+    "fit above the Start Wave button without overlapping at height %i",
+    (height) => {
+      controller.resize(1280, height);
+      const [first, second, third] = cards();
+      const bottom = (card: Konva.Group) => card.y() + CARD_HEIGHT * card.scaleY();
+
+      expect(first.y()).toBeGreaterThan(0);
+      expect(bottom(first)).toBeLessThanOrEqual(second.y());
+      expect(bottom(second)).toBeLessThanOrEqual(third.y());
+      expect(bottom(third)).toBeLessThanOrEqual(height - 80);
+    },
+  );
+
+  it("keep their full size when there is room", () => {
+    controller.resize(1280, 2000);
+    for (const card of cards()) expect(card.scaleX()).toBe(1);
+  });
+
+  it("grow back when the window gets taller again", () => {
+    controller.resize(1280, 600);
+    const small = cards()[0].scaleX();
+    controller.resize(1280, 1080);
+    expect(cards()[0].scaleX()).toBeGreaterThan(small);
+  });
+
+  it("stay inside the shop panel's width", () => {
+    controller.resize(1280, 600);
+    for (const card of cards()) {
+      expect(card.x()).toBeGreaterThanOrEqual(0);
+      expect(card.x() + 228 * card.scaleX()).toBeLessThanOrEqual(260);
+    }
+  });
+});
+
 describe("GameScreenController tower upgrades", () => {
   it("creates one tower sprite and forwards firing events to its animation", () => {
     const add = vi.spyOn(TowersView.prototype, "add");
@@ -617,7 +673,7 @@ describe("GameScreenController tower upgrades", () => {
 
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
     model.spawnEnemy("basic");
-    model.tick(0.016);
+    model.tick(1 / tower.fireRate);
 
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
     controller.hide();
