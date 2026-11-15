@@ -29,6 +29,9 @@ export function statLines(result: GameResult): string[] {
     `Time: ${formatTime(result.elapsedSeconds)}`,
     `Towers Placed: ${result.towersPlaced}`,
     `Questions Solved: ${result.questionsSolved}`,
+    `Enemies Defeated: ${result.enemiesDefeated}`,
+    `Final Score: ${result.score}`,
+    `Coins Earned: ${result.coinsEarned}`,
     `Lives Left: ${result.remainingLives}`,
     `Coins Left: ${result.finalCoins}`,
   ];

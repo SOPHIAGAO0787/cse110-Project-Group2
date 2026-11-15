@@ -34,6 +34,8 @@ export class GameModel {
   elapsedSeconds = 0;
   private towersPlaced = 0;
   private questionsSolved = 0;
+  private enemiesDefeated = 0;
+  private coinsEarned = 0;
   private finalWaveCleared = false;
   private finalResult: GameResult | null = null; // set once, when the game ends
 
@@ -79,6 +81,8 @@ export class GameModel {
     for (const enemy of this.enemies) {
       if (enemy.isDead()) {
         // Enemy has been killed, so it gives a reward
+        this.enemiesDefeated++;
+        this.coinsEarned += enemy.def.reward;
         this.events.emit("enemyKilled", {
           enemyId: enemy.id,
           reward: enemy.def.reward,
@@ -214,6 +218,9 @@ export class GameModel {
       remainingLives: this.lives.remaining,
       finalCoins: this.wallet.coins,
       questionsSolved: this.questionsSolved,
+      enemiesDefeated: this.enemiesDefeated,
+      coinsEarned: this.coinsEarned,
+      score: this.enemiesDefeated * 100,
     };
     this.events.emit("gameOver", { won });
   }
