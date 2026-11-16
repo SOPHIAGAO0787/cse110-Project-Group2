@@ -278,6 +278,53 @@ describe("GameScreenController HUD event wiring", () => {
   });
 });
 
+describe("GameScreenController feedback", () => {
+  function textsOnScreen(): string[] {
+    return controller.group.find<Konva.Text>("Text").map((text) => text.text());
+  }
+
+  it("shows the reward where an enemy is defeated", () => {
+    model.spawnEnemy("basic");
+    const enemy = model.enemies[0];
+    enemy.takeDamage(enemy.hp);
+    model.tick(0.1);
+
+    expect(textsOnScreen()).toContain(`+${enemy.def.reward}`);
+  });
+
+  it("draws a health bar once an enemy is damaged", () => {
+    model.spawnEnemy("basic");
+    const barColor = "#34c97a";
+    const bars = () =>
+      controller.group.find<Konva.Rect>("Rect").filter((rect) => rect.fill() === barColor);
+
+    frames[frames.length - 1](0.1);
+    expect(bars()).toHaveLength(0);
+
+    model.enemies[0].takeDamage(1);
+    frames[frames.length - 1](0.1);
+    expect(bars()).toHaveLength(1);
+  });
+
+  it("shows the wave number when a wave starts", () => {
+    clickButton("Start Wave");
+    expect(textsOnScreen()).toContain("Wave 1");
+  });
+
+  it("flashes the red frame when an enemy leaks", () => {
+    const frame = controller.group
+      .getChildren()
+      .find((node) => node instanceof Konva.Rect && node.stroke() === "#ff3b3b");
+    if (!(frame instanceof Konva.Rect)) {
+      throw new Error("The leak frame is missing from the screen");
+    }
+    expect(frame.opacity()).toBe(0);
+
+    model.events.emit("enemyLeaked", { enemyId: 1 });
+    expect(frame.opacity()).toBeGreaterThan(0.9); // the fade-out has just started
+  });
+});
+
 describe("GameScreenController questions during gameplay", () => {
   function openQuestion() {
     let answer!: (correct: boolean) => void;
