@@ -2,6 +2,8 @@ import type { MapConfig } from "./types";
 
 // Coins the mini-game gives for each correct answer
 export const COINS_PER_CORRECT_ANSWER = 5;
+// The most bonus coins the player can save up, so replaying the mini-game can't give endless coins
+export const MAX_BONUS_COINS = 50;
 
 // What the player has done across games: which map they picked, the best stars on each map,
 // and the bonus coins earned in the mini-game. It lives in memory only, so refreshing the page
@@ -45,13 +47,17 @@ export class Progress {
     }
   }
 
-  // Saves a finished mini-game round. Bonus coins add up until a game uses them.
+  // Saves a finished mini-game round. Bonus coins add up until a game uses them,
+  // but never past MAX_BONUS_COINS.
   // Mini-game rewards only touch bonusCoins, never stars or unlocks.
   addMiniGameReward(correctAnswers: number): void {
     if (correctAnswers <= 0) {
       return;
     }
     this.bonusCoins = this.bonusCoins + correctAnswers * COINS_PER_CORRECT_ANSWER;
+    if (this.bonusCoins > MAX_BONUS_COINS) {
+      this.bonusCoins = MAX_BONUS_COINS;
+    }
   }
 
   // Called when a game ends: that game got the bonus coins, so they are gone now.
