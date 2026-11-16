@@ -30,6 +30,8 @@ export class GameScreenController implements Screen {
   private active = false; // false while the screen is hidden
   private screenHeight = 0; // last size given to resize(), used to fit the shop cards
   private layoutCards: (() => void) | null = null;
+  private speed = 1; // model steps per frame: 1 is normal speed, 2 is double. Kept between games.
+  private onSpeedKey: (e: KeyboardEvent) => void; // the Space key listener, added in show()
 
   // Map progress tracks stars; tower progress tracks shop purchases.
   constructor(
@@ -49,9 +51,23 @@ export class GameScreenController implements Screen {
       () => this.openSettings(),
       () => this.closeSettings(),
       () => this.app.switchTo("menu"),
+      () => this.toggleSpeed(),
       this.questions,
     );
     this.group = this.view.group;
+
+    // Space switches the speed, like clicking the speed button
+    this.onSpeedKey = (e: KeyboardEvent) => {
+      if (e.key !== " " || e.repeat) {
+        return;
+      }
+      // The settings pause the game, and a question uses the keyboard for the answer
+      if (this.view.settings.isOpen() || this.view.prompt.group.visible()) {
+        return;
+      }
+      e.preventDefault(); // Space would also scroll the page
+      this.toggleSpeed();
+    };
 
     // A real game is created in show(). These are only here so the fields are never empty.
     this.model = new GameModel(this.map, this.towerProgress);
@@ -70,10 +86,21 @@ export class GameScreenController implements Screen {
     const towersView = new TowersView();
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
-      this.model.tick(dt);
+      // The game keeps running while a question is open, so it drops to normal speed
+      // to leave time for reading.
+      let steps = this.speed;
+      if (this.view.prompt.group.visible()) {
+        steps = 1;
+      }
+      // Double speed runs the same step twice. One step of 2 * dt would be faster to compute,
+      // but an enemy could then jump over a narrow tower range between two steps.
+      for (let i = 0; i < steps; i++) {
+        this.model.tick(dt);
+      }
       if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
-      towersView.update(this.model.towers, this.model.enemies, dt); // towers turn towards their targets
+      // towers turn towards their targets, and turn faster when the game runs faster
+      towersView.update(this.model.towers, this.model.enemies, dt * steps);
     });
     this.view.mapGroup.destroyChildren();
 
@@ -134,6 +161,7 @@ export class GameScreenController implements Screen {
     this.view.settings.close();
     this.view.backButton.visible(true);
 
+    window.addEventListener("keydown", this.onSpeedKey);
     this.active = true;
     this.group.visible(true);
     this.loop.start();
@@ -141,6 +169,7 @@ export class GameScreenController implements Screen {
 
   hide(): void {
     this.active = false;
+    window.removeEventListener("keydown", this.onSpeedKey);
     this.view.prompt.cancel(); // closes the popup and removes its key listener
     this.cleanupPlacement?.();
     this.cleanupPlacement = null;
@@ -176,6 +205,16 @@ export class GameScreenController implements Screen {
   private closeSettings(): void {
     this.view.settings.close();
     this.loop.start();
+  }
+
+  // Switches between normal and double speed
+  private toggleSpeed(): void {
+    if (this.speed === 1) {
+      this.speed = 2;
+    } else {
+      this.speed = 1;
+    }
+    this.view.setSpeed(this.speed);
   }
 
   private wirePlacement(gridView: GridView): () => void {
