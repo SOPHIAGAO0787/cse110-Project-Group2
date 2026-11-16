@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QuestionService } from "./QuestionService";
-import { QUESTIONS, TOWERS } from "../loadContent";
+import { GENERAL_QUESTIONS, QUESTION_POOLS, TOWERS } from "../loadContent";
 import type { Question } from "../types";
 
 const service = new QuestionService();
@@ -70,19 +70,26 @@ describe("QuestionService functionality", () => {
 
   describe("questionFor", () => {
     const tower = TOWERS[0];
+    const own = QUESTION_POOLS[tower.id] ?? [];
 
-    it("returns a question from questions.json", () => {
-      expect(QUESTIONS).toContain(service.questionFor(tower));
+    it("returns a question from the general pool or the tower's own pool", () => {
+      // templates are built into new objects on every call, so compare ids
+      const ids = [...GENERAL_QUESTIONS, ...own].map((entry) => entry.id);
+      for (const value of [0, 0.5, 0.999999]) {
+        vi.spyOn(Math, "random").mockReturnValue(value);
+        expect(ids).toContain(service.questionFor(tower).id);
+      }
     });
 
-    // Tests for this will change once questions are picked from pools based on the tower placed
     it("picks by Math.random", () => {
+      // 0 is below GENERAL_SHARE: the general pool, first question
       vi.spyOn(Math, "random").mockReturnValue(0);
-      expect(service.questionFor(tower)).toBe(QUESTIONS[0]);
+      expect(service.questionFor(tower)).toBe(GENERAL_QUESTIONS[0]);
 
-      // just under 1 must map to the last question, not past the end
+      // just under 1: the tower's own pool, and the last question, not past the end
       vi.spyOn(Math, "random").mockReturnValue(0.999999);
-      expect(service.questionFor(tower)).toBe(QUESTIONS[QUESTIONS.length - 1]);
+      // templates are built into new objects on every call, so compare ids
+      expect(service.questionFor(tower).id).toBe(own[own.length - 1].id);
     });
   });
 });

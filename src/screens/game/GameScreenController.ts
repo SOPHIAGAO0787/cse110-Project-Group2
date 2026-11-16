@@ -282,7 +282,7 @@ export class GameScreenController implements Screen {
       pending = true;
       let ok = false;
       try {
-        ok = await beforeCommit(tile);
+        ok = await beforeCommit(tile, config);
       } finally {
         pending = false;
       }

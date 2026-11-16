@@ -15,8 +15,8 @@ export const ENEMIES = enemiesJson as EnemyDef[];
 // Every tower also gets the common ones.
 export const COMMON_VARIABLES = ["damage", "rate"];
 export const VARIABLES_BY_KIND: Record<string, string[]> = {
-  circle: ["radius"],
-  sector: ["degrees", "radius", "fraction"],
+  circle: ["radius", "diameter", "circumference", "area"],
+  sector: ["degrees", "radius", "fraction", "fractionDecimal", "area", "arc"],
   rect: ["width", "depth", "area", "baseRate", "rateArea"],
 };
 
@@ -87,6 +87,14 @@ export function checkQuestions(pools: Record<string, QuestionEntry[]>): void {
         throw new Error(`questions.json: "${entry.id}" needs a template and a formula answer`);
       }
       for (const field of [entry.template, entry.hint]) {
+        // fill() only replaces plain names, so a formula like {2 * radius} would reach the player
+        for (const match of field.matchAll(/\{([^}]*)\}/g)) {
+          if (!/^\w+$/.test(match[1])) {
+            throw new Error(
+              `questions.json: "${entry.id}" uses {${match[1]}}; only plain names like {radius} are filled in`,
+            );
+          }
+        }
         for (const match of field.matchAll(/\{(\w+)\}/g)) {
           if (!allowed.includes(match[1])) {
             throw new Error(

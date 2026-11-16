@@ -50,8 +50,8 @@
       "hint": "Area = ½ × base × height."
     },
     {
-      "id": "gen-hard-triangle-area",
-      "prompt": "A right triangle has non-hypotenuse legs of length 12 and 5. What is its area",
+      "id": "gen-hard-triangle-perimeter",
+      "prompt": "A right triangle has non-hypotenuse legs of length 12 and 5. What is its perimeter?",
       "answer": 30,
       "tolerance": 0,
       "hint": "Find the hypotenuse and add up all three sides."
@@ -116,7 +116,7 @@
     },
     {
       "id": "circle-radius-t",
-      "template": "This tower's range has a diameter of {2 * radius} tiles. What is its radius?",
+      "template": "This tower's range has a diameter of {diameter} tiles. What is its radius?",
       "answer": "radius",
       "relativeTolerance": 0.01,
       "hint": "The radius is half of the diameter."
@@ -144,38 +144,38 @@
     },
     {
       "id": "mid-circle-circumference-t",
-      "template": "This tower's range has a diameter of {2 * radius} tiles. What is its circumference?",
+      "template": "This tower's range has a diameter of {diameter} tiles. What is its circumference?",
       "answer": "2 * pi * radius",
       "relativeTolerance": 0.01,
       "hint": "C = 2πr."
     },
     {
       "id": "hard-circle-diameter-t",
-      "template": "This tower's range covers an area of {pi * radius^2} tiles. What is its diameter?",
+      "template": "This tower covers an area of {area} tiles². What is its diameter?",
       "answer": "2 * radius",
-      "tolerance": 0,
-      "hint": "Area = πr²."
+      "hint": "Area = πr².",
+      "relativeTolerance": 0.01
     },
     {
       "id": "hard-circle-circumference-t",
-      "template": "This tower's range covers an area of {pi * radius^2} tiles. What is its circumference?",
+      "template": "This tower covers an area of {area} tiles². What is its circumference?",
       "answer": "2 * pi * radius",
       "relativeTolerance": 0.01,
       "hint": "Area = πr². C = 2πr."
     },
     {
       "id": "hard-circle-area-t",
-      "template": "This tower's range has a circumference of {2 * pi * radius} tiles. What is its area?",
+      "template": "This tower's range has a circumference of {circumference} tiles. What is its area?",
       "answer": "pi * radius^2",
       "relativeTolerance": 0.01,
       "hint": "C = 2πr. Area = πr²."
     },
     {
-      "id": "tower-dps-circle-t",
+      "id": "tower-dpm-circle-t",
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,
-      "hint": "Amount of seconds in a minute * damage × shots per second."
+      "hint": "Seconds in a minute × damage × shots per second."
     }
   ],
   "triangle": [
@@ -191,7 +191,7 @@
       "prompt": "A right triangle has one 30° angle. What is the other acute angle in °?",
       "answer": 60,
       "tolerance": 0,
-      "hint": "A right traingle always has a 90° angle."
+      "hint": "A right triangle always has a 90° angle."
     },
     {
       "id": "triangle-equilateral",
@@ -237,45 +237,45 @@
     },
     {
       "id": "hard1-triangle-radius-t",
-      "template": "Your cone has a curved edge of length {fraction * 2 * pi * radius} tiles and an angle of {degrees}°. How long is its radius?",
+      "template": "Your cone has a curved edge of length {arc} tiles and an angle of {degrees}°. How long is its radius?",
       "answer": "radius",
       "relativeTolerance": 0.01,
       "hint": "Arc = (angle ÷ degrees in a full circle) × 2πr."
     },
     {
       "id": "hard2-triangle-radius-t",
-      "template": "Your cone covers an area of {fraction * pi * radius^2} tiles and has an angle of {degrees}°. How long is its radius?",
+      "template": "Your cone covers an area of {area} tiles² and has an angle of {degrees}°. How long is its radius?",
       "answer": "radius",
       "relativeTolerance": 0.01,
       "hint": "Area = (angle ÷ degrees in a full circle) × πr²."
     },
     {
       "id": "triangle-degrees-t",
-      "template": "Your cone is {degrees / 360} of a full circle. What is the angle of the cone?",
+      "template": "Your cone is {fractionDecimal} of a full circle. What is the angle of the cone?",
       "answer": "degrees",
-      "tolerance": 0.01,
-      "hint": "How many degrees are in a full circle?"
+      "hint": "How many degrees are in a full circle?",
+      "relativeTolerance": 0.01
     },
     {
       "id": "hard-triangle-area-t",
-      "template": "Your cone has a curved edge of length {fraction * 2 * pi * radius} tiles and an angle of {degrees}°. How much area does it cover?",
+      "template": "Your cone has a curved edge of length {arc} tiles and an angle of {degrees}°. How much area does it cover?",
       "answer": "fraction * pi * radius^2",
       "relativeTolerance": 0.01,
       "hint": "Arc = (angle ÷ degrees in a full circle) × 2πr. Area = (angle ÷ degrees in a full circle) × πr²."
     },
     {
       "id": "hard-triangle-arc-t",
-      "template": "Your cone covers an area of {fraction * pi * radius^2} tiles and has an angle of {degrees}°. How long is its curved edge?",
+      "template": "Your cone covers an area of {area} tiles² and has an angle of {degrees}°. How long is its curved edge?",
       "answer": "fraction * 2 * pi * radius",
       "relativeTolerance": 0.01,
       "hint": "Area = (angle ÷ degrees in a full circle) × πr². Arc = (angle ÷ degrees in a full circle) × 2πr."
     },
     {
-      "id": "tower-dps-triangle-t",
-      "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per second is that?",
-      "answer": "damage * rate",
+      "id": "tower-dpm-triangle-t",
+      "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
+      "answer": "60 * damage * rate",
       "tolerance": 0.02,
-      "hint": "Damage × shots per second."
+      "hint": "Seconds in a minute × damage × shots per second."
     }
   ],
   "rectangle": [
@@ -336,11 +336,11 @@
       "hint": "Multiply {baseRate} by {rateArea}, then divide by {area}."
     },
     {
-      "id": "tower-dps-rectangle-t",
-      "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per second is that?",
-      "answer": "damage * rate",
+      "id": "tower-dpm-rectangle-t",
+      "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
+      "answer": "60 * damage * rate",
       "tolerance": 0.02,
-      "hint": "Damage × shots per second."
+      "hint": "Seconds in a minute × damage × shots per second."
     }
   ]
 }
