@@ -175,7 +175,7 @@
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,
-      "hint": "Seconds in a minute × damage × shots per second."
+      "hint": "Damage per minute = seconds in a minute × damage × shots per second."
     }
   ],
   "triangle": [
@@ -275,7 +275,7 @@
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,
-      "hint": "Seconds in a minute × damage × shots per second."
+      "hint": "Damage per minute = seconds in a minute × damage × shots per second."
     }
   ],
   "rectangle": [
@@ -330,17 +330,17 @@
     },
     {
       "id": "rect-rate-t",
-      "template": "A block of area {rateArea} fires {baseRate} shots per second, and smaller blocks fire faster: rate × {rateArea} ÷ area. Your block has area {area}. How many shots per second?",
-      "answer": "baseRate * rateArea / area",
-      "tolerance": 0.02,
-      "hint": "Multiply {baseRate} by {rateArea}, then divide by {area}."
+      "template": "A block of area {rateArea} fires {baseRate} shots per second, and smaller blocks fire faster: rate × {rateArea} ÷ area. Your block has area {area}. How many shots are fired per minute?",
+      "answer": "60 * baseRate * rateArea / area",
+      "tolerance": 0.5,
+      "hint": "Shots per minute = 60 × {baseRate} × {rateArea} ÷ area."
     },
     {
       "id": "tower-dpm-rectangle-t",
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,
-      "hint": "Seconds in a minute × damage × shots per second."
+      "hint": "Damage per minute = seconds in a minute × damage × shots per second."
     }
   ]
 }

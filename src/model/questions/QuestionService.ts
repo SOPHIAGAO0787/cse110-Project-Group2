@@ -1,6 +1,6 @@
 import { GENERAL_QUESTIONS, QUESTION_POOLS, isTemplate } from "../loadContent";
 import { defaultConfig } from "../towerConfig";
-import { towerVariables } from "./towerQuestions";
+import { towerVariables } from "./TowerQuestionsHandling";
 import type { Question, QuestionTemplate, TowerConfig, TowerDef } from "../types";
 
 // How often a question comes from the general geometry group instead of the tower's own
