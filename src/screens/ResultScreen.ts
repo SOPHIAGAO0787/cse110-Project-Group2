@@ -15,10 +15,10 @@ export class ResultScreen implements Screen {
   private stars = new Konva.Text({ fontSize: 40, fill: "#facc15", align: "center" });
   private subtitle = new Konva.Text({ fontSize: 24, fill: "#d1d5db", align: "center" });
   private stats = new Konva.Text({
-    fontSize: 20,
+    fontSize: 18,
     fill: "#e5e7eb",
     align: "center",
-    lineHeight: 1.6,
+    lineHeight: 1.4,
   });
   private menuButton: Konva.Group;
 
@@ -51,13 +51,16 @@ export class ResultScreen implements Screen {
   }
 
   resize(width: number, height: number): void {
+    const scale = Math.min(1, height / 500);
+    this.group.scale({ x: scale, y: scale });
+    this.group.position({ x: (width * (1 - scale)) / 2, y: (height * (1 - scale)) / 2 });
     for (const text of [this.title, this.stars, this.subtitle, this.stats]) {
       text.width(width);
     }
-    this.title.y(height / 2 - 220);
-    this.stars.y(height / 2 - 160);
-    this.subtitle.y(height / 2 - 105);
-    this.stats.y(height / 2 - 60);
-    this.menuButton.position({ x: width / 2 - 100, y: height / 2 + 120 });
+    this.title.y(height / 2 - 230);
+    this.stars.y(height / 2 - 166);
+    this.subtitle.y(height / 2 - 108);
+    this.stats.y(height / 2 - 70);
+    this.menuButton.position({ x: width / 2 - 100, y: height / 2 + 148 });
   }
 }

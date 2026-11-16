@@ -425,9 +425,20 @@ describe("GameModel game result (So1)", () => {
 
   it("ends in victory when the last wave is cleared with lives left", () => {
     const game = gameWithLives(14);
+    game.spawnEnemy("fast");
+    const defeated = game.enemies[0];
+    defeated.takeDamage(defeated.hp);
+    game.tick(0);
 
     expect(playUntilOver(game)).toEqual([true]);
-    expect(game.result).toMatchObject({ won: true, stars: 1, remainingLives: 1 });
+    expect(game.result).toMatchObject({
+      won: true,
+      stars: 1,
+      remainingLives: 1,
+      enemiesDefeated: 1,
+      coinsEarned: defeated.def.reward,
+      score: 100,
+    });
     expect(game.waves.currentWave).toBe(map1.waves.length);
   });
 
@@ -435,7 +446,14 @@ describe("GameModel game result (So1)", () => {
     const game = gameWithLives(3);
 
     expect(playUntilOver(game)).toEqual([false]);
-    expect(game.result).toMatchObject({ won: false, stars: 0, remainingLives: 0 });
+    expect(game.result).toMatchObject({
+      won: false,
+      stars: 0,
+      remainingLives: 0,
+      enemiesDefeated: 0,
+      coinsEarned: 0,
+      score: 0,
+    });
     expect(game.waves.currentWave).toBe(1); // lost during wave 1, so wave 2 never started
   });
 
@@ -502,6 +520,11 @@ describe("GameModel game result (So1)", () => {
     game.recordQuestionSolved();
     game.recordQuestionSolved();
     game.tick(0.5);
+    game.spawnEnemy("basic");
+    game.spawnEnemy("fast");
+    const earned = game.enemies.reduce((sum, enemy) => sum + enemy.def.reward, 0);
+    for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
+    game.tick(0);
 
     game.events.emit("enemyLeaked", { enemyId: 99 }); // costs the only life
     game.tick(0.25);
@@ -512,8 +535,11 @@ describe("GameModel game result (So1)", () => {
       elapsedSeconds: 0.75,
       towersPlaced: 1,
       remainingLives: 0,
-      finalCoins: map1.startingCoins - TOWERS.find((d) => d.id === "circle")!.cost,
+      finalCoins: map1.startingCoins - TOWERS.find((d) => d.id === "circle")!.cost + earned,
       questionsSolved: 2,
+      enemiesDefeated: 2,
+      coinsEarned: earned,
+      score: 200,
     });
   });
 
