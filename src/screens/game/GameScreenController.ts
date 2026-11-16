@@ -2,7 +2,7 @@ import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { GameModel } from "../../model/GameModel";
 import { findMap, TOWERS } from "../../model/loadContent";
-import type { MapConfig, Vec } from "../../model/types";
+import type { MapConfig, TowerConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
@@ -230,11 +230,11 @@ export class GameScreenController implements Screen {
     const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
 
     // Asks the question and returns true only if the player answered correctly.
-    const beforeCommit = async (tile: Vec): Promise<boolean> => {
-      const question = this.questions.questionFor(def);
+    const beforeCommit = async (tile: Vec, config?: TowerConfig): Promise<boolean> => {
+      const question = this.questions.questionFor(def, config);
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
       if (!canCommit()) return false;
-      if (correct) model.recordQuestionSolved(); // So1: shown on the result screen
+      if (correct) model.recordQuestionSolved();
       return correct;
     };
 

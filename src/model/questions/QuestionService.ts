@@ -1,5 +1,32 @@
-import { QUESTIONS } from "../loadContent";
-import type { Question, TowerDef } from "../types";
+import { GENERAL_QUESTIONS, QUESTION_POOLS, isTemplate } from "../loadContent";
+import { defaultConfig } from "../towerConfig";
+import { towerVariables } from "./towerQuestions";
+import type { Question, QuestionTemplate, TowerConfig, TowerDef } from "../types";
+
+// How often a question comes from the general geometry group instead of the tower's own
+const GENERAL_SHARE = 0.3;
+
+function fill(text: string, vars: Record<string, number>): string {
+  return text.replace(/\{(\w+)\}/g, (_match, name: string) => String(vars[name]));
+}
+
+// Turns a template into a question using this tower's numbers.
+// Returns null if the tower doesn't provide a number the template needs.
+function build(t: QuestionTemplate, vars: Record<string, number>): Question | null {
+  const needed = [...(t.template + t.hint).matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+  if (needed.some((name) => vars[name] === undefined)) return null;
+
+  // Names in the formula become their numbers; "pi" and "sqrt" stay for the parser
+  const formula = t.answer.replace(/[A-Za-z_]+/g, (w) =>
+    vars[w] !== undefined ? `(${vars[w]})` : w,
+  );
+  const answer = parseAnswer(formula);
+  if (answer === null) return null;
+
+  const tolerance =
+    t.tolerance ?? (t.relativeTolerance !== undefined ? Math.abs(answer) * t.relativeTolerance : 0);
+  return { id: t.id, prompt: fill(t.template, vars), answer, tolerance, hint: fill(t.hint, vars) };
+}
 
 // Splits typed text into tokens, or returns null if it contains anything unknown.
 function tokenize(input: string): string[] | null {
@@ -113,13 +140,25 @@ function parseAnswer(input: string): number | null {
 
 // Picks a random geometry question and checks answers.
 export class QuestionService {
-  questionFor(tower: TowerDef): Question {
-    // tower details will be used in questions in the future
-    if (QUESTIONS.length === 0) {
+  questionFor(tower: TowerDef, config: TowerConfig = defaultConfig(tower)): Question {
+    const vars = towerVariables(tower, config);
+    const own: Question[] = [];
+    for (const entry of QUESTION_POOLS[tower.id] ?? []) {
+      if (!isTemplate(entry)) {
+        own.push(entry);
+        continue;
+      }
+      const built = build(entry, vars);
+      if (built) own.push(built);
+    }
+
+    const general = GENERAL_QUESTIONS;
+    if (own.length === 0 && general.length === 0) {
       throw new Error("questions.json has no questions");
     }
-    const index = Math.floor(Math.random() * QUESTIONS.length);
-    return QUESTIONS[index];
+    const useGeneral = own.length === 0 || (general.length > 0 && Math.random() < GENERAL_SHARE);
+    const pool = useGeneral ? general : own;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   // Accepts parsed answers, within the question's tolerance.

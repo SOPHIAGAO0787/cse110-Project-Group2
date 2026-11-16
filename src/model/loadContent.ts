@@ -5,12 +5,109 @@ import map1 from "../data/maps/map1.json";
 import map2 from "../data/maps/map2.json";
 import map3 from "../data/maps/map3.json";
 import map4 from "../data/maps/map4.json";
-import type { EnemyDef, MapConfig, Question, TowerDef } from "./types";
+import type { EnemyDef, MapConfig, Question, QuestionTemplate, TowerDef } from "./types";
 
 // "as" tells TypeScript what shape the JSON has. loadMap below also checks maps for mistakes.
 export const TOWERS = towersJson as TowerDef[];
 export const ENEMIES = enemiesJson as EnemyDef[];
-export const QUESTIONS = questionsJson as Question[];
+
+// Numbers each kind of tower hands to a question template. towerQuestions.ts fills these in.
+// Every tower also gets the common ones.
+export const COMMON_VARIABLES = ["damage", "rate"];
+export const VARIABLES_BY_KIND: Record<string, string[]> = {
+  circle: ["radius"],
+  sector: ["degrees", "radius", "fraction"],
+  rect: ["width", "depth", "area", "baseRate", "rateArea"],
+};
+
+// Names that may appear in an answer formula besides the variables
+const FORMULA_WORDS = ["pi", "sqrt"];
+
+export type QuestionEntry = Question | QuestionTemplate;
+
+export function isTemplate(entry: QuestionEntry): entry is QuestionTemplate {
+  return "template" in entry;
+}
+
+// questions.json: { "general": [...], "<tower id>": [...] }
+// "general" holds fixed geometry questions. A tower's group holds its own fixed questions
+// and templates that are filled in with the tower's real numbers.
+export const QUESTION_POOLS = questionsJson as unknown as Record<string, QuestionEntry[]>;
+
+export const GENERAL_QUESTIONS: Question[] = (QUESTION_POOLS.general ?? []).filter(
+  (entry): entry is Question => !isTemplate(entry),
+);
+
+// Every fixed question from every group
+export const QUESTIONS: Question[] = Object.values(QUESTION_POOLS)
+  .flat()
+  .filter((entry): entry is Question => !isTemplate(entry));
+
+// Variable names a group's templates may use, or null if the group is not allowed
+function variablesForGroup(group: string): string[] | null {
+  if (group === "general") return [];
+  const tower = TOWERS.find((t) => t.id === group);
+  if (!tower) return null;
+  return [...COMMON_VARIABLES, ...(VARIABLES_BY_KIND[tower.range.kind] ?? [])];
+}
+
+// Checks questions.json for mistakes. A typo then fails loudly in the tests
+// instead of quietly breaking a question in the game.
+export function checkQuestions(pools: Record<string, QuestionEntry[]>): void {
+  const seen = new Set<string>();
+
+  for (const [group, entries] of Object.entries(pools)) {
+    const allowed = variablesForGroup(group);
+    if (allowed === null) throw new Error(`questions.json: unknown group "${group}"`);
+
+    for (const entry of entries) {
+      if (seen.has(entry.id)) throw new Error(`questions.json: duplicate id "${entry.id}"`);
+      seen.add(entry.id);
+
+      if (typeof entry.hint !== "string" || entry.hint === "") {
+        throw new Error(`questions.json: "${entry.id}" needs a hint`);
+      }
+
+      if (!isTemplate(entry)) {
+        const ok =
+          typeof entry.prompt === "string" &&
+          entry.prompt !== "" &&
+          Number.isFinite(entry.answer) &&
+          Number.isFinite(entry.tolerance) &&
+          entry.tolerance >= 0;
+        if (!ok) {
+          throw new Error(
+            `questions.json: "${entry.id}" needs a prompt, a number answer and a tolerance >= 0`,
+          );
+        }
+        continue;
+      }
+
+      if (typeof entry.template !== "string" || typeof entry.answer !== "string") {
+        throw new Error(`questions.json: "${entry.id}" needs a template and a formula answer`);
+      }
+      for (const field of [entry.template, entry.hint]) {
+        for (const match of field.matchAll(/\{(\w+)\}/g)) {
+          if (!allowed.includes(match[1])) {
+            throw new Error(
+              `questions.json: "${entry.id}" uses {${match[1]}}, which "${group}" does not provide`,
+            );
+          }
+        }
+      }
+      for (const word of entry.answer.match(/[A-Za-z_]+/g) ?? []) {
+        if (!allowed.includes(word) && !FORMULA_WORDS.includes(word.toLowerCase())) {
+          throw new Error(`questions.json: "${entry.id}" answer uses unknown name "${word}"`);
+        }
+      }
+      if (entry.tolerance !== undefined && !(entry.tolerance >= 0)) {
+        throw new Error(`questions.json: "${entry.id}" has a negative tolerance`);
+      }
+    }
+  }
+}
+
+checkQuestions(QUESTION_POOLS);
 
 // Checks a map file for common mistakes and returns it typed.
 // A typo in a map file then fails loudly in the tests instead of quietly breaking the game.

@@ -88,6 +88,17 @@ export interface Question {
   hint: string; // shown after a wrong answer
 }
 
+// A question whose wording and answer depend on the tower being placed.
+// {name} placeholders in template and hint, and names in answer, are filled from the tower.
+export interface QuestionTemplate {
+  id: string;
+  template: string;
+  answer: string; // a formula the answer parser understands, e.g. "pi * radius^2"
+  tolerance?: number; // absolute
+  relativeTolerance?: number; // fraction of the answer, e.g. 0.01 for 1%
+  hint: string;
+}
+
 // What happened when the player tried to place a tower.
 // "blocked" = not a buildable tile, "occupied" = a tower is already there, "funds" = not enough coins
 export type PlaceResult = "ok" | "blocked" | "occupied" | "funds" | "locked";
