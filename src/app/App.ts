@@ -2,6 +2,7 @@ import Konva from "konva";
 import { GameScreenController } from "../screens/game/GameScreenController";
 import { MapSelectScreen } from "../screens/MapSelectScreen";
 import { MenuScreen } from "../screens/MenuScreen";
+import { GeometryMiniGameScreen } from "../screens/minigame/GeometryMiniGameScreen";
 import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResult } from "../model/GameResult";
 import { MAPS } from "../model/loadContent";
@@ -23,6 +24,7 @@ export class App implements ScreenSwitcher {
   private current: Screen;
   private shop: TowerShopScreen;
   private towerProgress = new TowerProgress();
+  private miniGame: GeometryMiniGameScreen;
 
   constructor(containerId: string) {
     this.stage = new Konva.Stage({ container: containerId });
@@ -33,6 +35,11 @@ export class App implements ScreenSwitcher {
     this.game = new GameScreenController(this, this.progress, this.towerProgress);
     this.result = new ResultScreen(this);
     this.shop = new TowerShopScreen(this, this.towerProgress);
+    // A finished mini-game round turns its correct answers into bonus coins for the next game
+    this.miniGame = new GeometryMiniGameScreen(
+      (result) => this.progress.addMiniGameReward(result.correctAnswers),
+      () => this.switchTo("menu"),
+    );
     for (const screen of this.allScreens()) {
       this.layer.add(screen.group);
       screen.group.visible(false);
@@ -54,6 +61,8 @@ export class App implements ScreenSwitcher {
       this.current = this.game;
     } else if (name === "shop") {
       this.current = this.shop;
+    } else if (name === "minigame") {
+      this.current = this.miniGame;
     } else {
       this.current = this.result;
     }
@@ -61,7 +70,7 @@ export class App implements ScreenSwitcher {
   }
 
   private allScreens(): Screen[] {
-    return [this.menu, this.maps, this.game, this.result, this.shop];
+    return [this.menu, this.maps, this.game, this.result, this.shop, this.miniGame];
   }
 
   private resize(): void {

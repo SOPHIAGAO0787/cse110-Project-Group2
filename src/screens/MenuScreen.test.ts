@@ -49,6 +49,11 @@ describe("MenuScreen buttons", () => {
     clickButton("Tower Shop");
     expect(switchTo).toHaveBeenCalledWith("shop");
   });
+
+  it("opens the mini-game with Mini-game", () => {
+    clickButton("Mini-game");
+    expect(switchTo).toHaveBeenCalledWith("minigame");
+  });
 });
 
 describe("MenuScreen bonus coins", () => {

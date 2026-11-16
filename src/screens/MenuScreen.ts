@@ -16,7 +16,7 @@ const BUTTON_WIDTH = 320;
 // Left edge of anything BUTTON_WIDTH wide that is centered in the card
 const BUTTON_X = (CARD_WIDTH - BUTTON_WIDTH) / 2;
 
-// The first screen. The player starts a game or opens the tower shop from here.
+// The first screen. The player starts a game, opens the tower shop or plays the mini-game from here.
 export class MenuScreen implements Screen {
   group: Konva.Group;
   private page: Page;
@@ -67,9 +67,15 @@ export class MenuScreen implements Screen {
     playButton.position({ x: BUTTON_X, y: 420 });
     const shopButton = makeButton("Tower Shop", () => this.app.switchTo("shop"), BUTTON_WIDTH);
     shopButton.position({ x: BUTTON_X, y: 492 });
+    const miniGameButton = makeButton(
+      "Mini-game",
+      () => this.app.switchTo("minigame"),
+      BUTTON_WIDTH,
+    );
+    miniGameButton.position({ x: BUTTON_X, y: 564 });
 
     this.bonusText = new Konva.Text({
-      y: 572,
+      y: 644,
       width: CARD_WIDTH,
       align: "center",
       fontSize: 20,
@@ -77,7 +83,16 @@ export class MenuScreen implements Screen {
       fill: MUTED_TEXT,
     });
 
-    this.page.content.add(title, circle, triangle, square, playButton, shopButton, this.bonusText);
+    this.page.content.add(
+      title,
+      circle,
+      triangle,
+      square,
+      playButton,
+      shopButton,
+      miniGameButton,
+      this.bonusText,
+    );
   }
 
   // The bonus can change between visits (a mini-game round adds to it, a finished game uses it)
