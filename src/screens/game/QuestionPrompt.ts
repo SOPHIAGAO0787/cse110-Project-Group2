@@ -179,6 +179,8 @@ export class QuestionPrompt {
     this.attemptsLeft = MAX_ATTEMPTS;
     this.submitButton.visible(true);
     this.continueButton.visible(false);
+    this.symbolRow.visible(true);
+    this.cursorBar.visible(true);
     this.promptText.text(question.prompt);
     this.layout(question.hint); // must come before placeNear, which needs panelH
     this.refreshInput();
