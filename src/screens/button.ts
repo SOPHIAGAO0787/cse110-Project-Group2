@@ -93,12 +93,26 @@ function makeIconButton(
 }
 
 // Runs onClick when the button is clicked, and shows a hand cursor while the mouse is over it
-function makeClickable(button: Konva.Group, onClick: () => void): void {
+export function makeClickable(button: Konva.Group, onClick: () => void): void {
   button.on("click tap", onClick);
   button.on("mouseenter", () => {
     document.body.style.cursor = "pointer";
   });
   button.on("mouseleave", () => {
+    document.body.style.cursor = "default";
+  });
+}
+
+// Shows this CSS cursor ("text", "pointer", ...) while the mouse is over the node
+export function setHoverCursor(
+  node: Konva.Node,
+  cursor: string,
+  isEnabled: () => boolean = () => true,
+): void {
+  node.on("mouseenter", () => {
+    if (isEnabled()) document.body.style.cursor = cursor;
+  });
+  node.on("mouseleave", () => {
     document.body.style.cursor = "default";
   });
 }
