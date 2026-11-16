@@ -5,7 +5,7 @@ import {
   GeometryMiniGame,
   type GeometryMiniGameResult,
 } from "../../model/minigame/GeometryMiniGame";
-import { makeButton } from "../button";
+import { makeBackButton, makeButton } from "../button";
 import { CARD_FILL, FONT, PAGE_BACKGROUND, TITLE_TEXT } from "../theme";
 
 export class GeometryMiniGameScreen implements Screen {
@@ -76,7 +76,10 @@ export class GeometryMiniGameScreen implements Screen {
   private notified = false;
   private typed = "";
 
-  constructor(private onComplete: (result: GeometryMiniGameResult) => void = () => {}) {
+  constructor(
+    private onComplete: (result: GeometryMiniGameResult) => void = () => {},
+    onBack: () => void = () => {},
+  ) {
     this.panel.add(
       new Konva.Rect({ width: 520, height: 470, fill: CARD_FILL, cornerRadius: 16 }),
       this.title,
@@ -90,6 +93,10 @@ export class GeometryMiniGameScreen implements Screen {
       button.position({ x: 160, y: 345 });
       this.panel.add(button);
     }
+    // The back arrow goes in the panel's top-left corner. It works at any point in a round.
+    const backButton = makeBackButton(onBack);
+    backButton.position({ x: 20, y: 16 });
+    this.panel.add(backButton);
     this.group.add(this.background, this.panel);
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
