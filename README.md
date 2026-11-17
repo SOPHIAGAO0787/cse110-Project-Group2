@@ -15,18 +15,21 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 ## How to play
 
-1. Click **Play Map 1** on the menu.
-2. Drag the tower from the shop on the right onto a green tile, then press **Enter**.
-3. Answer the geometry question about the tower's range. A correct answer places the tower and spends its coins.
-4. Click **Start Wave** to send enemies down the path. Each enemy that reaches the end costs a life.
-5. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars and stats.
+1. Click **Play** on the main menu and pick a map. Winning a map unlocks the next one.
+2. Drag a tower from the shop on the right onto a green tile. For a triangle or square tower, move the mouse to aim its cone or block. Then press **Enter**.
+3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. A correct answer places the tower and spends its coins.
+4. Click **Start Wave** to send enemies down the path. Defeating an enemy earns coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
+5. Click a placed tower to upgrade it, up to the level bought in the Tower Shop.
+6. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars, score, and stats.
 
-The gear button opens the settings, where the music and the sound effects can each be switched off.
+During a game, the speed button (or **Space**) switches between normal and double speed. The gear button opens the settings, where the music and the sound effects can each be switched off.
 
-The menu also has a **Tower Shop** screen that shows each tower's cost, stats, and upgrades. It is a demo with its own coins and is not connected to the game yet.
+The main menu also has:
 
-**Works today:** the map, tower placement with a question, coins, lives, waves, and the victory and defeat screens.
-**Coming next:** towers attacking enemies, choosing towers from the in-game shop, and connecting the Tower Shop to the game.
+- **Tower Shop:** unlock the triangle and square towers and raise each tower's upgrade level. The shop has its own coins for now; coins earned in games do not count there yet.
+- **Mini-game:** a timed geometry quiz. Each correct answer gives bonus coins for your next game.
+
+**Coming next (Sprint 3):** balancing the maps, saving progress, a leaderboard, and a second mini-game. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 
@@ -38,12 +41,17 @@ src/
   model/              game rules and state: plain TypeScript, no Konva, unit tested
     GameModel.ts      holds everything for one game and runs each tick in order
     types.ts          shared shapes and the list of game events
+    Progress.ts       what is kept between games: the chosen map, stars, and bonus coins
     geometry/         tower range shapes
     questions/        picks and checks geometry questions
+    minigame/         the rules of the timed geometry quiz
     shop/             shop data: tower costs, stats, and upgrades
   data/               maps, towers, enemies, upgrades, and questions (JSON)
-  screens/            Menu and Result screens, and the shared button
-    game/             the game screen: view, controller, grid, enemies, placement, question popup
+  screens/            Menu, Map Select and Result screens, and what screens share:
+                      Page (header and card), theme (colors and font), and buttons
+    game/             the game screen: view, controller, grid, towers, enemies, effects,
+                      placement, question popup, and settings
+    minigame/         the mini-game screen
     shop/             the Tower Shop screen
 assets/               images for this README
 public/audio/         the music loop and the sound effects, made for this game
