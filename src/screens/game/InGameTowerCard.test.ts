@@ -4,6 +4,7 @@ import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { TowerDef } from "../../model/types";
 import { InGameTowerCard } from "./InGameTowerCard";
+import { BUTTON_FILL, CARD_BORDER } from "../theme";
 
 const tower: TowerDef = {
   id: "circle",
@@ -78,10 +79,10 @@ describe("InGameTowerCard", () => {
     const background = card.group.findOne<Konva.Rect>("Rect")!;
 
     card.group.fire("mouseenter");
-    expect(background.stroke()).toBe("#a6e3a1");
+    expect(background.stroke()).toBe(BUTTON_FILL);
 
     card.group.fire("mouseleave");
-    expect(background.stroke()).toBe("#52526b");
+    expect(background.stroke()).toBe(CARD_BORDER);
   });
 
   it("allows pointer events on the icon to reach the card", () => {

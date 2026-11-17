@@ -26,3 +26,8 @@ export const LOCKED_BUTTON_FILL = "#808080";
 export const SQUARE_TOWER_COLOR = "#759ef5";
 export const CIRCLE_TOWER_COLOR = "#34c97a";
 export const TRIANGLE_TOWER_COLOR = "#f5a623";
+
+// Game screen
+export const COST_TEXT = "#1f9d57";
+// Messages like "Not enough coins"
+export const WARNING_TEXT = "#d64545";

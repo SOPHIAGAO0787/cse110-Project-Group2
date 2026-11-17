@@ -6,7 +6,15 @@ import {
   makeIconButton,
   makeSettingsButton,
 } from "../button";
-import { FONT } from "../theme";
+import {
+  FONT,
+  HEADER_BACKGROUND,
+  PAGE_BACKGROUND,
+  SIDEBAR_BORDER,
+  SIDEBAR_FILL,
+  TITLE_TEXT,
+  WARNING_TEXT,
+} from "../theme";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { SettingsPanel } from "./SettingsPanel";
 import type { Sound } from "../../core/Sound";
@@ -46,23 +54,44 @@ export class GameScreenView {
 
   private mapCols: number;
   private mapRows: number;
+  // The same grey page and blue bar as the screens outside the game
+  private background = new Konva.Rect({ fill: PAGE_BACKGROUND });
+  private hudBar = new Konva.Rect({ height: HUD_HEIGHT, fill: HEADER_BACKGROUND });
   // Starts right of the back arrow
-  private hudText = new Konva.Text({ x: 72, y: 14, fontSize: 20, fill: "white" });
+  private hudText = new Konva.Text({
+    x: 72,
+    y: 14,
+    fontSize: 20,
+    fontFamily: FONT,
+    fontStyle: "bold",
+    fill: "white",
+  });
   private timerText = new Konva.Text({
     x: 20,
     width: SHOP_WIDTH - 40,
     fontSize: 18,
-    fill: "white",
+    fontFamily: FONT,
+    fill: TITLE_TEXT,
     listening: false,
   });
-  private shopBackground = new Konva.Rect({ fill: "#262637", stroke: "#3a3a52" });
-  private shopTitle = new Konva.Text({ x: 20, y: 20, text: "Shop", fontSize: 22, fill: "white" });
+  private shopBackground = new Konva.Rect({ fill: SIDEBAR_FILL, stroke: SIDEBAR_BORDER });
+  private shopTitle = new Konva.Text({
+    x: 20,
+    y: 20,
+    text: "Shop",
+    fontSize: 22,
+    fontFamily: FONT,
+    fontStyle: "bold",
+    fill: TITLE_TEXT,
+  });
   // A short message under the HUD, e.g. "Not enough coins". Hidden until showMessage() is called.
   private messageText = new Konva.Text({
     x: MARGIN,
     y: HUD_HEIGHT,
     fontSize: 18,
-    fill: "#ff6b6b",
+    fontFamily: FONT,
+    fontStyle: "bold",
+    fill: WARNING_TEXT,
     visible: false,
   });
   // The speed button shows a fast-forward sign (two triangles pointing right) and "1x" or "2x"
@@ -143,7 +172,9 @@ export class GameScreenView {
     this.settings = new SettingsPanel(onResume, onBack, onMainMenu, sound);
     this.shopGroup.add(this.shopBackground, this.shopTitle, this.timerText);
     this.group.add(
+      this.background,
       this.mapGroup,
+      this.hudBar,
       this.hudText,
       this.shopGroup,
       this.startWaveButton,
@@ -231,6 +262,8 @@ export class GameScreenView {
   }
 
   resize(width: number, height: number): void {
+    this.background.size({ width, height });
+    this.hudBar.width(width - SHOP_WIDTH);
     this.shopGroup.x(width - SHOP_WIDTH);
     this.shopBackground.size({ width: SHOP_WIDTH, height });
     this.startWaveButton.position({ x: width - SHOP_WIDTH + 30, y: height - 80 });

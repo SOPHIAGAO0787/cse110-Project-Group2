@@ -1,6 +1,15 @@
 import Konva from "konva";
 import { describeRange } from "../../model/towerConfig";
 import type { TowerDef } from "../../model/types";
+import {
+  BUTTON_FILL,
+  CARD_BORDER,
+  CARD_FILL,
+  COST_TEXT,
+  FONT,
+  MUTED_TEXT,
+  TITLE_TEXT,
+} from "../theme";
 
 export class InGameTowerCard {
   group = new Konva.Group({ x: 16, y: 64 });
@@ -9,8 +18,9 @@ export class InGameTowerCard {
     const background = new Konva.Rect({
       width: 228,
       height: 340,
-      fill: "#303044",
-      stroke: "#52526b",
+      fill: CARD_FILL,
+      stroke: CARD_BORDER,
+      strokeWidth: 2,
       cornerRadius: 10,
     });
 
@@ -20,7 +30,9 @@ export class InGameTowerCard {
       width: 204,
       text: def.name,
       fontSize: 20,
-      fill: "white",
+      fontFamily: FONT,
+      fontStyle: "bold",
+      fill: TITLE_TEXT,
       align: "center",
       listening: false,
     });
@@ -34,7 +46,9 @@ export class InGameTowerCard {
       width: 204,
       text: `${def.cost} coins`,
       fontSize: 20,
-      fill: "#a6e3a1",
+      fontFamily: FONT,
+      fontStyle: "bold",
+      fill: COST_TEXT,
       align: "center",
       listening: false,
     });
@@ -45,7 +59,8 @@ export class InGameTowerCard {
       width: 196,
       text: def.description,
       fontSize: 15,
-      fill: "#d0d0df",
+      fontFamily: FONT,
+      fill: MUTED_TEXT,
       lineHeight: 1.3,
       listening: false,
     });
@@ -60,7 +75,8 @@ export class InGameTowerCard {
         `Range: ${describeRange(def)}`,
       ].join("\n"),
       fontSize: 15,
-      fill: "white",
+      fontFamily: FONT,
+      fill: TITLE_TEXT,
       lineHeight: 1.4,
       listening: false,
     });
@@ -74,7 +90,8 @@ export class InGameTowerCard {
           ? "Drag onto a tile that turns green.\nPress Enter to answer the question."
           : "Drag onto a tile that turns green, then aim with the mouse.\nPress Enter to answer the question.",
       fontSize: 13,
-      fill: "#b4b4c8",
+      fontFamily: FONT,
+      fill: MUTED_TEXT,
       lineHeight: 1.3,
       listening: false,
     });
@@ -82,11 +99,11 @@ export class InGameTowerCard {
     this.group.add(background, title, icon, cost, description, abilities, instructions);
 
     this.group.on("mouseenter", () => {
-      background.stroke("#a6e3a1");
+      background.stroke(BUTTON_FILL);
     });
 
     this.group.on("mouseleave", () => {
-      background.stroke("#52526b");
+      background.stroke(CARD_BORDER);
     });
   }
 }
