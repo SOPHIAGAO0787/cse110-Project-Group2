@@ -2,11 +2,12 @@
 import type { ScreenSwitcher } from "../app/types";
 import Konva from "konva";
 import "vitest-canvas-mock";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { MAPS } from "../model/loadContent";
 import { COINS_PER_CORRECT_ANSWER, Progress } from "../model/Progress";
 import { MenuScreen } from "./MenuScreen";
 
+let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 let progress: Progress;
 let screen: MenuScreen;
 
@@ -20,10 +21,34 @@ function bonusLine(): string | null {
   return null;
 }
 
+// Clicks the button whose label is `label`
+function clickButton(label: string): void {
+  for (const node of screen.group.find<Konva.Text>("Text")) {
+    if (node.text() === label) {
+      const button = node.getParent() as Konva.Group;
+      button.fire("click");
+      return;
+    }
+  }
+  throw new Error(`No "${label}" button`);
+}
+
 beforeEach(() => {
-  const switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
+  switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
   progress = new Progress(MAPS);
   screen = new MenuScreen({ switchTo }, progress);
+});
+
+describe("MenuScreen buttons", () => {
+  it("opens the map selection with Play", () => {
+    clickButton("Play");
+    expect(switchTo).toHaveBeenCalledWith("maps");
+  });
+
+  it("opens the tower shop with Tower Shop", () => {
+    clickButton("Tower Shop");
+    expect(switchTo).toHaveBeenCalledWith("shop");
+  });
 });
 
 describe("MenuScreen bonus coins", () => {

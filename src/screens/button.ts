@@ -35,7 +35,7 @@ export function makeButton(label: string, onClick: () => void, width = 200): Kon
 }
 
 // Icon buttons are square and smaller than text buttons
-const ICON_BUTTON_SIZE = 40;
+export const ICON_BUTTON_SIZE = 40;
 
 // A square button with a left arrow, for going back to the previous screen.
 // It is named "back" so tests can find it.
@@ -72,14 +72,17 @@ export function makeSettingsButton(onClick: () => void): Konva.Group {
   return makeIconButton("settings", gear, onClick);
 }
 
-function makeIconButton(
+// A button around the given icon. The name lets tests find the button.
+// Icon buttons are square; pass a width for an icon with a label next to it.
+export function makeIconButton(
   name: string,
   icon: Konva.Shape | Konva.Group,
   onClick: () => void,
+  width = ICON_BUTTON_SIZE,
 ): Konva.Group {
   const button = new Konva.Group({ name: name });
   const background = new Konva.Rect({
-    width: ICON_BUTTON_SIZE,
+    width: width,
     height: ICON_BUTTON_SIZE,
     fill: BUTTON_FILL,
     cornerRadius: 9,

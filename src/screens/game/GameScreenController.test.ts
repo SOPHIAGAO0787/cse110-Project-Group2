@@ -677,7 +677,7 @@ describe("GameScreenController shop cards", () => {
   });
 
   it.each([600, 800, 1080])(
-    "fit above the Start Wave button without overlapping at height %i",
+    "fit above the wave countdown without overlapping at height %i",
     (height) => {
       controller.resize(1280, height);
       const [first, second, third] = cards();
@@ -686,7 +686,7 @@ describe("GameScreenController shop cards", () => {
       expect(first.y()).toBeGreaterThan(0);
       expect(bottom(first)).toBeLessThanOrEqual(second.y());
       expect(bottom(second)).toBeLessThanOrEqual(third.y());
-      expect(bottom(third)).toBeLessThanOrEqual(height - 80);
+      expect(bottom(third)).toBeLessThanOrEqual(height - 140); // the countdown text starts there
     },
   );
 
@@ -1027,4 +1027,97 @@ it("rechecks funds after a correct answer", async () => {
   await settlePlacement();
   expect(model.towers).toHaveLength(0);
   expect(model.wallet.coins).toBe(0);
+});
+
+describe("GameScreenController game speed", () => {
+  // The text on the speed button: "1x" or "2x"
+  function speedLabel(): string {
+    const button = controller.group.findOne<Konva.Group>(".speed");
+    if (button === undefined) {
+      throw new Error("speed button is missing from the screen");
+    }
+    const label = button.findOne<Konva.Text>("Text");
+    if (label === undefined) {
+      throw new Error("speed button has no label");
+    }
+    return label.text();
+  }
+
+  // Runs one frame of the game loop, dt seconds long
+  function runFrame(dt: number): void {
+    frames[frames.length - 1](dt);
+  }
+
+  it("starts at normal speed: one frame moves the game by dt", () => {
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("1x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.1);
+  });
+
+  it("runs two steps per frame after a click on the speed button", () => {
+    clickIcon("speed");
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("2x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.2);
+  });
+
+  it("goes back to normal speed on a second click", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("1x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.1);
+  });
+
+  it("switches the speed with the Space key", () => {
+    press(" ");
+    expect(speedLabel()).toBe("2x");
+
+    press(" ");
+    expect(speedLabel()).toBe("1x");
+  });
+
+  it("ignores Space while the settings are open", () => {
+    clickIcon("settings");
+    press(" ");
+
+    expect(speedLabel()).toBe("1x");
+  });
+
+  it("ignores Space while a question is open", () => {
+    openPlacementQuestion();
+    press(" ");
+
+    expect(speedLabel()).toBe("1x");
+  });
+
+  it("drops to one step per frame while a question is open", () => {
+    clickIcon("speed");
+    openPlacementQuestion();
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("2x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.1);
+  });
+
+  it("keeps the chosen speed for the next game", () => {
+    clickIcon("speed");
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("2x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.2);
+  });
+
+  it("ignores Space after leaving the game screen", () => {
+    controller.hide();
+    press(" ");
+
+    expect(speedLabel()).toBe("1x");
+  });
 });

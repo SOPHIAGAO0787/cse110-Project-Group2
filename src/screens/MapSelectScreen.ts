@@ -4,26 +4,16 @@ import { MAPS } from "../model/loadContent";
 import type { Progress } from "../model/Progress";
 import type { MapConfig } from "../model/types";
 import { BUTTON_HEIGHT, makeBackButton, makeButton } from "./button";
+import { Page } from "./Page";
 import { formatStars } from "./resultFormat";
 import {
-  CARD_BORDER,
-  CARD_FILL,
   CIRCLE_TOWER_COLOR,
   FONT,
-  HEADER_BACKGROUND,
   LOCKED_BUTTON_FILL,
-  PAGE_BACKGROUND,
   SQUARE_TOWER_COLOR,
   TITLE_TEXT,
   TRIANGLE_TOWER_COLOR,
 } from "./theme";
-
-const HEADER_HEIGHT = 104;
-const MARGIN = 32; // space around the big card
-
-// The big white card is drawn at this size, then scaled to fit the window
-const CARD_WIDTH = 1335;
-const CARD_HEIGHT = 784;
 
 // One map card: a colored top with a shape, and a white strip with the name and a button
 const MAP_CARD_WIDTH = 417;
@@ -57,49 +47,24 @@ const CARD_LOOKS: CardLook[] = [
 
 // Lets the player pick a map. Locked maps can't be picked; won maps show their best stars.
 //
-//   ┌──────────────────────────────────────┐
-//   │ header: game name                    │
-//   ├──────────────────────────────────────┤
-//   │  ┌────────────────────────────────┐  │
-//   │  │ [←] Choose your map            │  │
-//   │  │  [ map 1 ]  [ map 2 ]          │  │
-//   │  │  [ map 3 ]  [ map 4 ]          │  │
-//   │  └────────────────────────────────┘  │
-//   └──────────────────────────────────────┘
+//   ┌────────────────────────────────┐
+//   │ [←] Choose your map            │
+//   │  [ map 1 ]  [ map 2 ]          │
+//   │  [ map 3 ]  [ map 4 ]          │
+//   └────────────────────────────────┘
 export class MapSelectScreen implements Screen {
-  group = new Konva.Group();
+  group: Konva.Group;
+  private page: Page;
   private app: ScreenSwitcher;
   private progress: Progress;
-  private background = new Konva.Rect({ fill: PAGE_BACKGROUND });
-  private header = new Konva.Rect({ height: HEADER_HEIGHT, fill: HEADER_BACKGROUND });
-  private headerTitle = new Konva.Text({
-    x: 37,
-    y: 28,
-    text: "Geometry Tower Defense",
-    fontSize: 48,
-    fontFamily: FONT,
-    fill: "white",
-  });
-  // Everything inside the big card. Drawn at CARD_WIDTH × CARD_HEIGHT and scaled in resize().
-  private content = new Konva.Group();
   private mapCards = new Konva.Group();
 
   constructor(app: ScreenSwitcher, progress: Progress) {
     this.app = app;
     this.progress = progress;
+    this.page = new Page();
+    this.group = this.page.group;
 
-    const card = new Konva.Rect({
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      fill: CARD_FILL,
-      stroke: CARD_BORDER,
-      strokeWidth: 2,
-      cornerRadius: 24,
-      // A solid shadow below the card, like the buttons have
-      shadowColor: CARD_BORDER,
-      shadowOffset: { x: 0, y: 8 },
-      shadowBlur: 0,
-    });
     // The back arrow goes in the top-left corner, with the title next to it
     const backButton = makeBackButton(() => this.app.switchTo("menu"));
     backButton.position({ x: 56, y: 42 });
@@ -114,9 +79,7 @@ export class MapSelectScreen implements Screen {
     });
     const sun = new Konva.Circle({ x: 1230, y: 90, radius: 40, fill: SUN_COLOR });
     this.mapCards.position({ x: 76, y: 178 });
-    this.content.add(card, title, sun, this.mapCards, backButton);
-
-    this.group.add(this.background, this.header, this.headerTitle, this.content);
+    this.page.content.add(title, sun, this.mapCards, backButton);
   }
 
   // Rebuilds the map cards every time, so locks and stars match the latest games.
@@ -136,18 +99,7 @@ export class MapSelectScreen implements Screen {
   }
 
   resize(width: number, height: number): void {
-    this.background.size({ width, height });
-    this.header.width(width);
-
-    // Fit the big card into the space below the header and center it there
-    const areaWidth = width - 2 * MARGIN;
-    const areaHeight = height - HEADER_HEIGHT - 2 * MARGIN;
-    const scale = Math.min(areaWidth / CARD_WIDTH, areaHeight / CARD_HEIGHT);
-    this.content.scale({ x: scale, y: scale });
-    this.content.position({
-      x: MARGIN + (areaWidth - CARD_WIDTH * scale) / 2,
-      y: HEADER_HEIGHT + MARGIN + (areaHeight - CARD_HEIGHT * scale) / 2,
-    });
+    this.page.resize(width, height);
   }
 
   private makeMapCard(map: MapConfig): Konva.Group {
