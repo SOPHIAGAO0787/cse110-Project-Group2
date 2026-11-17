@@ -117,6 +117,14 @@ describe("GeometryMiniGameScreen", () => {
     expect(frames).toHaveLength(1);
   });
 
+  it("runs the back callback when the back arrow is clicked", () => {
+    const back = vi.fn();
+    const withBack = new GeometryMiniGameScreen(complete, back);
+    withBack.group.findOne(".back")!.fire("click");
+    expect(back).toHaveBeenCalledTimes(1);
+    withBack.group.destroy();
+  });
+
   it("keeps the panel within small and large viewports", () => {
     for (const [width, height] of [
       [400, 400],

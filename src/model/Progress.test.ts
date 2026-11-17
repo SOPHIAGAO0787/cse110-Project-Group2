@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAPS } from "./loadContent";
-import { COINS_PER_CORRECT_ANSWER, Progress } from "./Progress";
+import { COINS_PER_CORRECT_ANSWER, MAX_BONUS_COINS, Progress } from "./Progress";
 
 describe("Progress", () => {
   it("starts on the first map with only that map unlocked", () => {
@@ -70,6 +70,14 @@ describe("Progress mini-game rewards", () => {
     progress.addMiniGameReward(3);
     progress.addMiniGameReward(2);
     expect(progress.bonusCoins).toBe(5 * COINS_PER_CORRECT_ANSWER);
+  });
+
+  it("stops adding coins once the bonus reaches the maximum", () => {
+    const progress = new Progress(MAPS);
+    for (let round = 0; round < 5; round++) {
+      progress.addMiniGameReward(5);
+    }
+    expect(progress.bonusCoins).toBe(MAX_BONUS_COINS);
   });
 
   it("gives nothing for a round with no correct answers", () => {
