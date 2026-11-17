@@ -10,6 +10,9 @@ const result: GameResult = {
   remainingLives: 12,
   finalCoins: 40,
   questionsSolved: 4,
+  enemiesDefeated: 6,
+  coinsEarned: 35,
+  score: 600,
 };
 
 describe("formatTime (So1)", () => {
@@ -54,14 +57,27 @@ describe("result text (So1)", () => {
       "Time: 1:15",
       "Towers Placed: 3",
       "Questions Solved: 4",
+      "Enemies Defeated: 6",
+      "Final Score: 600",
+      "Coins Earned: 35",
       "Lives Left: 12",
       "Coins Left: 40",
     ]);
   });
 
   it("still shows stats that are zero", () => {
-    const lines = statLines({ ...result, towersPlaced: 0, questionsSolved: 0 });
+    const lines = statLines({
+      ...result,
+      towersPlaced: 0,
+      questionsSolved: 0,
+      enemiesDefeated: 0,
+      coinsEarned: 0,
+      score: 0,
+    });
     expect(lines).toContain("Towers Placed: 0");
     expect(lines).toContain("Questions Solved: 0");
+    expect(lines).toContain("Enemies Defeated: 0");
+    expect(lines).toContain("Final Score: 0");
+    expect(lines).toContain("Coins Earned: 0");
   });
 });

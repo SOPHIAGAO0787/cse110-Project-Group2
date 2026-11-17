@@ -14,6 +14,9 @@ const defeat: GameResult = {
   remainingLives: 0,
   finalCoins: 15,
   questionsSolved: 2,
+  enemiesDefeated: 3,
+  coinsEarned: 17,
+  score: 300,
 };
 
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
@@ -41,6 +44,9 @@ describe("ResultScreen (So1)", () => {
     expect(shownText()).toContain("☆☆☆");
     expect(shownText()).toContain("Time: 0:42");
     expect(shownText()).toContain("Questions Solved: 2");
+    expect(shownText()).toContain("Enemies Defeated: 3");
+    expect(shownText()).toContain("Final Score: 300");
+    expect(shownText()).toContain("Coins Earned: 17");
   });
 
   it("replaces a defeat with a victory when shown again", () => {
@@ -48,7 +54,7 @@ describe("ResultScreen (So1)", () => {
     screen.show({ ...defeat, won: true, stars: 3, remainingLives: 20 });
 
     expect(shownText()).toContain("Victory!");
-    expect(shownText()).not.toContain("Defeat");
+    expect(shownText().split("\n")[0]).not.toBe("Defeat");
     expect(shownText()).toContain("★★★");
   });
 
@@ -73,5 +79,19 @@ describe("ResultScreen (So1)", () => {
     screen.hide();
 
     expect(screen.group.visible()).toBe(false);
+  });
+
+  it.each([480, 600, 768])("keeps all stats above the menu button at %i px height", (height) => {
+    screen.show(defeat);
+    screen.resize(800, height);
+    const stats = screen.group
+      .find("Text")
+      .find((node) => (node as Konva.Text).text().includes("Enemies Defeated")) as Konva.Text;
+    const button = screen.group.findOne("Group")!;
+    const scale = screen.group.scaleY();
+    const offset = screen.group.y();
+
+    expect(stats.y() + stats.height()).toBeLessThan(button.y());
+    expect(offset + (button.y() + 48) * scale).toBeLessThanOrEqual(height);
   });
 });

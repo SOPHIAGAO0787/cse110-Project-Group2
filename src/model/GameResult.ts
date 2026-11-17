@@ -7,6 +7,9 @@ export interface GameResult {
   remainingLives: number;
   finalCoins: number;
   questionsSolved: number; // tower questions answered correctly
+  enemiesDefeated: number;
+  coinsEarned: number; // kill rewards earned this run, before spending
+  score: number; // proposed rule: 100 points per enemy defeated
 }
 
 export const MAX_STARS = 3;

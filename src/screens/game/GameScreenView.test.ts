@@ -16,6 +16,7 @@ beforeEach(() => {
     () => {},
     () => {},
     () => {},
+    () => {},
     new QuestionService(),
   );
 });
@@ -102,4 +103,21 @@ it("keeps the preparation timer above the relabeled button across resizes", () =
   expect(timer.text()).toBe("Last Enemy Spawns In: 2s");
   view.setWaveTimers(null, null, true);
   expect(label.text()).toBe("Start Wave");
+});
+
+it("puts the speed button left of the gear and shows the speed on it", () => {
+  view.resize(1200, 800);
+  const label = view.speedButton.findOne<Konva.Text>("Text")!;
+  expect(label.text()).toBe("1x");
+  expect(label.fill()).toBe("white");
+  expect(view.speedButton.position()).toEqual({ x: 804, y: 4 });
+  expect(view.settingsButton.position()).toEqual({ x: 884, y: 4 });
+
+  view.setSpeed(2);
+  expect(label.text()).toBe("2x");
+  expect(label.fill()).toBe("#ffd53d");
+
+  view.setSpeed(1);
+  expect(label.text()).toBe("1x");
+  expect(label.fill()).toBe("white");
 });
