@@ -94,6 +94,25 @@ export class GameScreenView {
     fill: "white",
   });
   private messageTimer = 0; // id of the timeout that hides the message
+  // "Wave 3" across the top of the map when a wave starts. Invisible until showWaveBanner().
+  private waveBanner = new Konva.Text({
+    fontSize: 56,
+    fontStyle: "bold",
+    fontFamily: FONT,
+    fill: "white",
+    stroke: "#073c53",
+    strokeWidth: 2,
+    align: "center",
+    opacity: 0,
+    listening: false,
+  });
+  // A red frame around the map when a life is lost. Invisible until flashLeak().
+  private leakFrame = new Konva.Rect({
+    stroke: "#ff3b3b",
+    strokeWidth: 10,
+    opacity: 0,
+    listening: false,
+  });
 
   // onStartWave runs on Start Wave, onBack on the back arrow and on "Back to maps" in the
   // settings, onOpenSettings on the gear, onResume / onMainMenu on those settings buttons,
@@ -130,6 +149,8 @@ export class GameScreenView {
       this.settingsButton,
       this.speedButton,
       this.messageText,
+      this.leakFrame,
+      this.waveBanner,
       this.prompt.group,
       this.settings.group,
     );
@@ -185,6 +206,19 @@ export class GameScreenView {
     }, MESSAGE_MS);
   }
 
+  // Shows the wave number over the map, then fades it out.
+  showWaveBanner(wave: number): void {
+    this.waveBanner.text(`Wave ${wave}`);
+    this.waveBanner.opacity(1);
+    new Konva.Tween({ node: this.waveBanner, duration: 1.5, opacity: 0 }).play();
+  }
+
+  // Flashes the red frame around the map.
+  flashLeak(): void {
+    this.leakFrame.opacity(1);
+    new Konva.Tween({ node: this.leakFrame, duration: 0.4, opacity: 0 }).play();
+  }
+
   /* Converts a tile to a screen position (right edge, vertical middle),
   accounting for the map's scale and offset. Used to place the question popup. */
   tileToScreen(tile: Vec): Vec {
@@ -213,6 +247,13 @@ export class GameScreenView {
       x: MARGIN + (areaWidth - this.mapCols * TILE * scale) / 2,
       y: HUD_HEIGHT + MARGIN + (areaHeight - this.mapRows * TILE * scale) / 2,
     });
+    // The frame and the banner follow the map: the frame around it, the banner near its top
+    const mapWidth = this.mapCols * TILE * scale;
+    const mapHeight = this.mapRows * TILE * scale;
+    this.leakFrame.position(this.mapGroup.position());
+    this.leakFrame.size({ width: mapWidth, height: mapHeight });
+    this.waveBanner.position({ x: this.mapGroup.x(), y: this.mapGroup.y() + mapHeight * 0.2 });
+    this.waveBanner.width(mapWidth);
     this.prompt.resize(width, height);
     this.settings.resize(width, height);
   }

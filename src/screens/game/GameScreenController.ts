@@ -10,6 +10,7 @@ import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
+import { EffectsView } from "./EffectsView";
 import { InGameTowerCard } from "./InGameTowerCard";
 import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
@@ -84,6 +85,7 @@ export class GameScreenController implements Screen {
     // R1: create the enemy view
     const enemiesView = new EnemiesView();
     const towersView = new TowersView();
+    const effectsView = new EffectsView();
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
       // The game keeps running while a question is open, so it drops to normal speed
@@ -101,6 +103,7 @@ export class GameScreenController implements Screen {
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
       // towers turn towards their targets, and turn faster when the game runs faster
       towersView.update(this.model.towers, this.model.enemies, dt * steps);
+      effectsView.syncHealthBars(this.model.enemies);
     });
     this.view.mapGroup.destroyChildren();
 
@@ -110,6 +113,7 @@ export class GameScreenController implements Screen {
     this.view.mapGroup.add(gridView.group);
     this.view.mapGroup.add(towersView.group);
     this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
+    this.view.mapGroup.add(effectsView.group); // on top, so the bars and popups are never covered
 
     this.cleanupPlacement = this.wirePlacement(gridView);
 
@@ -156,6 +160,18 @@ export class GameScreenController implements Screen {
       if (tower) towersView.add(tower);
     });
     events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
+
+    // Feedback for kills, new waves and lost lives
+    events.on("enemyKilled", ({ enemyId, reward }) => {
+      // The model removes the enemy after this event, so it is still in the list here
+      for (const enemy of this.model.enemies) {
+        if (enemy.id === enemyId) {
+          effectsView.showKill(enemy, reward);
+        }
+      }
+    });
+    events.on("waveStarted", ({ wave }) => this.view.showWaveBanner(wave));
+    events.on("enemyLeaked", () => this.view.flashLeak());
 
     // A new game starts unpaused, with the back arrow showing
     this.view.settings.close();

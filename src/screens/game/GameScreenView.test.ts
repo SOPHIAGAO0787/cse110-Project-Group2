@@ -2,7 +2,7 @@
 import Konva from "konva";
 import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GameScreenView } from "./GameScreenView";
+import { GameScreenView, TILE } from "./GameScreenView";
 import { QuestionService } from "../../model/questions/QuestionService";
 
 let view: GameScreenView;
@@ -120,4 +120,49 @@ it("puts the speed button left of the gear and shows the speed on it", () => {
   view.setSpeed(1);
   expect(label.text()).toBe("1x");
   expect(label.fill()).toBe("white");
+});
+
+describe("GameScreenView feedback", () => {
+  function waveBanner(): Konva.Text {
+    const banner = view.group
+      .getChildren()
+      .find((node) => node instanceof Konva.Text && node.text().startsWith("Wave "));
+    if (!(banner instanceof Konva.Text)) {
+      throw new Error("The wave banner is missing from the screen");
+    }
+    return banner;
+  }
+
+  function leakFrame(): Konva.Rect {
+    const frame = view.group
+      .getChildren()
+      .find((node) => node instanceof Konva.Rect && node.stroke() === "#ff3b3b");
+    if (!(frame instanceof Konva.Rect)) {
+      throw new Error("The leak frame is missing from the screen");
+    }
+    return frame;
+  }
+
+  it("shows the wave number over the map when a wave starts", () => {
+    view.resize(1200, 800);
+    view.showWaveBanner(3);
+
+    const banner = waveBanner();
+    expect(banner.text()).toBe("Wave 3");
+    expect(banner.opacity()).toBeGreaterThan(0.9); // the fade-out has just started
+    expect(banner.x()).toBe(view.mapGroup.x());
+    expect(banner.width()).toBeCloseTo(16 * TILE * view.mapGroup.scaleX());
+  });
+
+  it("keeps the leak frame hidden until a life is lost, then puts it around the map", () => {
+    view.resize(1200, 800);
+    const frame = leakFrame();
+    expect(frame.opacity()).toBe(0);
+
+    view.flashLeak();
+    expect(frame.opacity()).toBeGreaterThan(0.9); // the fade-out has just started
+    expect(frame.position()).toEqual(view.mapGroup.position());
+    expect(frame.width()).toBeCloseTo(16 * TILE * view.mapGroup.scaleX());
+    expect(frame.height()).toBeCloseTo(10 * TILE * view.mapGroup.scaleY());
+  });
 });
