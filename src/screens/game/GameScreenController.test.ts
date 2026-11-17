@@ -630,7 +630,7 @@ describe("GameScreenController shop cards", () => {
   });
 
   it.each([600, 800, 1080])(
-    "fit above the Start Wave button without overlapping at height %i",
+    "fit above the wave countdown without overlapping at height %i",
     (height) => {
       controller.resize(1280, height);
       const [first, second, third] = cards();
@@ -639,7 +639,7 @@ describe("GameScreenController shop cards", () => {
       expect(first.y()).toBeGreaterThan(0);
       expect(bottom(first)).toBeLessThanOrEqual(second.y());
       expect(bottom(second)).toBeLessThanOrEqual(third.y());
-      expect(bottom(third)).toBeLessThanOrEqual(height - 80);
+      expect(bottom(third)).toBeLessThanOrEqual(height - 140); // the countdown text starts there
     },
   );
 
