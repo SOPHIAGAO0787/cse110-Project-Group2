@@ -12,6 +12,11 @@ export const CARD_BORDER = "#d5e5de";
 export const TITLE_TEXT = "#073c53";
 export const MUTED_TEXT = "#647fae";
 
+// Result screen
+export const WIN_TEXT = "#1f9d57";
+export const LOSE_TEXT = "#d64545";
+export const STAR_COLOR = "#f5a623";
+
 // Side panel next to the map
 export const SIDEBAR_FILL = "#f7f3ea";
 export const SIDEBAR_BORDER = "#d9d1c3";
