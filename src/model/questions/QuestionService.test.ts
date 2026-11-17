@@ -1,17 +1,76 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuestionService } from "./QuestionService";
-import { QUESTIONS, TOWERS } from "../loadContent";
-import type { Question } from "../types";
+import { towerVariables } from "./TowerQuestionsHandling";
+import { TOWERS, type QuestionEntry } from "../loadContent";
+import { defaultConfig } from "../towerConfig";
+import type { Question, QuestionTemplate, TowerConfig, TowerDef } from "../types";
+
+// questionFor reads its questions from loadContent. These tests swap in their own groups so they
+// don't break when someone edits questions.json. towerQuestions.test.ts checks the real file.
+const pools = vi.hoisted(() => ({
+  byGroup: {} as Record<string, QuestionEntry[]>,
+  general: [] as Question[],
+}));
+vi.mock("../loadContent", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../loadContent")>();
+  return { ...original, QUESTION_POOLS: pools.byGroup, GENERAL_QUESTIONS: pools.general };
+});
 
 const service = new QuestionService();
 
-// Mock question to elimiate dependency on questions.json
+// Mock question to eliminate dependency on questions.json
 const q = (answer: number, tolerance = 0): Question => ({
   id: "test",
   prompt: "test prompt",
   answer,
   tolerance,
   hint: "test hint",
+});
+
+const fixed = (id: string): Question => ({
+  id,
+  prompt: `Question ${id}`,
+  answer: 1,
+  tolerance: 0,
+  hint: "A hint.",
+});
+
+function template(id: string, fields: Partial<QuestionTemplate> = {}): QuestionTemplate {
+  return {
+    id,
+    template: "The range has radius {radius}. What is its area?",
+    answer: "pi * radius^2",
+    hint: "Use π × {radius}².",
+    ...fields,
+  };
+}
+
+function towerOfKind(kind: string): TowerDef {
+  const tower = TOWERS.find((t) => t.range.kind === kind);
+  if (tower === undefined) throw new Error(`towers.json has no ${kind} tower`);
+  return tower;
+}
+
+function sectorConfig(def: TowerDef, spread: number): TowerConfig {
+  const base = defaultConfig(def);
+  if (base.kind !== "sector") throw new Error(`${def.id} is not aimed like a cone`);
+  return { ...base, spread };
+}
+
+const circle = towerOfKind("circle");
+const sector = towerOfKind("sector");
+
+// Sets the general group and one tower's own group for a test
+function setPools(general: Question[], own: QuestionEntry[], tower: TowerDef = circle): void {
+  pools.general.push(...general);
+  pools.byGroup[tower.id] = own;
+}
+
+const random = (value: number) => vi.spyOn(Math, "random").mockReturnValue(value);
+
+beforeEach(() => {
+  pools.general.length = 0;
+  for (const key of Object.keys(pools.byGroup)) delete pools.byGroup[key];
 });
 
 afterEach(() => {
@@ -68,21 +127,160 @@ describe("QuestionService functionality", () => {
     });
   });
 
-  describe("questionFor", () => {
-    const tower = TOWERS[0];
+  // GENERAL_SHARE in QuestionService.ts is 0.3: a draw below it asks a general question
+  describe("questionFor: choosing a group", () => {
+    const [g1, g2] = [fixed("g1"), fixed("g2")];
+    const [o1, o2, o3] = [fixed("o1"), fixed("o2"), fixed("o3")];
 
-    it("returns a question from questions.json", () => {
-      expect(QUESTIONS).toContain(service.questionFor(tower));
+    it("asks a general question when Math.random is below 0.3", () => {
+      setPools([g1, g2], [o1]);
+      random(0.29);
+      expect(service.questionFor(circle)).toBe(g1);
     });
 
-    // Tests for this will change once questions are picked from pools based on the tower placed
-    it("picks by Math.random", () => {
-      vi.spyOn(Math, "random").mockReturnValue(0);
-      expect(service.questionFor(tower)).toBe(QUESTIONS[0]);
+    it("asks the tower's own question from 0.3 up", () => {
+      setPools([g1, g2], [o1]);
+      random(0.3);
+      expect(service.questionFor(circle)).toBe(o1);
+    });
 
-      // just under 1 must map to the last question, not past the end
-      vi.spyOn(Math, "random").mockReturnValue(0.999999);
-      expect(service.questionFor(tower)).toBe(QUESTIONS[QUESTIONS.length - 1]);
+    it("picks the last question just under 1, not past the end", () => {
+      setPools([g1], [o1, o2, o3]);
+      random(0.999999);
+      expect(service.questionFor(circle)).toBe(o3);
+    });
+
+    it("asks only general questions when the tower has none of its own", () => {
+      setPools([g1, g2], []);
+      random(0.99);
+      expect(service.questionFor(circle)).toBe(g2);
+
+      delete pools.byGroup[circle.id]; // a tower with no group at all
+      expect(service.questionFor(circle)).toBe(g2);
+    });
+
+    it("asks only the tower's own questions when there are no general ones", () => {
+      setPools([], [o1, o2]);
+      random(0);
+      expect(service.questionFor(circle)).toBe(o1);
+    });
+
+    it("never asks another tower's questions", () => {
+      setPools([], [o1]);
+      pools.byGroup[sector.id] = [fixed("theirs")];
+      random(0.99);
+      expect(service.questionFor(circle)).toBe(o1);
+    });
+
+    it("throws when there are no questions at all", () => {
+      setPools([], []);
+      expect(() => service.questionFor(circle)).toThrow(/no questions/);
+    });
+
+    it("returns a fixed question from the tower's group as it is", () => {
+      setPools([], [o1]);
+      expect(service.questionFor(circle)).toBe(o1);
+    });
+  });
+
+  describe("questionFor: templates", () => {
+    it("fills the prompt and hint with the tower's numbers", () => {
+      const vars = towerVariables(circle);
+      setPools([], [template("t")]);
+
+      const question = service.questionFor(circle);
+      expect(question.id).toBe("t");
+      expect(question.prompt).toBe(`The range has radius ${vars.radius}. What is its area?`);
+      expect(question.hint).toBe(`Use π × ${vars.radius}².`);
+      expect(question.answer).toBeCloseTo(Math.PI * vars.radius ** 2, 9);
+    });
+
+    it("uses the settings the player chose", () => {
+      const cone = template("cone", {
+        template: "The cone is {degrees}° wide. What fraction of a circle is it?",
+        answer: "degrees / 360",
+        hint: "Divide {degrees} by 360.",
+      });
+      setPools([], [cone], sector);
+
+      const question = service.questionFor(sector, sectorConfig(sector, Math.PI / 2));
+      expect(question.prompt).toBe("The cone is 90° wide. What fraction of a circle is it?");
+      expect(question.hint).toBe("Divide 90 by 360.");
+      expect(question.answer).toBe(0.25);
+    });
+
+    it("uses the tower's default settings when none are given", () => {
+      setPools([], [template("cone", { template: "{degrees}°", answer: "degrees" })], sector);
+      expect(service.questionFor(sector)).toEqual(
+        service.questionFor(sector, defaultConfig(sector)),
+      );
+    });
+
+    it.each([
+      ["2 pi radius", (v: Record<string, number>) => 2 * Math.PI * v.radius],
+      ["sqrt(area / pi)", (v: Record<string, number>) => Math.sqrt(v.area / Math.PI)],
+      ["diameter^2 / 4", (v: Record<string, number>) => v.diameter ** 2 / 4],
+      ["(radius + 1)(radius - 1)", (v: Record<string, number>) => (v.radius + 1) * (v.radius - 1)],
+      ["damage * rate", (v: Record<string, number>) => v.damage * v.rate],
+    ])("works out the formula %s", (formula, expected) => {
+      setPools([], [template("t", { answer: formula })]);
+      const question = service.questionFor(circle);
+      expect(question.answer).toBeCloseTo(expected(towerVariables(circle)), 9);
+    });
+
+    describe("tolerance", () => {
+      it.each([
+        ["a fixed tolerance", { tolerance: 0.5 }, () => 0.5],
+        ["a relative tolerance", { relativeTolerance: 0.01 }, (a: number) => Math.abs(a) * 0.01],
+        [
+          "the fixed one when both are given",
+          { tolerance: 0.5, relativeTolerance: 0.01 },
+          () => 0.5,
+        ],
+        ["0 when none is given", {}, () => 0],
+      ])("uses %s", (_label, fields, expected) => {
+        setPools([], [template("t", fields)]);
+        const question = service.questionFor(circle);
+        expect(question.tolerance).toBeCloseTo(expected(question.answer), 12);
+      });
+
+      it("accepts answers within a relative tolerance", () => {
+        setPools([], [template("t", { relativeTolerance: 0.01 })]);
+        const question = service.questionFor(circle);
+        expect(service.check(question, String(question.answer * 1.005))).toBe(true);
+        expect(service.check(question, String(question.answer * 1.02))).toBe(false);
+      });
+    });
+
+    describe("templates that can't be asked", () => {
+      it("skips a template that needs a number this tower doesn't have", () => {
+        const cone = template("cone", { template: "The cone is {degrees}° wide.", answer: "1" });
+        setPools([], [cone, fixed("o1")]);
+        random(0.99);
+        expect(service.questionFor(circle).id).toBe("o1");
+      });
+
+      it("skips it when only the hint needs the missing number", () => {
+        setPools([], [template("t", { hint: "Divide {degrees} by 360." }), fixed("o1")]);
+        random(0.99);
+        expect(service.questionFor(circle).id).toBe("o1");
+      });
+
+      it.each(["radius +", "radius / (damage - damage)", "sqrt(0 - radius)", "radius * cones"])(
+        "skips a template whose formula %s can't be worked out",
+        (formula) => {
+          setPools([], [template("t", { answer: formula }), fixed("o1")]);
+          random(0.99);
+          expect(service.questionFor(circle).id).toBe("o1");
+        },
+      );
+
+      it("falls back to the general group when none of the tower's templates work", () => {
+        const g1 = fixed("g1");
+        setPools([g1], [template("t", { answer: "radius +" })]);
+        random(0.99);
+        expect(service.questionFor(circle)).toBe(g1);
+      });
     });
   });
 });

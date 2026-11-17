@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { findMap, loadMap, MAPS } from "./loadContent";
+import {
+  checkQuestions,
+  findMap,
+  GENERAL_QUESTIONS,
+  isTemplate,
+  loadMap,
+  MAPS,
+  QUESTION_POOLS,
+  QUESTIONS,
+  TOWERS,
+  VARIABLES_BY_KIND,
+  type QuestionEntry,
+} from "./loadContent";
 import map1 from "../data/maps/map1.json";
 
 // A tiny valid map: path runs left to right along row 1
@@ -122,5 +134,200 @@ describe("findMap", () => {
 
   it("throws for an unknown id", () => {
     expect(() => findMap("map9")).toThrow(/map9/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Questions
+// ---------------------------------------------------------------------------
+
+function towerOfKind(kind: string) {
+  const tower = TOWERS.find((t) => t.range.kind === kind);
+  if (tower === undefined) throw new Error(`towers.json has no ${kind} tower`);
+  return tower;
+}
+
+const circle = towerOfKind("circle");
+
+// Runs checkQuestions on hand-written groups. Broken entries are cast, since catching them is the point.
+function check(pools: Record<string, unknown[]>): () => void {
+  return () => checkQuestions(pools as Record<string, QuestionEntry[]>);
+}
+
+const fixedQ = (id: string, fields: Record<string, unknown> = {}) => ({
+  id,
+  prompt: "What is 2 + 2?",
+  answer: 4,
+  tolerance: 0,
+  hint: "Add them.",
+  ...fields,
+});
+
+const templateQ = (id: string, fields: Record<string, unknown> = {}) => ({
+  id,
+  template: "The range has radius {radius}. What is its diameter?",
+  answer: "2 * radius",
+  hint: "Double {radius}.",
+  ...fields,
+});
+
+describe("isTemplate", () => {
+  it("tells templates from fixed questions", () => {
+    expect(isTemplate(templateQ("t") as QuestionEntry)).toBe(true);
+    expect(isTemplate(fixedQ("f") as QuestionEntry)).toBe(false);
+  });
+});
+
+describe("checkQuestions", () => {
+  it("accepts the real questions.json", () => {
+    expect(() => checkQuestions(QUESTION_POOLS)).not.toThrow();
+  });
+
+  it("accepts fixed questions and templates in their groups", () => {
+    expect(
+      check({ general: [fixedQ("g1")], [circle.id]: [fixedQ("c1"), templateQ("c2")] }),
+    ).not.toThrow();
+  });
+
+  describe("groups and ids", () => {
+    it("rejects a group that is neither general nor a tower id", () => {
+      expect(check({ towr: [fixedQ("a")] })).toThrow(/unknown group "towr"/);
+    });
+
+    it("rejects the same id twice, even in different groups", () => {
+      expect(check({ general: [fixedQ("a")], [circle.id]: [fixedQ("a")] })).toThrow(
+        /duplicate id "a"/,
+      );
+    });
+  });
+
+  describe("hints", () => {
+    it.each([
+      ["no hint", { hint: undefined }],
+      ["an empty hint", { hint: "" }],
+      ["a hint that isn't text", { hint: 5 }],
+    ])("rejects a fixed question with %s", (_label, fields) => {
+      expect(check({ general: [fixedQ("a", fields)] })).toThrow(/"a" needs a hint/);
+    });
+
+    it.each([
+      ["no hint", { hint: undefined }],
+      ["an empty hint", { hint: "" }],
+    ])("rejects a template with %s", (_label, fields) => {
+      expect(check({ [circle.id]: [templateQ("t", fields)] })).toThrow(/"t" needs a hint/);
+    });
+  });
+
+  describe("fixed questions", () => {
+    it.each([
+      ["no prompt", { prompt: undefined }],
+      ["an empty prompt", { prompt: "" }],
+      ["a text answer", { answer: "4" }],
+      ["a NaN answer", { answer: NaN }],
+      ["an Infinity answer", { answer: Infinity }],
+      ["no tolerance", { tolerance: undefined }],
+      ["a negative tolerance", { tolerance: -1 }],
+    ])("rejects %s", (_label, fields) => {
+      expect(check({ general: [fixedQ("a", fields)] })).toThrow(
+        /needs a prompt, a number answer and a tolerance >= 0/,
+      );
+    });
+
+    it("accepts a tolerance of 0", () => {
+      expect(check({ general: [fixedQ("a", { tolerance: 0 })] })).not.toThrow();
+    });
+  });
+
+  describe("templates", () => {
+    it.each([
+      ["a number answer instead of a formula", { answer: 8 }],
+      ["no template text", { template: undefined }],
+    ])("rejects %s", (_label, fields) => {
+      expect(check({ [circle.id]: [templateQ("t", fields)] })).toThrow(
+        /needs a template and a formula answer/,
+      );
+    });
+
+    // fill() only replaces plain names, so these would reach the player as written
+    it.each([
+      ["a formula in the template", { template: "What is {2 * radius}?" }],
+      ["a formula in the hint", { hint: "It is {radius + radius}." }],
+      ["empty braces", { template: "Radius: {}" }],
+    ])("rejects %s", (_label, fields) => {
+      expect(check({ [circle.id]: [templateQ("t", fields)] })).toThrow(/only plain names/);
+    });
+
+    it("rejects a number the tower doesn't provide, in the template or the hint", () => {
+      expect(
+        check({ [circle.id]: [templateQ("t", { template: "The cone is {degrees}° wide." })] }),
+      ).toThrow(/uses \{degrees\}.*does not provide/);
+      expect(check({ [circle.id]: [templateQ("t", { hint: "Use {width}." })] })).toThrow(
+        /does not provide/,
+      );
+    });
+
+    it("rejects tower numbers in the general group", () => {
+      expect(check({ general: [templateQ("t")] })).toThrow(/"general" does not provide/);
+    });
+
+    it("lets every tower use the common numbers", () => {
+      for (const tower of TOWERS) {
+        const entry = templateQ(`common-${tower.id}`, {
+          template: "It deals {damage} damage {rate} times a second.",
+          answer: "damage * rate",
+          hint: "Multiply {damage} by {rate}.",
+        });
+        expect(check({ [tower.id]: [entry] })).not.toThrow();
+      }
+    });
+
+    it("rejects an unknown name in the answer formula", () => {
+      expect(check({ [circle.id]: [templateQ("t", { answer: "2 * r" })] })).toThrow(
+        /answer uses unknown name "r"/,
+      );
+    });
+
+    it("allows pi and sqrt in the answer, in any case", () => {
+      expect(
+        check({
+          [circle.id]: [
+            templateQ("t1", { answer: "PI * radius^2" }),
+            templateQ("t2", { answer: "sqrt(area / pi)" }),
+          ],
+        }),
+      ).not.toThrow();
+    });
+
+    it("rejects a negative or NaN tolerance and accepts none", () => {
+      expect(check({ [circle.id]: [templateQ("t", { tolerance: -0.1 })] })).toThrow(
+        /negative tolerance/,
+      );
+      expect(check({ [circle.id]: [templateQ("t", { tolerance: NaN })] })).toThrow(
+        /negative tolerance/,
+      );
+      expect(check({ [circle.id]: [templateQ("t")] })).not.toThrow();
+    });
+  });
+});
+
+describe("question lists", () => {
+  it("has numbers for every kind of tower in towers.json", () => {
+    for (const tower of TOWERS) {
+      expect(VARIABLES_BY_KIND[tower.range.kind], tower.id).toBeDefined();
+    }
+  });
+
+  it("GENERAL_QUESTIONS holds the general group's fixed questions and no templates", () => {
+    const general = QUESTION_POOLS.general ?? [];
+    expect(GENERAL_QUESTIONS).toEqual(general.filter((entry) => !isTemplate(entry)));
+    for (const question of GENERAL_QUESTIONS) expect(isTemplate(question)).toBe(false);
+  });
+
+  it("QUESTIONS holds every fixed question from every group and no templates", () => {
+    const fixed = Object.values(QUESTION_POOLS)
+      .flat()
+      .filter((entry) => !isTemplate(entry));
+    expect(QUESTIONS).toEqual(fixed);
+    for (const question of GENERAL_QUESTIONS) expect(QUESTIONS).toContain(question);
   });
 });
