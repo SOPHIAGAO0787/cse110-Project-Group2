@@ -4,6 +4,7 @@ import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GameScreenView, TILE } from "./GameScreenView";
 import { QuestionService } from "../../model/questions/QuestionService";
+import { Sound } from "../../core/Sound";
 
 let view: GameScreenView;
 
@@ -18,6 +19,7 @@ beforeEach(() => {
     () => {},
     () => {},
     new QuestionService(),
+    new Sound(),
   );
 });
 

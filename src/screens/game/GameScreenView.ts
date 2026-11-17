@@ -9,6 +9,7 @@ import {
 import { FONT } from "../theme";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { SettingsPanel } from "./SettingsPanel";
+import type { Sound } from "../../core/Sound";
 import type { QuestionService } from "../../model/questions/QuestionService";
 import type { Vec } from "../../model/types";
 
@@ -116,7 +117,7 @@ export class GameScreenView {
 
   // onStartWave runs on Start Wave, onBack on the back arrow and on "Back to maps" in the
   // settings, onOpenSettings on the gear, onResume / onMainMenu on those settings buttons,
-  // and onToggleSpeed on the speed button.
+  // and onToggleSpeed on the speed button. The settings switch the sound on and off.
   constructor(
     mapCols: number,
     mapRows: number,
@@ -127,6 +128,7 @@ export class GameScreenView {
     onMainMenu: () => void,
     onToggleSpeed: () => void,
     questions: QuestionService,
+    sound: Sound,
   ) {
     this.mapCols = mapCols;
     this.mapRows = mapRows;
@@ -138,7 +140,7 @@ export class GameScreenView {
     speedIcon.add(this.speedArrowOne, this.speedArrowTwo, this.speedLabel);
     this.speedButton = makeIconButton("speed", speedIcon, onToggleSpeed, SPEED_BUTTON_WIDTH);
     this.prompt = new QuestionPrompt(questions);
-    this.settings = new SettingsPanel(onResume, onBack, onMainMenu);
+    this.settings = new SettingsPanel(onResume, onBack, onMainMenu, sound);
     this.shopGroup.add(this.shopBackground, this.shopTitle, this.timerText);
     this.group.add(
       this.mapGroup,

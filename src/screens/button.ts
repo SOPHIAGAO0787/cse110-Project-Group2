@@ -34,6 +34,14 @@ export function makeButton(label: string, onClick: () => void, width = 200): Kon
   return button;
 }
 
+// Changes the label of a button made by makeButton
+export function setButtonLabel(button: Konva.Group, label: string): void {
+  const text = button.findOne<Konva.Text>("Text");
+  if (text) {
+    text.text(label);
+  }
+}
+
 // Icon buttons are square and smaller than text buttons
 export const ICON_BUTTON_SIZE = 40;
 

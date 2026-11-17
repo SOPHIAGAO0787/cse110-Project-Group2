@@ -21,6 +21,8 @@ Then open the URL Vite prints (usually http://localhost:5173).
 4. Click **Start Wave** to send enemies down the path. Each enemy that reaches the end costs a life.
 5. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars and stats.
 
+The gear button opens the settings, where the music and the sound effects can each be switched off.
+
 The menu also has a **Tower Shop** screen that shows each tower's cost, stats, and upgrades. It is a demo with its own coins and is not connected to the game yet.
 
 **Works today:** the map, tower placement with a question, coins, lives, waves, and the victory and defeat screens.
@@ -32,7 +34,7 @@ The menu also has a **Tower Shop** screen that shows each tower's cost, stats, a
 src/
   main.ts             starts the App
   app/                App (owns the Konva stage, switches screens) and screen types
-  core/               EventBus (game events) and GameLoop (calls tick every frame)
+  core/               EventBus (game events), GameLoop (calls tick every frame), and Sound
   model/              game rules and state: plain TypeScript, no Konva, unit tested
     GameModel.ts      holds everything for one game and runs each tick in order
     types.ts          shared shapes and the list of game events
@@ -44,6 +46,7 @@ src/
     game/             the game screen: view, controller, grid, enemies, placement, question popup
     shop/             the Tower Shop screen
 assets/               images for this README
+public/audio/         the music loop and the sound effects, made for this game
 ```
 
 Three rules keep it working:
