@@ -1,8 +1,18 @@
 # Geometry Tower Defense
 
-A tower defense game where you answer geometry questions to build your defenses. Built by CSE 110 Group 2 with TypeScript, Vite, and Konva.
+A tower defense game where you answer geometry questions to build your defenses. Every tower is a shape, and every question is about the shape you are placing: its radius, its area, its angle. Built by CSE 110 Group 2 with TypeScript, Vite, and Konva.
 
-![Placing a tower, answering its question, and starting a wave](assets/demo.gif)
+![Choosing a map, placing two circle towers by answering their questions, and clearing the first wave](assets/demo.gif)
+
+## Features
+
+- **Four maps** (Circle Grove, Angle Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
+- **Three towers, three shapes.** The circle tower hits everything in its circle. The triangle and square towers are aimed by the player.
+- **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
+- **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
+- **Stars and stats** at the end of every game, and the best stars on each map are kept on the map screen.
+- **Tower Shop** to unlock towers and raise their upgrade level, and a **mini-game** that earns bonus coins.
+- **Double speed, music, and sound effects**, with a settings menu to pause the game or switch the sound off.
 
 ## Play it
 
@@ -24,10 +34,39 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 During a game, the speed button (or **Space**) switches between normal and double speed. The gear button opens the settings, where the music and the sound effects can each be switched off.
 
-The main menu also has:
+| Choose a map                                         | See how you did                          |
+| ---------------------------------------------------- | ---------------------------------------- |
+| ![The map screen after a win](assets/map-select.png) | ![The victory screen](assets/result.png) |
 
-- **Tower Shop:** unlock the triangle and square towers and raise each tower's upgrade level. The shop has its own coins for now; coins earned in games do not count there yet.
-- **Mini-game:** a timed geometry quiz. Each correct answer gives bonus coins for your next game.
+## Towers
+
+| Tower    | Cost | Range                                                                               |
+| -------- | ---- | ----------------------------------------------------------------------------------- |
+| Circle   | 50   | A circle of radius 2.5 tiles. Hits every enemy inside it.                           |
+| Triangle | 75   | A cone with a fixed area. A wider cone reaches less far. Hits the front-most enemy. |
+| Square   | 100  | A block of up to 6 tiles next to the tower. A smaller block fires faster.           |
+
+The triangle and square towers are aimed after they are dropped: move the mouse to turn them, and move it closer or further to change the cone's angle or the block's size. Then press **Enter** for the question.
+
+**Triangle tower:** the question asks about the cone you aimed, here what fraction of a full circle a 46° cone is.
+
+![Aiming the triangle tower's cone, answering 46/360, and the tower firing during a wave](assets/triangle-tower.gif)
+
+**Square tower:** the block snaps to whole tiles, and the question asks about the block you chose.
+
+![Aiming the square tower's block, answering its perimeter, and the tower firing during a wave](assets/square-tower.gif)
+
+Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols.
+
+## Tower Shop and mini-game
+
+The **Tower Shop** unlocks the triangle and square towers and raises each tower's upgrade level. A placed tower can be upgraded in a game up to the level bought here. The shop has its own coins for now; coins earned in games do not count there yet.
+
+![The Tower Shop showing the circle tower's stats and next upgrade](assets/tower-shop.png)
+
+The **mini-game** is a five-question geometry quiz with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50.
+
+![Answering the five mini-game questions and returning to the menu with a coin bonus](assets/mini-game.gif)
 
 **Coming next (Sprint 3):** balancing the maps, saving progress, a leaderboard, and a second mini-game. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
