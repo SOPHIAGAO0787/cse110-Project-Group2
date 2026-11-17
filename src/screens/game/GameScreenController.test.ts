@@ -18,6 +18,7 @@ import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
 import { TowerProgress } from "../../model/TowerProgress";
 import { TowersView } from "./TowersView";
+import { Sound, type EffectName } from "../../core/Sound";
 
 // Capture real model instances without exposing the controller's private fields.
 // All state and the EventBus remain real; only the animation loop is stopped.
@@ -62,6 +63,7 @@ let model: GameModel;
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 let progress: Progress;
 let towerProgress: TowerProgress;
+let playSound: Mock<(name: EffectName) => void>; // counts the effects instead of playing them
 
 function hud(): string {
   const text = controller.group
@@ -109,7 +111,9 @@ beforeEach(() => {
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
   progress = new Progress(MAPS);
   towerProgress = new TowerProgress();
-  controller = new GameScreenController({ switchTo }, progress, towerProgress);
+  const sound = new Sound();
+  playSound = vi.spyOn(sound, "play").mockImplementation(() => {});
+  controller = new GameScreenController({ switchTo }, progress, towerProgress, sound);
   controller.show();
   model = models[models.length - 1];
 });
@@ -1119,5 +1123,48 @@ describe("GameScreenController game speed", () => {
     press(" ");
 
     expect(speedLabel()).toBe("1x");
+  });
+});
+
+describe("GameScreenController sound effects", () => {
+  it("plays the wave cue when a wave starts", () => {
+    clickStartWave();
+
+    expect(playSound).toHaveBeenCalledWith("wave");
+  });
+
+  it("plays a pop for a kill and a thud for a lost life", () => {
+    model.events.emit("enemyKilled", { enemyId: 1, reward: 5 });
+    expect(playSound).toHaveBeenLastCalledWith("pop");
+
+    model.events.emit("enemyLeaked", { enemyId: 2 });
+    expect(playSound).toHaveBeenLastCalledWith("leak");
+  });
+
+  it("plays the place sound when a tower is placed", () => {
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+
+    expect(playSound).toHaveBeenCalledWith("place");
+  });
+
+  it("plays the win sound for a won game and the lose sound for a lost one", () => {
+    model.events.emit("gameOver", { won: true });
+    expect(playSound).toHaveBeenLastCalledWith("win");
+
+    model.events.emit("gameOver", { won: false });
+    expect(playSound).toHaveBeenLastCalledWith("lose");
+  });
+
+  it("plays nothing for a tower that fires", () => {
+    model.events.emit("towerFired", { towerId: 1 });
+
+    expect(playSound).not.toHaveBeenCalled();
+  });
+
+  it("plays nothing after leaving the game screen", () => {
+    controller.hide();
+    model.events.emit("enemyKilled", { enemyId: 1, reward: 5 });
+
+    expect(playSound).not.toHaveBeenCalled();
   });
 });

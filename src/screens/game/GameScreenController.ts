@@ -1,5 +1,6 @@
 import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
+import { Sound } from "../../core/Sound";
 import { GameModel } from "../../model/GameModel";
 import { findMap, TOWERS } from "../../model/loadContent";
 import type { MapConfig, Vec } from "../../model/types";
@@ -22,6 +23,7 @@ export class GameScreenController implements Screen {
   group: Konva.Group;
   private app: ScreenSwitcher;
   private progress: Progress; // which map to play and the bonus coins; finished games save stars here
+  private sound: Sound;
   private map: MapConfig;
   private view: GameScreenView;
   private model: GameModel;
@@ -39,9 +41,11 @@ export class GameScreenController implements Screen {
     app: ScreenSwitcher,
     progress: Progress,
     private towerProgress: TowerProgress = new TowerProgress(),
+    sound: Sound = new Sound(),
   ) {
     this.app = app;
     this.progress = progress;
+    this.sound = sound;
     this.map = findMap(progress.currentMapId);
     this.view = new GameScreenView(
       this.map.cols,
@@ -54,6 +58,7 @@ export class GameScreenController implements Screen {
       () => this.app.switchTo("menu"),
       () => this.toggleSpeed(),
       this.questions,
+      this.sound,
     );
     this.group = this.view.group;
 
@@ -172,6 +177,19 @@ export class GameScreenController implements Screen {
     });
     events.on("waveStarted", ({ wave }) => this.view.showWaveBanner(wave));
     events.on("enemyLeaked", () => this.view.flashLeak());
+
+    // Sound effects. Towers firing make no sound: with many towers it would never stop.
+    events.on("waveStarted", () => this.sound.play("wave"));
+    events.on("enemyKilled", () => this.sound.play("pop"));
+    events.on("enemyLeaked", () => this.sound.play("leak"));
+    events.on("towerPlaced", () => this.sound.play("place"));
+    events.on("gameOver", ({ won }) => {
+      if (won) {
+        this.sound.play("win");
+      } else {
+        this.sound.play("lose");
+      }
+    });
 
     // A new game starts unpaused, with the back arrow showing
     this.view.settings.close();
