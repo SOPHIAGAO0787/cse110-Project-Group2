@@ -4,6 +4,8 @@ import Konva from "konva";
 import "vitest-canvas-mock";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { GameResult } from "../model/GameResult";
+import { BUTTON_HEIGHT } from "./button";
+import { CARD_HEIGHT, CARD_WIDTH } from "./Page";
 import { ResultScreen } from "./ResultScreen";
 
 const defeat: GameResult = {
@@ -30,6 +32,21 @@ function shownText(): string {
     .join("\n");
 }
 
+// The button group that has this label
+function buttonWithLabel(label: string): Konva.Group {
+  for (const node of screen.group.find("Text")) {
+    const button = node.getParent();
+    if ((node as Konva.Text).text() === label && button instanceof Konva.Group) {
+      return button;
+    }
+  }
+  throw new Error(`${label} button is missing from the screen`);
+}
+
+function clickButton(label: string): void {
+  buttonWithLabel(label).fire("click");
+}
+
 beforeEach(() => {
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
   screen = new ResultScreen({ switchTo });
@@ -54,7 +71,7 @@ describe("ResultScreen (So1)", () => {
     screen.show({ ...defeat, won: true, stars: 3, remainingLives: 20 });
 
     expect(shownText()).toContain("Victory!");
-    expect(shownText().split("\n")[0]).not.toBe("Defeat");
+    expect(shownText().split("\n")).not.toContain("Defeat");
     expect(shownText()).toContain("★★★");
   });
 
@@ -68,10 +85,16 @@ describe("ResultScreen (So1)", () => {
 
   it("goes back to the menu", () => {
     screen.show(defeat);
-    const button = screen.group.findOne("Group");
-    button!.fire("click");
+    clickButton("Back to menu");
 
     expect(switchTo).toHaveBeenCalledWith("menu");
+  });
+
+  it("goes to the map choice", () => {
+    screen.show(defeat);
+    clickButton("Choose a map");
+
+    expect(switchTo).toHaveBeenCalledWith("maps");
   });
 
   it("hides", () => {
@@ -81,17 +104,28 @@ describe("ResultScreen (So1)", () => {
     expect(screen.group.visible()).toBe(false);
   });
 
-  it.each([480, 600, 768])("keeps all stats above the menu button at %i px height", (height) => {
+  it("keeps all stats above the buttons, and the buttons inside the card", () => {
     screen.show(defeat);
-    screen.resize(800, height);
     const stats = screen.group
       .find("Text")
       .find((node) => (node as Konva.Text).text().includes("Enemies Defeated")) as Konva.Text;
-    const button = screen.group.findOne("Group")!;
-    const scale = screen.group.scaleY();
-    const offset = screen.group.y();
+    const button = buttonWithLabel("Back to menu");
 
     expect(stats.y() + stats.height()).toBeLessThan(button.y());
-    expect(offset + (button.y() + 48) * scale).toBeLessThanOrEqual(height);
+    expect(button.y() + BUTTON_HEIGHT).toBeLessThan(CARD_HEIGHT);
+  });
+
+  it.each([
+    [800, 480],
+    [1456, 827],
+    [1920, 1080],
+  ])("fits the whole card into a %i x %i window", (width, height) => {
+    screen.resize(width, height);
+    const content = screen.group.findOne("Group") as Konva.Group;
+    const scale = content.scaleY();
+
+    expect(content.x()).toBeGreaterThanOrEqual(0);
+    expect(content.x() + CARD_WIDTH * scale).toBeLessThanOrEqual(width);
+    expect(content.y() + CARD_HEIGHT * scale).toBeLessThanOrEqual(height);
   });
 });
