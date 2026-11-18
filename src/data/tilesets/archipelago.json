@@ -2,7 +2,7 @@
   "id": "archipelago",
   "sheet": "archipelago.png",
   "cellSize": 256,
-  "inset": 0,
+  "inset": 1,
   "legend": {
     "#": {
       "kind": "buildable",
