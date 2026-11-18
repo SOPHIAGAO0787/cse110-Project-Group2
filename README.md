@@ -80,7 +80,7 @@ src/
   model/              game rules and state: plain TypeScript, no Konva, unit tested
     GameModel.ts      holds everything for one game and runs each tick in order
     types.ts          shared shapes and the list of game events
-    tileArt.ts        which picture goes on which tile of a textured map
+    TileArt.ts        which picture goes on which tile of a textured map
     Progress.ts       what is kept between games: the chosen map, stars, and bonus coins
     geometry/         tower range shapes
     questions/        picks and checks geometry questions

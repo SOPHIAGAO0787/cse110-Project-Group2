@@ -6,6 +6,7 @@ import map2 from "../data/maps/map2.json";
 import map3 from "../data/maps/map3.json";
 import map4 from "../data/maps/map4.json";
 import meadow from "../data/tilesets/meadow.json";
+import archipelago from "../data/tilesets/archipelago.json";
 import { checkArt, loadTileset, type Tileset } from "./TileArt";
 import type { EnemyDef, MapConfig, Question, QuestionTemplate, TowerDef } from "./types";
 
@@ -120,7 +121,7 @@ export function checkQuestions(pools: Record<string, QuestionEntry[]>): void {
 checkQuestions(QUESTION_POOLS);
 
 // Every picture sheet a map can be drawn with.
-export const TILESETS: Tileset[] = [loadTileset(meadow)];
+export const TILESETS: Tileset[] = [loadTileset(meadow), loadTileset(archipelago)];
 
 // Returns the tileset with this id. Throws if there is none, so a typo in a map file fails loudly.
 export function findTileset(id: string): Tileset {
