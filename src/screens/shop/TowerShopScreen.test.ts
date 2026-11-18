@@ -97,44 +97,47 @@ describe("Tower shop UI interactions", () => {
     expect(view.render).toHaveBeenCalledTimes(rendersBeforeAttempt);
   });
 
-  it.each(["triangle"])("unlocks %s and buys both upgrades for use in the game", (id) => {
-    progress.shopCoins = 1000;
-    view.selectTower(id);
-    const shopTower = displayedState().towers.find((tower) => tower.def.id === id)!;
-    const game = new GameModel(loadMap(map1), progress);
-    game.wallet.add(1000);
+  it.each(["triangle", "rectangle"])(
+    "unlocks %s and buys both upgrades for use in the game",
+    (id) => {
+      progress.shopCoins = 1000;
+      view.selectTower(id);
+      const shopTower = displayedState().towers.find((tower) => tower.def.id === id)!;
+      const game = new GameModel(loadMap(map1), progress);
+      game.wallet.add(1000);
 
-    expect(game.tryPlaceTower(id, { x: 0, y: 2 })).toBe("locked");
-    view.clickAction();
-    expect(game.tryPlaceTower(id, { x: 0, y: 2 })).toBe("ok");
-    const tower = game.towers[0];
-    const originalConfig = { ...tower.config };
-    const originalRange = tower.range;
-    const baseRate = tower.fireRate;
-    const baseSpeed = tower.def.fireRatePerSec;
-    let shopCoins = 1000 - shopTower.unlockCost;
-
-    for (let level = 1; level <= 2; level++) {
-      expect(game.tryUpgradeTower(tower.id)).toContain("Tower Shop");
+      expect(game.tryPlaceTower(id, { x: 0, y: 2 })).toBe("locked");
       view.clickAction();
-      shopCoins -= shopTower.levels[level - 1].upgradeCost!;
+      expect(game.tryPlaceTower(id, { x: 0, y: 2 })).toBe("ok");
+      const tower = game.towers[0];
+      const originalConfig = { ...tower.config };
+      const originalRange = tower.range;
+      const baseRate = tower.fireRate;
+      const baseSpeed = tower.def.fireRatePerSec;
+      let shopCoins = 1000 - shopTower.unlockCost;
+
+      for (let level = 1; level <= 2; level++) {
+        expect(game.tryUpgradeTower(tower.id)).toContain("Tower Shop");
+        view.clickAction();
+        shopCoins -= shopTower.levels[level - 1].upgradeCost!;
+        expect(progress.shopCoins).toBe(shopCoins);
+        expect(progress.getMaxLevel(id)).toBe(level);
+
+        const gameCoins = game.wallet.coins;
+        expect(game.tryUpgradeTower(tower.id)).toContain(`Level ${level + 1}`);
+        expect(game.wallet.coins).toBe(gameCoins - shopTower.levels[level - 1].upgradeCost!);
+        expect(tower.def.damage).toBe(shopTower.levels[level].damage);
+        expect(tower.fireRate).toBeCloseTo(
+          (baseRate * shopTower.levels[level].attackSpeed) / baseSpeed,
+        );
+        expect(tower.config).toEqual(originalConfig);
+        expect(tower.range).toBe(originalRange);
+      }
+
+      view.clickAction();
       expect(progress.shopCoins).toBe(shopCoins);
-      expect(progress.getMaxLevel(id)).toBe(level);
-
-      const gameCoins = game.wallet.coins;
-      expect(game.tryUpgradeTower(tower.id)).toContain(`Level ${level + 1}`);
-      expect(game.wallet.coins).toBe(gameCoins - shopTower.levels[level - 1].upgradeCost!);
-      expect(tower.def.damage).toBe(shopTower.levels[level].damage);
-      expect(tower.fireRate).toBeCloseTo(
-        (baseRate * shopTower.levels[level].attackSpeed) / baseSpeed,
-      );
-      expect(tower.config).toEqual(originalConfig);
-      expect(tower.range).toBe(originalRange);
-    }
-
-    view.clickAction();
-    expect(progress.shopCoins).toBe(shopCoins);
-    expect(progress.getMaxLevel(id)).toBe(2);
-    expect(tower.level).toBe(2);
-  });
+      expect(progress.getMaxLevel(id)).toBe(2);
+      expect(tower.level).toBe(2);
+    },
+  );
 });

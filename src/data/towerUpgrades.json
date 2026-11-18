@@ -22,5 +22,12 @@
       { "cost": 100, "damage": 15, "attackSpeed": 1 },
       { "cost": 150, "damage": 20, "attackSpeed": 1.2 }
     ]
+  },
+  {
+    "towerId": "rectangle",
+    "upgrades": [
+      { "cost": 125, "damage": 18, "attackSpeed": 0.9 },
+      { "cost": 175, "damage": 24, "attackSpeed": 1.1 }
+    ]
   }
 ]

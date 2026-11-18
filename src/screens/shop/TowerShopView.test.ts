@@ -60,24 +60,25 @@ describe("tower shop abilities", () => {
     (id) => {
       const nodes = renderTower(id, -1);
       const abilities = nodes.find((node) => node.text().startsWith("Damage:"))!;
-      const status = nodes.find((node) =>
-        node
-          .text()
-          .startsWith(
-            id === "triangle" ? "Next upgrade after unlocking:" : "No further upgrades available",
-          ),
-      )!;
+      const status = nodes.find((node) => node.text().startsWith("Next upgrade after unlocking:"))!;
 
       expect(abilities.y() + abilities.height()).toBeLessThan(status.y());
       expect(status.y() + status.height()).toBeLessThan(520);
       expect(nodes.some((node) => node.text().startsWith("Unlock ·"))).toBe(true);
-      expect(nodes.some((node) => node.text() === "No further upgrades available")).toBe(
-        id === "rectangle",
-      );
+      expect(nodes.some((node) => node.text() === "No further upgrades available")).toBe(false);
     },
   );
 
-  it.each(["triangle"])("stops offering upgrades for %s at Level 3", (id) => {
+  it("previews the rectangle's faster firing rates at the next level", () => {
+    const text = renderTower("rectangle", 1)
+      .map((node) => node.text())
+      .join("\n");
+    expect(text).toContain("Attack speed: 0.9–1.35 → 1.1–1.65 shots/sec");
+    expect(text).toContain("Upgrade · 175 coins");
+    expect(text).not.toContain("Range radius:");
+  });
+
+  it.each(["triangle", "rectangle"])("stops offering upgrades for %s at Level 3", (id) => {
     const nodes = renderTower(id, 2);
     expect(nodes.some((node) => node.text() === "Level 3")).toBe(true);
     expect(nodes.some((node) => node.text() === "No further upgrades available")).toBe(true);
