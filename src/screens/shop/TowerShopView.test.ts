@@ -56,15 +56,31 @@ describe("tower shop abilities", () => {
   });
 
   it.each(["triangle", "rectangle"])(
-    "keeps %s abilities above the status and unlock button",
+    "keeps %s abilities above the upgrade preview and unlock button",
     (id) => {
       const nodes = renderTower(id, -1);
       const abilities = nodes.find((node) => node.text().startsWith("Damage:"))!;
-      const status = nodes.find((node) => node.text() === "No further upgrades available")!;
+      const status = nodes.find((node) =>
+        node
+          .text()
+          .startsWith(
+            id === "triangle" ? "Next upgrade after unlocking:" : "No further upgrades available",
+          ),
+      )!;
 
       expect(abilities.y() + abilities.height()).toBeLessThan(status.y());
       expect(status.y() + status.height()).toBeLessThan(520);
       expect(nodes.some((node) => node.text().startsWith("Unlock ·"))).toBe(true);
+      expect(nodes.some((node) => node.text() === "No further upgrades available")).toBe(
+        id === "rectangle",
+      );
     },
   );
+
+  it.each(["triangle"])("stops offering upgrades for %s at Level 3", (id) => {
+    const nodes = renderTower(id, 2);
+    expect(nodes.some((node) => node.text() === "Level 3")).toBe(true);
+    expect(nodes.some((node) => node.text() === "No further upgrades available")).toBe(true);
+    expect(nodes.some((node) => node.text().startsWith("Upgrade ·"))).toBe(false);
+  });
 });

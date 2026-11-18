@@ -15,5 +15,12 @@
         "radius": 3
       }
     ]
+  },
+  {
+    "towerId": "triangle",
+    "upgrades": [
+      { "cost": 100, "damage": 15, "attackSpeed": 1 },
+      { "cost": 150, "damage": 20, "attackSpeed": 1.2 }
+    ]
   }
 ]
