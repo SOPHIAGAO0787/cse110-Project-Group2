@@ -21,6 +21,11 @@
     "e": { "kind": "buildable", "cells": [[4, 0]] },
     "f": { "kind": "buildable", "cells": [[5, 0]] },
     ".": { "kind": "blocked", "cells": [[0, 1]] },
+    ",": { "kind": "blocked", "cells": [[5, 3]] },
+    "v": { "kind": "blocked", "cells": [[4, 2],[2,3]] },
+    "u": { "kind": "blocked", "cells": [[5, 2],[3,2]] },
+    "=": { "kind": "blocked", "cells": [[3, 3]] },
+    "^": { "kind": "blocked", "cells": [[4, 3]] },
     "|": {
       "kind": "path",
       "connects": ["N", "S"],
