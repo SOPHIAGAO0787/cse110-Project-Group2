@@ -20,6 +20,7 @@
     "d": { "kind": "buildable", "cells": [[3, 0]] },
     "e": { "kind": "buildable", "cells": [[4, 0]] },
     "f": { "kind": "buildable", "cells": [[5, 0]] },
+    ".": { "kind": "blocked", "cells": [[0, 1]] },
     "1": { "kind": "blocked", "cells": [[3, 2]] },
     "2": { "kind": "blocked", "cells": [[4, 2]] },
     "3": { "kind": "blocked", "cells": [[5, 2]] },
