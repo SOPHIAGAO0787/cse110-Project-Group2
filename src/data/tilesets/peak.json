@@ -1,0 +1,52 @@
+{
+  "id": "peak",
+  "sheet": "peak.png",
+  "cellSize": 256,
+  "inset": 1,
+  "legend": {
+    "#": {
+      "kind": "buildable",
+      "cells": [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+        [3, 0],
+        [4, 0]
+      ]
+    },
+    "a": { "kind": "buildable", "cells": [[0, 0]] },
+    "b": { "kind": "buildable", "cells": [[1, 0]] },
+    "c": { "kind": "buildable", "cells": [[2, 0]] },
+    "d": { "kind": "buildable", "cells": [[3, 0]] },
+    "e": { "kind": "buildable", "cells": [[4, 0]] },
+    "f": { "kind": "buildable", "cells": [[5, 0]] },
+    ".": { "kind": "blocked", "cells": [[0, 1]] },
+    ",": { "kind": "blocked", "cells": [[5, 3]] },
+    "v": { "kind": "blocked", "cells": [[4, 2],[2,3]] },
+    "u": { "kind": "blocked", "cells": [[5, 2],[3,2]] },
+    "=": { "kind": "blocked", "cells": [[3, 3]] },
+    "^": { "kind": "blocked", "cells": [[4, 3]] },
+    "y": { "kind": "blocked", "cells": [[1, 3]] },
+    "x": { "kind": "blocked", "cells": [[0, 3]] },
+    "|": {
+      "kind": "path",
+      "connects": ["N", "S"],
+      "cells": [
+        [1, 1],
+        [2, 1]
+      ]
+    },
+    "-": {
+      "kind": "path",
+      "connects": ["E", "W"],
+      "cells": [
+        [3, 1],
+        [4, 1]
+      ]
+    },
+    "L": { "kind": "path", "connects": ["N", "E"], "cells": [[5, 1]] },
+    "7": { "kind": "path", "connects": ["W", "S"], "cells": [[0, 2]] },
+    "r": { "kind": "path", "connects": ["E", "S"], "cells": [[1, 2]] },
+    "J": { "kind": "path", "connects": ["N", "W"], "cells": [[1, 2]], "rotation": 180 }
+  }
+}

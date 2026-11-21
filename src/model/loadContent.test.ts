@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   checkQuestions,
   findMap,
+  findTileset,
   GENERAL_QUESTIONS,
   isTemplate,
   loadMap,
   MAPS,
   QUESTION_POOLS,
   QUESTIONS,
+  TILESETS,
   TOWERS,
   VARIABLES_BY_KIND,
   type QuestionEntry,
@@ -101,6 +103,56 @@ describe("loadMap", () => {
       ],
     };
     expect(() => loadMap(map)).toThrow(/\(3, 0\)/);
+  });
+});
+
+describe("loadMap with a tileset", () => {
+  // The road runs along row 1, so every piece on it is a straight one running east and west
+  const art = ["#...", "----", "...#"];
+
+  it("accepts a map that names a tileset and leaves the art to be worked out", () => {
+    expect(loadMap({ ...validMap(), tileset: "meadow" }).tileset).toBe("meadow");
+  });
+
+  it("accepts a map whose art fits its tiles and route", () => {
+    expect(loadMap({ ...validMap(), tileset: "meadow", art }).art).toEqual(art);
+  });
+
+  it("rejects a tileset that does not exist", () => {
+    expect(() => loadMap({ ...validMap(), tileset: "volcano" })).toThrow(
+      /Unknown tileset "volcano"/,
+    );
+  });
+
+  it("rejects art without a tileset to read it with", () => {
+    expect(() => loadMap({ ...validMap(), art })).toThrow(/test: has art but no tileset/);
+  });
+
+  it("rejects art that does not fit the map, naming the map", () => {
+    const wrongKind = ["#...", "-.--", "...#"];
+    expect(() => loadMap({ ...validMap(), tileset: "meadow", art: wrongKind })).toThrow(
+      /^test: art/,
+    );
+  });
+
+  it("checks the art only after the tiles and route, so a bad route is reported as such", () => {
+    const map = { ...validMap(), tileset: "meadow", path: [{ x: 0, y: 0 }] };
+    expect(() => loadMap(map)).toThrow(/not a 'P' tile/);
+  });
+});
+
+describe("TILESETS", () => {
+  it("has a different id for every tileset", () => {
+    const ids = TILESETS.map((tileset) => tileset.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("finds a tileset by its id", () => {
+    expect(findTileset("meadow").id).toBe("meadow");
+  });
+
+  it("throws for an unknown id", () => {
+    expect(() => findTileset("nope")).toThrow(/Unknown tileset "nope"/);
   });
 });
 

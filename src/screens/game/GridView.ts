@@ -19,8 +19,9 @@ export class GridView {
   });
   private isBuildable: (tile: Vec) => boolean;
 
-  // isBuildable answers "can a tower go on this tile?" (the controller passes in the model's grid)
-  constructor(map: MapConfig, isBuildable: (tile: Vec) => boolean) {
+  // isBuildable answers "can a tower go on this tile?" (the controller passes in the model's grid).
+  // terrain is the textured ground (see createTerrain); without it the map is drawn in plain colors.
+  constructor(map: MapConfig, isBuildable: (tile: Vec) => boolean, terrain?: Konva.Group | null) {
     this.isBuildable = isBuildable;
 
     // The scenery is one big rectangle, so the map has no lines between tiles
@@ -32,6 +33,35 @@ export class GridView {
       }),
     );
 
+    // With a textured map the pictures replace everything else drawn here. The rectangle above
+    // stays either way: it is what catches the mouse, and it shows through while a sheet is missing.
+    if (terrain) {
+      this.group.add(terrain);
+    } else {
+      this.drawColored(map);
+    }
+
+    // One line along every tile edge, hidden until showGrid(true)
+    for (let x = 0; x <= map.cols; x++) {
+      this.gridLines.add(
+        new Konva.Line({ points: [x * TILE, 0, x * TILE, map.rows * TILE], stroke: "white" }),
+      );
+    }
+    for (let y = 0; y <= map.rows; y++) {
+      this.gridLines.add(
+        new Konva.Line({ points: [0, y * TILE, map.cols * TILE, y * TILE], stroke: "white" }),
+      );
+    }
+    this.group.add(this.gridLines);
+
+    this.group.add(this.hover);
+    this.group.on("mousemove", () => this.moveHover());
+    this.group.on("mouseleave", () => this.hover.visible(false));
+  }
+
+  // The plain colored look: build tiles with a dark edge, decorations on the blocked tiles,
+  // and a road along the enemy route.
+  private drawColored(map: MapConfig): void {
     // Build tiles in two passes. First a dark square a little bigger than each tile,
     // then the tiles on top. Next to each other the tiles cover the dark squares,
     // so only a dark edge around each patch of build tiles is left.
@@ -120,23 +150,6 @@ export class GridView {
         listening: false,
       }),
     );
-
-    // One line along every tile edge, hidden until showGrid(true)
-    for (let x = 0; x <= map.cols; x++) {
-      this.gridLines.add(
-        new Konva.Line({ points: [x * TILE, 0, x * TILE, map.rows * TILE], stroke: "white" }),
-      );
-    }
-    for (let y = 0; y <= map.rows; y++) {
-      this.gridLines.add(
-        new Konva.Line({ points: [0, y * TILE, map.cols * TILE, y * TILE], stroke: "white" }),
-      );
-    }
-    this.group.add(this.gridLines);
-
-    this.group.add(this.hover);
-    this.group.on("mousemove", () => this.moveHover());
-    this.group.on("mouseleave", () => this.hover.visible(false));
   }
 
   // The tile the mouse is over, or null if the mouse is not on the page.

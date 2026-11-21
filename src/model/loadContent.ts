@@ -5,6 +5,11 @@ import map1 from "../data/maps/map1.json";
 import map2 from "../data/maps/map2.json";
 import map3 from "../data/maps/map3.json";
 import map4 from "../data/maps/map4.json";
+import meadow from "../data/tilesets/meadow.json";
+import archipelago from "../data/tilesets/archipelago.json";
+import canyon from "../data/tilesets/canyon.json";
+import peak from "../data/tilesets/peak.json";
+import { checkArt, loadTileset, type Tileset } from "./TileArt";
 import type { EnemyDef, MapConfig, Question, QuestionTemplate, TowerDef } from "./types";
 
 // "as" tells TypeScript what shape the JSON has. loadMap below also checks maps for mistakes.
@@ -117,6 +122,19 @@ export function checkQuestions(pools: Record<string, QuestionEntry[]>): void {
 
 checkQuestions(QUESTION_POOLS);
 
+// Every picture sheet a map can be drawn with.
+export const TILESETS: Tileset[] = [loadTileset(meadow), loadTileset(archipelago),loadTileset(canyon),loadTileset(peak)];
+
+// Returns the tileset with this id. Throws if there is none, so a typo in a map file fails loudly.
+export function findTileset(id: string): Tileset {
+  for (const tileset of TILESETS) {
+    if (tileset.id === id) {
+      return tileset;
+    }
+  }
+  throw new Error(`Unknown tileset "${id}"`);
+}
+
 // Checks a map file for common mistakes and returns it typed.
 // A typo in a map file then fails loudly in the tests instead of quietly breaking the game.
 export function loadMap(data: unknown): MapConfig {
@@ -171,6 +189,15 @@ export function loadMap(data: unknown): MapConfig {
         throw new Error(`${map.id}: path points ${i - 1} and ${i} are diagonal`);
       }
     }
+  }
+
+  if (map.tileset === undefined) {
+    if (map.art !== undefined) {
+      throw new Error(`${map.id}: has art but no tileset to read it with`);
+    }
+  } else {
+    // Last, because working out the road pieces needs a valid route
+    checkArt(map, findTileset(map.tileset));
   }
 
   return map;

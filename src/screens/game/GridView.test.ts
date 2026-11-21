@@ -93,3 +93,55 @@ describe("GridView", () => {
     }
   });
 });
+
+describe("GridView with textured ground", () => {
+  const map = MAPS[0];
+  const lines = (view: GridView) => view.group.find<Konva.Line>("Line");
+
+  it("shows the terrain it is given", () => {
+    const terrain = new Konva.Group();
+    const view = new GridView(map, () => true, terrain);
+    expect(view.group.getChildren()).toContain(terrain);
+  });
+
+  it("draws neither the colored build tiles, the decorations nor the road under the terrain", () => {
+    const view = new GridView(map, () => true, new Konva.Group());
+    expect(view.group.find(".decoration")).toHaveLength(0);
+    expect(lines(view).filter((line) => line.stroke() === map.colors.path)).toHaveLength(0);
+    for (const rect of view.group.find<Konva.Rect>("Rect")) {
+      expect(rect.fill()).not.toBe(map.colors.buildable);
+    }
+  });
+
+  it("keeps the scenery rectangle, which catches the mouse and shows through a missing sheet", () => {
+    const view = new GridView(map, () => true, new Konva.Group());
+    const scenery = view.group.find<Konva.Rect>("Rect")[0];
+    expect(scenery.fill()).toBe(map.colors.blocked);
+    expect(scenery.listening()).toBe(true);
+  });
+
+  it("puts the terrain under the grid lines and the hover tint", () => {
+    const terrain = new Konva.Group();
+    const view = new GridView(map, () => true, terrain);
+    const order = view.group.getChildren();
+    const terrainAt = order.indexOf(terrain);
+    expect(terrainAt).toBeGreaterThan(0); // above the scenery rectangle
+    // everything after it is the grid lines and the hover tint
+    expect(order).toHaveLength(terrainAt + 3);
+  });
+
+  it("still shows the grid lines only while a tower is being placed", () => {
+    const view = new GridView(map, () => true, new Konva.Group());
+    const gridLines = lines(view).filter((line) => line.stroke() === "white");
+    expect(gridLines).toHaveLength(map.cols + 1 + map.rows + 1);
+    expect(gridLines[0].isVisible()).toBe(false);
+    view.showGrid(true);
+    expect(gridLines[0].isVisible()).toBe(true);
+  });
+
+  it("draws the plain colored look when the terrain is null", () => {
+    const view = new GridView(map, () => true, null);
+    expect(view.group.find(".decoration").length).toBeGreaterThan(0);
+    expect(lines(view).some((line) => line.stroke() === map.colors.path)).toBe(true);
+  });
+});
