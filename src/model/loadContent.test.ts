@@ -108,7 +108,7 @@ describe("loadMap", () => {
 
 describe("loadMap with a tileset", () => {
   // The road runs along row 1, so every piece on it is a straight one running east and west
-  const art = ["#...", "----", "...#"];
+  const art = ["#...", "....", "...#"];
 
   it("accepts a map that names a tileset and leaves the art to be worked out", () => {
     expect(loadMap({ ...validMap(), tileset: "meadow" }).tileset).toBe("meadow");

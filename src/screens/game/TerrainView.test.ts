@@ -4,6 +4,7 @@ import "vitest-canvas-mock";
 import { describe, expect, it } from "vitest";
 import { MAPS, TILESETS } from "../../model/loadContent";
 import { loadTileset, parseArt, parseRoad, type TileSprite } from "../../model/TileArt";
+import type { MapConfig } from "../../model/types";
 import { TILE } from "./GameScreenView";
 import { buildTerrain, createTerrain } from "./TerrainView";
 import { registerTilesetImage } from "./tilesetImages";
@@ -73,36 +74,68 @@ describe("buildTerrain", () => {
   });
 });
 
-describe("createTerrain", () => {
-  const meadow = TILESETS.find((tileset) => tileset.id === "meadow")!;
-  const map1 = MAPS.find((map) => map.id === "map1")!;
+// A small map and a tileset with a ready-made road piece, so these tests do not depend on how any
+// real tileset draws its road. The road runs along row 1.
+const plain = loadTileset({
+  id: "plain-test",
+  sheet: "plain-test.png",
+  cellSize: 256,
+  inset: 1,
+  legend: {
+    "#": {
+      kind: "buildable",
+      cells: [
+        [0, 0],
+        [1, 0],
+      ],
+    },
+    ".": { kind: "blocked", cells: [[0, 1]] },
+    "-": { kind: "path", connects: ["E", "W"], cells: [[1, 1]] },
+  },
+});
+TILESETS.push(plain);
+const plainMap: MapConfig = {
+  ...MAPS.find((map) => map.id === "map1")!,
+  id: "plain-map",
+  cols: 4,
+  rows: 3,
+  tiles: ["#...", "PPPP", "...#"],
+  path: [
+    { x: 0, y: 1 },
+    { x: 3, y: 1 },
+  ],
+  tileset: "plain-test",
+  art: undefined,
+};
 
+describe("createTerrain", () => {
   it("returns null for a map without a tileset", () => {
-    expect(createTerrain({ ...map1, tileset: undefined, art: undefined })).toBeNull();
+    expect(createTerrain({ ...plainMap, tileset: undefined })).toBeNull();
   });
 
   it("returns null when the sheet has not loaded, so the plain look is used", () => {
-    expect(createTerrain({ ...map1, tileset: "never-loaded", art: undefined })).toBeNull();
+    expect(createTerrain({ ...plainMap, tileset: "never-loaded" })).toBeNull();
   });
 
   it("draws every tile of the map once the sheet has loaded", () => {
-    registerTilesetImage("meadow", sheet);
-    const terrain = createTerrain(map1)!;
-    expect(terrain.find("Image")).toHaveLength(map1.cols * map1.rows);
+    registerTilesetImage("plain-test", sheet);
+    const terrain = createTerrain(plainMap)!;
+    expect(terrain.find("Image")).toHaveLength(plainMap.cols * plainMap.rows);
   });
 
   it("cuts each picture out of the cell the map's art names, inset as the tileset says", () => {
-    registerTilesetImage("meadow", sheet);
-    const sprites = parseArt(map1, meadow);
-    const inset = meadow.inset ?? 0;
-    const images = createTerrain(map1)!.find<Konva.Image>("Image");
+    registerTilesetImage("plain-test", sheet);
+    const sprites = parseArt(plainMap, plain);
+    const inset = plain.inset ?? 0;
+    const images = createTerrain(plainMap)!.find<Konva.Image>("Image");
 
+    expect(images).toHaveLength(sprites.length);
     images.forEach((image, i) => {
       expect(image.crop()).toEqual({
-        x: sprites[i].col * meadow.cellSize + inset,
-        y: sprites[i].row * meadow.cellSize + inset,
-        width: meadow.cellSize - 2 * inset,
-        height: meadow.cellSize - 2 * inset,
+        x: sprites[i].col * plain.cellSize + inset,
+        y: sprites[i].row * plain.cellSize + inset,
+        width: plain.cellSize - 2 * inset,
+        height: plain.cellSize - 2 * inset,
       });
     });
   });
@@ -168,8 +201,8 @@ describe("createTerrain with a road overlay", () => {
   });
 
   it("has no extra group for a tileset without a road", () => {
-    registerTilesetImage("meadow", sheet);
-    const terrain = createTerrain({ ...map1, art: undefined })!;
+    registerTilesetImage("plain-test", sheet);
+    const terrain = createTerrain(plainMap)!;
     expect(terrain.getChildren().every((child) => child instanceof Konva.Image)).toBe(true);
   });
 });
