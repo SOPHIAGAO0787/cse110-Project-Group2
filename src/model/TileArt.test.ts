@@ -1,7 +1,15 @@
 /// <reference types="vite/client" />
 import { describe, expect, it } from "vitest";
 import { MAPS, TILESETS } from "./loadContent";
-import { checkArt, defaultArt, loadTileset, parseArt, roadSides, type Tileset } from "./TileArt";
+import {
+  checkArt,
+  defaultArt,
+  loadTileset,
+  parseArt,
+  parseRoad,
+  roadSides,
+  type Tileset,
+} from "./TileArt";
 import type { MapConfig } from "./types";
 
 // A small tileset with every kind of piece. Cells are only labels here, nothing is drawn.
@@ -356,6 +364,243 @@ describe("parseArt", () => {
   });
 });
 
+describe("a tileset that draws its road as an overlay", () => {
+  // Ground and the two road cells, with no road pieces in the legend. The road cells sit in row 2.
+  function overlay(): Tileset {
+    return {
+      id: "overlay",
+      sheet: "overlay.png",
+      cellSize: 64,
+      legend: {
+        "#": { kind: "buildable", cells: [[0, 0]] },
+        ".": { kind: "blocked", cells: [[1, 0]] },
+        "~": { kind: "blocked", cells: [[2, 0]] },
+      },
+      road: {
+        straight: [[0, 2]],
+        corner: [[1, 2]],
+      },
+    };
+  }
+
+  describe("loadTileset", () => {
+    it("accepts a road with straight and corner cells", () => {
+      const set = overlay();
+      expect(loadTileset(set)).toBe(set);
+      expect(() =>
+        loadTileset({ ...overlay(), road: { ...overlay().road, ground: "~" } }),
+      ).not.toThrow();
+    });
+
+    it("rejects a road without straight or corner cells", () => {
+      for (const shape of ["straight", "corner"]) {
+        for (const cells of [[], undefined]) {
+          const road = { ...overlay().road, [shape]: cells };
+          expect(() => loadTileset({ ...overlay(), road })).toThrow(
+            new RegExp(`at least one ${shape} cell`),
+          );
+        }
+      }
+    });
+
+    it("rejects a bad road cell", () => {
+      for (const cells of [[[0]], [[-1, 2]], [[0.5, 2]], [["a", 2]]]) {
+        const road = { ...overlay().road, straight: cells };
+        expect(() => loadTileset({ ...overlay(), road })).toThrow(/road straight has a bad cell/);
+      }
+    });
+
+    it("rejects a ground that is not in the legend or is a road piece", () => {
+      const road = { ...overlay().road, ground: "x" };
+      expect(() => loadTileset({ ...overlay(), road })).toThrow(/ground "x" is not in the legend/);
+
+      const set = overlay();
+      set.legend["-"] = { kind: "path", connects: ["E", "W"], cells: [[3, 0]] };
+      expect(() => loadTileset({ ...set, road: { ...set.road, ground: "-" } })).toThrow(
+        /must be ground, not a road piece/,
+      );
+    });
+  });
+
+  describe("parseRoad", () => {
+    // The sample map's road, tile by tile:  EW EW SW / . . NS / . . EN EW EW  (see map())
+    it("makes one piece for every tile the enemies cross, in route order", () => {
+      const pieces = parseRoad(map(), overlay());
+      expect(pieces.map((p) => `${p.x},${p.y}`)).toEqual([
+        "0,0",
+        "1,0",
+        "2,0",
+        "2,1",
+        "2,2",
+        "3,2",
+        "4,2",
+      ]);
+    });
+
+    it("uses the straight cell for straight road, turned a quarter for east to west", () => {
+      const pieces = parseRoad(map(), overlay());
+      expect(pieces[3]).toMatchObject({ x: 2, y: 1, col: 0, row: 2, rotation: 0 }); // north to south
+      expect(pieces[0]).toMatchObject({ x: 0, y: 0, col: 0, row: 2, rotation: 90 }); // east to west
+      expect(pieces[6]).toMatchObject({ x: 4, y: 2, col: 0, row: 2, rotation: 90 });
+    });
+
+    it("turns the corner cell (north and east) to fit all four corners", () => {
+      const corner = (path: { x: number; y: number }[], x: number, y: number) =>
+        parseRoad(map({ path }), overlay()).find((p) => p.x === x && p.y === y);
+
+      // coming from the west, leaving to the south: west and south
+      expect(
+        corner(
+          [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+          ],
+          2,
+          0,
+        ),
+      ).toMatchObject({ col: 1, row: 2, rotation: 180 });
+      // coming from the north, leaving to the east: north and east
+      expect(
+        corner(
+          [
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+            { x: 4, y: 2 },
+          ],
+          2,
+          2,
+        ),
+      ).toMatchObject({ col: 1, row: 2, rotation: 0 });
+      // coming from the east, leaving to the south: east and south
+      expect(
+        corner(
+          [
+            { x: 4, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 2 },
+          ],
+          2,
+          0,
+        ),
+      ).toMatchObject({ col: 1, row: 2, rotation: 90 });
+      // coming from the west, leaving to the north: west and north
+      expect(
+        corner(
+          [
+            { x: 0, y: 2 },
+            { x: 2, y: 2 },
+            { x: 2, y: 0 },
+          ],
+          2,
+          2,
+        ),
+      ).toMatchObject({ col: 1, row: 2, rotation: 270 });
+    });
+
+    it("picks the same cell for the same tile every time when there are several", () => {
+      const set = overlay();
+      set.road!.straight = [
+        [0, 2],
+        [2, 2],
+        [3, 2],
+      ];
+      const wide = map({
+        cols: 16,
+        rows: 1,
+        tiles: ["P".repeat(16)],
+        path: [
+          { x: 0, y: 0 },
+          { x: 15, y: 0 },
+        ],
+      });
+      const pieces = parseRoad(wide, set);
+      expect(parseRoad(wide, set)).toEqual(pieces);
+      expect(new Set(pieces.map((p) => p.col))).toEqual(new Set([0, 2, 3]));
+    });
+
+    it("makes nothing for a tileset without a road", () => {
+      expect(parseRoad(map(), tileset())).toEqual([]);
+    });
+
+    it("throws where the route crosses itself, since there is no piece for four sides", () => {
+      const loop = map({
+        path: [
+          { x: 0, y: 1 },
+          { x: 2, y: 1 },
+          { x: 2, y: 2 },
+          { x: 1, y: 2 },
+          { x: 1, y: 0 },
+        ],
+      });
+      expect(() => parseRoad(loop, overlay())).toThrow(
+        /\(1, 1\) opens onto ENSW, but an overlay road only has straight and corner pieces/,
+      );
+    });
+  });
+
+  describe("art", () => {
+    it("works out the ground under the road from the first blocked entry", () => {
+      expect(defaultArt(map(), overlay())).toEqual([".....", "...#.", "....."]);
+    });
+
+    it("uses the road's own ground when it names one", () => {
+      const set = overlay();
+      set.road!.ground = "~";
+      expect(defaultArt(map(), set)[0]).toBe("~~~..");
+    });
+
+    it("needs a blocked tile to show under the road", () => {
+      const set = overlay();
+      delete set.legend["."];
+      delete set.legend["~"];
+      expect(() => defaultArt(map(), set)).toThrow(/needs a blocked tile/);
+    });
+
+    it("accepts art that names the ground under the road", () => {
+      expect(() => checkArt(map({ art: ["~~~..", "..~#.", "..~~~"] }), overlay())).not.toThrow();
+    });
+
+    it("accepts any ground under the road, even a buildable picture", () => {
+      expect(() => checkArt(map({ art: ["###..", "..##.", "..###"] }), overlay())).not.toThrow();
+    });
+
+    it("rejects a road piece under the road, since the overlay draws the road", () => {
+      const set = overlay();
+      set.legend["-"] = { kind: "path", connects: ["E", "W"], cells: [[3, 0]] };
+      expect(() => checkArt(map({ art: ["--~..", "..~#.", "..~~~"] }), set)).toThrow(
+        /'-' at \(0, 0\) is a road piece, but "overlay" draws its road from road cells/,
+      );
+    });
+
+    it("still checks the other tiles against their pictures", () => {
+      expect(() => checkArt(map({ art: ["~~~..", "..~..", "..~~~"] }), overlay())).toThrow(
+        /'\.' at \(3, 1\) is a blocked picture on a buildable tile/,
+      );
+    });
+
+    it("still rejects a route the overlay has no piece for", () => {
+      const loop = map({
+        path: [
+          { x: 0, y: 1 },
+          { x: 2, y: 1 },
+          { x: 2, y: 2 },
+          { x: 1, y: 2 },
+          { x: 1, y: 0 },
+        ],
+      });
+      expect(() => checkArt(loop, overlay())).toThrow(/overlay road only has straight and corner/);
+    });
+
+    it("draws the ground under the road in parseArt and leaves the road to parseRoad", () => {
+      const sprites = parseArt(map(), overlay());
+      expect(sprites).toHaveLength(15);
+      // (0, 0) is a road tile: the blocked ground cell, not a road cell
+      expect(sprites[0]).toMatchObject({ x: 0, y: 0, col: 1, row: 0, rotation: 0 });
+    });
+  });
+});
+
 describe("the real maps", () => {
   it("draws every map that has a tileset with art that fits its tiles", () => {
     for (const m of MAPS) {
@@ -404,10 +649,19 @@ describe("the tileset sheets", () => {
   it("keeps every legend cell inside its sheet", () => {
     for (const set of TILESETS) {
       const { width, height } = sheetSize(set.sheet);
-      for (const [name, def] of Object.entries(set.legend)) {
-        for (const [col, row] of def.cells) {
+      const named = Object.entries(set.legend).map(
+        ([name, def]) => [`'${name}'`, def.cells] as const,
+      );
+      const road = set.road
+        ? ([
+            ["road straight", set.road.straight],
+            ["road corner", set.road.corner],
+          ] as const)
+        : [];
+      for (const [name, cells] of [...named, ...road]) {
+        for (const [col, row] of cells) {
           const inside = (col + 1) * set.cellSize <= width && (row + 1) * set.cellSize <= height;
-          expect(inside, `${set.id} '${name}' cell [${col}, ${row}] is off the sheet`).toBe(true);
+          expect(inside, `${set.id} ${name} cell [${col}, ${row}] is off the sheet`).toBe(true);
         }
       }
     }

@@ -23,6 +23,16 @@ export interface TileArtDef {
   rotation?: Rotation; // turns the cell clockwise, so one drawing can serve a second corner
 }
 
+// A road drawn over the ground, from cells on the same sheet. The cells are transparent, so the
+// ground shows through, and the road follows the enemy route by itself: a map's art then only
+// names the ground under it. Draw `straight` running up and down (joining N and S) and `corner`
+// joining N and E; the code turns them for every other direction.
+export interface RoadArt {
+  ground?: string; // legend name drawn under the road. Left out, the first blocked entry is used
+  straight: [number, number][];
+  corner: [number, number][];
+}
+
 export interface Tileset {
   id: string;
   sheet: string; // file name inside public/tilesets/
@@ -32,6 +42,8 @@ export interface Tileset {
   // show up as thin lines between tiles. Re-export with the art running past the cell edge,
   // then this can go.
   inset?: number;
+  // Draws the road as an overlay instead of with `path` pieces from the legend. Optional.
+  road?: RoadArt;
   // Characters are kept in the order written. The first entry of a kind is what a tile of
   // that kind gets when the map's art does not say otherwise.
   legend: Record<string, TileArtDef>;
@@ -50,6 +62,17 @@ const KINDS: TileKind[] = ["blocked", "buildable", "path"];
 const SIDES: Side[] = ["N", "E", "S", "W"];
 const ROTATIONS: Rotation[] = [0, 90, 180, 270];
 const TILE_CHARACTER: Record<string, TileKind> = { ".": "blocked", "#": "buildable", P: "path" };
+
+// Every cell is [column, row], two whole numbers from 0
+function checkCells(id: string, label: string, cells: unknown[]): void {
+  for (const cell of cells) {
+    const ok =
+      Array.isArray(cell) && cell.length === 2 && cell.every((n) => Number.isInteger(n) && n >= 0);
+    if (!ok) {
+      throw new Error(`${id}: ${label} has a bad cell, expected [column, row]`);
+    }
+  }
+}
 
 // Checks a tileset file and returns it typed. Mistakes fail loudly in the tests,
 // instead of showing up as a wrong picture in the game.
@@ -83,15 +106,7 @@ export function loadTileset(data: unknown): Tileset {
     if (!Array.isArray(def.cells) || def.cells.length === 0) {
       throw new Error(`${id}: "${character}" needs at least one cell`);
     }
-    for (const cell of def.cells) {
-      const ok =
-        Array.isArray(cell) &&
-        cell.length === 2 &&
-        cell.every((n) => Number.isInteger(n) && n >= 0);
-      if (!ok) {
-        throw new Error(`${id}: "${character}" has a bad cell, expected [column, row]`);
-      }
-    }
+    checkCells(id, `"${character}"`, def.cells);
     if (def.rotation !== undefined && !ROTATIONS.includes(def.rotation)) {
       throw new Error(`${id}: "${character}" rotation must be 0, 90, 180 or 270`);
     }
@@ -106,7 +121,31 @@ export function loadTileset(data: unknown): Tileset {
       throw new Error(`${id}: only road pieces have connects ("${character}")`);
     }
   }
+  if (tileset.road !== undefined) {
+    checkRoad(tileset);
+  }
   return tileset;
+}
+
+function checkRoad(tileset: Tileset): void {
+  const { id, legend } = tileset;
+  const road = tileset.road as RoadArt;
+  for (const shape of ["straight", "corner"] as const) {
+    const cells = road[shape];
+    if (!Array.isArray(cells) || cells.length === 0) {
+      throw new Error(`${id}: road needs at least one ${shape} cell`);
+    }
+    checkCells(id, `road ${shape}`, cells);
+  }
+  if (road.ground !== undefined) {
+    const def = legend[road.ground];
+    if (def === undefined) {
+      throw new Error(`${id}: road ground "${road.ground}" is not in the legend`);
+    }
+    if (def.kind === "path") {
+      throw new Error(`${id}: road ground "${road.ground}" must be ground, not a road piece`);
+    }
+  }
 }
 
 const STEP: Record<Side, Vec> = {
@@ -165,6 +204,16 @@ function sameSides(a: Iterable<Side>, b: Iterable<Side>): boolean {
   return left === right;
 }
 
+// The ground that shows under an overlay road: the road's own `ground`, else the first blocked entry.
+function roadGround(tileset: Tileset): string {
+  if (tileset.road?.ground !== undefined) return tileset.road.ground;
+  const found = Object.entries(tileset.legend).find(([, def]) => def.kind === "blocked");
+  if (found === undefined) {
+    throw new Error(`${tileset.id}: a road overlay needs a blocked tile to show under it`);
+  }
+  return found[0];
+}
+
 // The art for a map that doesn't have its own: ground everywhere and road pieces that follow
 // the route. It is also a good grid to start from when drawing a map by hand.
 export function defaultArt(map: MapConfig, tileset: Tileset): string[] {
@@ -186,6 +235,7 @@ export function defaultArt(map: MapConfig, tileset: Tileset): string[] {
             `${map.id}: (${x}, ${y}) is a 'P' tile but the enemy route never crosses it`,
           );
         }
+        if (tileset.road !== undefined) return roadGround(tileset);
         const piece = entries.find(
           ([, def]) => def.kind === "path" && sameSides(def.connects ?? [], open),
         );
@@ -203,6 +253,8 @@ export function defaultArt(map: MapConfig, tileset: Tileset): string[] {
 // Checks a map's art against its tileset and its tiles. Called when the map is loaded.
 // A map without art is checked by working its art out, which fails if the tileset lacks a piece.
 export function checkArt(map: MapConfig, tileset: Tileset): void {
+  // An overlay road has to fit the route too: only straight and corner pieces exist
+  parseRoad(map, tileset);
   if (map.art === undefined) {
     defaultArt(map, tileset);
     return;
@@ -226,6 +278,15 @@ export function checkArt(map: MapConfig, tileset: Tileset): void {
         );
       }
       const expected = TILE_CHARACTER[map.tiles[y][x]];
+      if (tileset.road !== undefined && expected === "path") {
+        // The road is drawn over this tile, so its art names the ground that shows under it
+        if (def.kind === "path") {
+          throw new Error(
+            `${map.id}: art '${name}' at (${x}, ${y}) is a road piece, but "${tileset.id}" draws its road from road cells: name the ground under it`,
+          );
+        }
+        continue;
+      }
       if (def.kind !== expected) {
         throw new Error(
           `${map.id}: art '${name}' at (${x}, ${y}) is a ${def.kind} picture on a ${expected} tile`,
@@ -258,6 +319,39 @@ export function parseArt(map: MapConfig, tileset: Tileset): TileSprite[] {
       const [col, row] = def.cells[variantFor(x, y, def.cells.length)];
       sprites.push({ x, y, col, row, rotation: def.rotation ?? 0 });
     }
+  }
+  return sprites;
+}
+
+// Which cell list and how far to turn it, by the sides a road tile opens onto (sorted letters).
+// Straight cells run N to S and corner cells join N and E; a quarter turn clockwise moves
+// every side one step round (N to E, E to S, S to W, W to N).
+const STRAIGHT_TURN: Record<string, Rotation> = { NS: 0, EW: 90 };
+const CORNER_TURN: Record<string, Rotation> = { EN: 0, ES: 90, SW: 180, NW: 270 };
+
+// The road pieces to draw over the ground, one per tile the enemies cross, in route order.
+// Empty for a tileset without a `road`.
+export function parseRoad(map: MapConfig, tileset: Tileset): TileSprite[] {
+  const road = tileset.road;
+  if (road === undefined) return [];
+
+  const sprites: TileSprite[] = [];
+  for (const [key, open] of roadSides(map)) {
+    const [x, y] = key.split(",").map(Number);
+    const shape = [...open].sort().join("");
+    const [cells, rotation] =
+      shape in STRAIGHT_TURN
+        ? [road.straight, STRAIGHT_TURN[shape]]
+        : shape in CORNER_TURN
+          ? [road.corner, CORNER_TURN[shape]]
+          : [undefined, 0 as Rotation];
+    if (cells === undefined) {
+      throw new Error(
+        `${map.id}: the road at (${x}, ${y}) opens onto ${shape}, but an overlay road only has straight and corner pieces`,
+      );
+    }
+    const [col, row] = cells[variantFor(x, y, cells.length)];
+    sprites.push({ x, y, col, row, rotation });
   }
   return sprites;
 }
