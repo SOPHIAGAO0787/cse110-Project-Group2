@@ -41,7 +41,6 @@ export class TowerShopScreen implements Screen {
     this.view.resize(width, height);
   }
 
-  //refresh the page
   private refresh(): void {
     this.view.render({
       towers: SHOP_TOWERS,
@@ -55,7 +54,6 @@ export class TowerShopScreen implements Screen {
     const tower = SHOP_TOWERS.find((item) => item.def.id === this.selectedId);
     if (!tower) return;
 
-    //get the level, check locked or not, get cur level
     // -1 = locked; 0 = level 1; 1 = level 2.
     const levelIndex = this.progress.maxLevels.get(tower.def.id) ?? -1;
     const locked = levelIndex < 0;

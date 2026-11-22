@@ -1,4 +1,4 @@
-// So1: everything the result screen shows about a finished game.
+// Everything the result screen shows about a finished game.
 export interface GameResult {
   won: boolean;
   stars: number; // 0 on defeat, 1–3 on victory

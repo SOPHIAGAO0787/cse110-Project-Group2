@@ -1,7 +1,7 @@
 import type { TowerConfig, Vec } from "./types";
 
 type PlacementState =
-  //StateMachine tracking what process of placement user is in
+  // Which step of placing a tower the player is on
   | { kind: "idle" } // nothing being placed
   | { kind: "dragging"; pos: Vec } // ghost following the pointer
   | { kind: "placed"; pos: Vec } // ghost dropped, waiting to confirm

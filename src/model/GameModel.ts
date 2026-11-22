@@ -31,7 +31,7 @@ export class GameModel {
   private nextId = 1; // every enemy gets its own number, so events can say which one
   private nextTowerId = 1; // every tower gets its own id
 
-  // So1: stats for the result screen
+  // Stats for the result screen
   elapsedSeconds = 0;
   private towersPlaced = 0;
   private questionsSolved = 0;
@@ -60,24 +60,24 @@ export class GameModel {
     if (this.isOver) return; // the game is frozen once it ends
     if (Number.isFinite(dt) && dt > 0) this.elapsedSeconds += dt;
 
-    // 1. Spawn the enemies the wave manager asks for (N1)
+    // 1. Spawn the enemies the wave manager asks for
     for (const defId of this.waves.tick(dt)) {
       this.spawnEnemy(defId);
     }
 
-    // 2. Move enemies along the path (R1)
+    // 2. Move enemies along the path
     for (const enemy of this.enemies) {
       enemy.update(dt);
     }
 
-    // 3. Towers shoot enemies in range (R3)
+    // 3. Towers shoot enemies in range
     for (const tower of this.towers) {
       if (tower.update(dt, this.enemies) > 0) {
         this.events.emit("towerFired", { towerId: tower.id });
       }
     }
 
-    // 4. R2: Remove dead enemies and enemies that reached the end.
+    // 4. Remove dead enemies and enemies that reached the end.
     const remainingEnemies: Enemy[] = [];
     for (const enemy of this.enemies) {
       if (enemy.isDead()) {
@@ -101,7 +101,7 @@ export class GameModel {
 
     this.enemies = remainingEnemies;
 
-    // 5. So1: end the game. Defeat is checked first, so losing the last life on the
+    // 5. End the game. Defeat is checked first, so losing the last life on the
     //    same step the last wave clears is still a defeat.
     if (this.lives.remaining <= 0) {
       this.finish(false);

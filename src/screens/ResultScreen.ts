@@ -9,7 +9,7 @@ import { FONT, LOSE_TEXT, MUTED_TEXT, STAR_COLOR, TITLE_TEXT, WIN_TEXT } from ".
 const BUTTON_WIDTH = 240;
 const BUTTON_GAP = 24; // space between the two buttons
 
-// So1: shown when the game ends: victory or defeat, a star rating, and the game's stats.
+// Shown when the game ends: victory or defeat, a star rating, and the game's stats.
 // Everything is centered in the page's card.
 export class ResultScreen implements Screen {
   group: Konva.Group;
