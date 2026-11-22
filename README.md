@@ -6,7 +6,7 @@ A tower defense game where you answer geometry questions to build your defenses.
 
 ## Features
 
-- **Four maps** (Circle Grove, Angle Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
+- **Four maps** (Circle Grove, s Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
 - **Three towers, three shapes.** The circle tower hits everything in its circle. The triangle and square towers are aimed by the player.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
 - **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.

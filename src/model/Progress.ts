@@ -27,7 +27,6 @@ export class Progress {
 
   // The first map is always open. Every other map opens once the map before it is won.
   isUnlocked(mapId: string): boolean {
-    return true;
     const index = this.indexOf(mapId);
     if (index === 0) {
       return true;
