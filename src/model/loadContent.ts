@@ -123,7 +123,12 @@ export function checkQuestions(pools: Record<string, QuestionEntry[]>): void {
 checkQuestions(QUESTION_POOLS);
 
 // Every picture sheet a map can be drawn with.
-export const TILESETS: Tileset[] = [loadTileset(meadow), loadTileset(archipelago),loadTileset(canyon),loadTileset(peak)];
+export const TILESETS: Tileset[] = [
+  loadTileset(meadow),
+  loadTileset(archipelago),
+  loadTileset(canyon),
+  loadTileset(peak),
+];
 
 // Returns the tileset with this id. Throws if there is none, so a typo in a map file fails loudly.
 export function findTileset(id: string): Tileset {

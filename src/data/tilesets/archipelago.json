@@ -21,7 +21,6 @@
     "e": { "kind": "buildable", "cells": [[4, 0]] },
     "f": { "kind": "buildable", "cells": [[5, 0]] },
     ".": { "kind": "blocked", "cells": [[0, 1]] }
-
   },
   "road": {
     "straight": [[4, 3]],
