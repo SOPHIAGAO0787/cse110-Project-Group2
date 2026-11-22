@@ -5,7 +5,7 @@
     "description": "Hits enemies inside a circle around it.",
     "cost": 50,
     "damage": 5,
-    "fireRatePerSec": 100,
+    "fireRatePerSec": 1,
     "attack": "all",
     "range": { "kind": "circle", "radius": 2.5 }
   },
