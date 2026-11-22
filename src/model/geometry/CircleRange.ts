@@ -1,7 +1,6 @@
 import type { RangeShape, Vec } from "../types";
 
-// A circular attack range. Example of the RangeShape pattern:
-// the triangle and rectangle towers will be new classes with their own contains().
+// A circular attack range: everything within `radius` of the center.
 export class CircleRange implements RangeShape {
   center: Vec;
   radius: number;

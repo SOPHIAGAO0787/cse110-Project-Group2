@@ -2,14 +2,14 @@
 export interface GameResult {
   won: boolean;
   stars: number; // 0 on defeat, 1–3 on victory
-  elapsedSeconds: number; // time the game ran; paused while a question is open
+  elapsedSeconds: number; // time the game ran; paused while the settings are open
   towersPlaced: number;
   remainingLives: number;
   finalCoins: number;
   questionsSolved: number; // tower questions answered correctly
   enemiesDefeated: number;
   coinsEarned: number; // kill rewards earned this run, before spending
-  score: number; // proposed rule: 100 points per enemy defeated
+  score: number; // 100 points per enemy defeated
 }
 
 export const MAX_STARS = 3;
