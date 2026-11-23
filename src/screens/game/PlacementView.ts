@@ -196,7 +196,7 @@ export class PlacementView {
 
   // Shows the confirm and cancel squares at the corner of the dropped tower.
   showPrompt(tile: Vec): void {
-    let left = (tile.x) * TILE; // just right of the tile, below its bottom edge
+    let left = tile.x * TILE; // just right of the tile, below its bottom edge
     let top = (tile.y + 1) * TILE;
     if (this.bounds) {
       if (left + PROMPT_WIDTH > this.bounds.cols * TILE) left = tile.x * TILE - PROMPT_WIDTH;
