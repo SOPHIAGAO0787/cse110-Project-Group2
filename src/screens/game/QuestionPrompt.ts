@@ -1,13 +1,12 @@
 import Konva from "konva";
 import type { Question, Vec } from "../../model/types";
 import type { QuestionService } from "../../model/questions/QuestionService";
-import { makeButton, makeClickable, setHoverCursor } from "../button";
+import { BUTTON_HEIGHT, makeButton, makeClickable, setHoverCursor } from "../button";
 
 const PANEL_W = 320;
 const PAD = 16; // space around the edges of the panel
 const SECTION_GAP = 12; // space between the question and the input box
 const INPUT_H = 40;
-const BUTTON_H = 48; // same as BUTTON_HEIGHT in button.ts
 const MIN_FEEDBACK_H = 34; // room for two lines of feedback
 const SYMBOLS = ["π", "√", "⌫", "C"];
 const SYMBOL_W = 40;
@@ -163,7 +162,7 @@ export class QuestionPrompt {
     this.submitButton.y(buttonsY);
     this.continueButton.y(buttonsY);
 
-    this.panelH = buttonsY + BUTTON_H + PAD;
+    this.panelH = buttonsY + BUTTON_HEIGHT + PAD;
     this.panel.height(this.panelH);
   }
 

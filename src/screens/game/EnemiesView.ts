@@ -3,7 +3,7 @@ import type { Enemy } from "../../model/Enemy";
 import { TILE } from "./GameScreenView";
 
 // Draws enemies and syncs their positions with the model
-//Movement logic is handled by src/model/Enemy.ts
+// Movement logic is handled by src/model/Enemy.ts
 
 export class EnemiesView {
   group = new Konva.Group();
@@ -21,7 +21,6 @@ export class EnemiesView {
 
       let circle = this.shapes.get(enemy.id);
 
-      // Create a visual representation for new enemies.
       if (!circle) {
         circle = new Konva.Circle({
           radius: TILE * 0.3,

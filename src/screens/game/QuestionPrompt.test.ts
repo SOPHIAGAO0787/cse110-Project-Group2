@@ -8,10 +8,13 @@ import type { Question } from "../../model/types";
 
 // Capture the button callbacks so tests can "click" Submit and Continue.
 // makeClickable and setHoverCursor are replaced with copies of the real behavior.
+// The rest of the module, like BUTTON_HEIGHT, stays real.
 const handlers = vi.hoisted(() => ({}) as Record<string, () => void>);
-vi.mock("../button", async () => {
+vi.mock("../button", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../button")>();
   const Konva = (await import("konva")).default;
   return {
+    ...original,
     makeButton: (label: string, onClick: () => void) => {
       handlers[label] = onClick;
       return new Konva.Group();

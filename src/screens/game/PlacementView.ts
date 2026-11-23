@@ -57,7 +57,7 @@ function makeGhost(def: TowerDef): Konva.Shape {
 
 export class PlacementView {
   group = new Konva.Group({ listening: false }); // so GridView's hover still gets the mouse
-  // temporary stand-in for a shop card icon; goes in shopGroup (unscaled)
+  // the picture on the tower's shop card; goes in shopGroup (unscaled)
   menuIcon: Konva.Shape;
 
   // the tower's own shape, see-through, blue where it can go and red where it can't

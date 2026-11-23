@@ -4,9 +4,16 @@ import { BUTTON_FILL, BUTTON_SHADOW, FONT } from "./theme";
 // Every button is this tall. Exported so a screen can line other things up with its buttons.
 export const BUTTON_HEIGHT = 48;
 
+// The width of a button when no width is given
+export const DEFAULT_BUTTON_WIDTH = 200;
+
 // A clickable rectangle with a label. Konva has no built-in buttons, so we make our own.
-// Most buttons are 200 wide; pass a width for a smaller or larger one.
-export function makeButton(label: string, onClick: () => void, width = 200): Konva.Group {
+// Pass a width for a button that is not DEFAULT_BUTTON_WIDTH wide.
+export function makeButton(
+  label: string,
+  onClick: () => void,
+  width = DEFAULT_BUTTON_WIDTH,
+): Konva.Group {
   const button = new Konva.Group();
   const background = new Konva.Rect({
     width: width,

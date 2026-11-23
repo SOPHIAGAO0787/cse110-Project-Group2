@@ -6,12 +6,12 @@ import type { Facing, Vec } from "../types";
 // stretching away in the facing direction. `width` runs across that direction, `depth` along it.
 
 // Every side of the block must be at least this long (no 1-wide strips).
-export const MIN_SIDE = 2;
+const MIN_SIDE = 2;
 
 // Pointer distance from the tower (in tiles) where the pointer starts picking bigger blocks,
 // and how many more tiles it takes to reach the next block in the list.
 export const RECT_NEAR_DISTANCE = 1;
-export const RECT_STEP_DISTANCE = 1;
+const RECT_STEP_DISTANCE = 1;
 
 export interface RectSize {
   width: number;
