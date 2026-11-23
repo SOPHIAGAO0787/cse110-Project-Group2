@@ -60,9 +60,16 @@ export class TowerShopView {
     this.content.destroyChildren();
     this.content.add(new Konva.Rect({ width: WIDTH, height: HEIGHT, fill: PAGE }));
     this.content.add(new Konva.Rect({ width: WIDTH, height: 88, fill: HEADER_BACKGROUND }));
-    this.text(this.content, "Geometry game", 40, 27, 28, 360, "white", true);
-    this.button(this.content, "←  Main menu", 716, 25, 154, 38, this.callbacks.onBack, "#638ce4");
-    this.text(this.content, "Tower Shop", 897, 34, 15, 170, "white", true);
+    this.text(this.content, "Geometry game", 40, 27, 28, 250, "white", true);
+    this.content.add(
+      new Konva.Line({
+        points: [305, 31, 305, 57],
+        stroke: "#ffffff66",
+        listening: false,
+      }),
+    );
+    this.text(this.content, "Tower Shop", 329, 34, 15, 170, "white", true);
+    this.button(this.content, "←  Main menu", 926, 25, 154, 38, this.callbacks.onBack, "#638ce4");
 
     this.text(this.content, "Choose a tower", 40, 117, 29, 650, INK, true);
     this.text(
@@ -87,7 +94,7 @@ export class TowerShopView {
     );
     this.text(this.content, `${state.coins} coins`, 954, 132, 17, 115, INK, true);
 
-    const order = ["rect", "sector", "circle"];
+    const order = ["circle", "sector", "rect"];
     const towers = [...state.towers].sort(
       (a, b) => order.indexOf(a.def.range.kind) - order.indexOf(b.def.range.kind),
     );
@@ -145,6 +152,40 @@ export class TowerShopView {
     );
     this.text(card, tower.def.name.toUpperCase(), 25, 20, 9, 103, "white", true);
     this.drawIcon(card, tower, color);
+    if (locked) {
+      card.add(
+        new Konva.Rect({
+          width: CARD_WIDTH,
+          height: 132,
+          fill: "#111827",
+          opacity: 0.65,
+          cornerRadius: [16, 16, 0, 0],
+          listening: false,
+          name: "locked-overlay",
+        }),
+        new Konva.Arc({
+          x: 165,
+          y: 65,
+          innerRadius: 10,
+          outerRadius: 13,
+          angle: 180,
+          rotation: 180,
+          fill: "white",
+          listening: false,
+        }),
+        new Konva.Rect({
+          x: 148,
+          y: 65,
+          width: 34,
+          height: 27,
+          fill: "white",
+          cornerRadius: 5,
+          listening: false,
+        }),
+        new Konva.Circle({ x: 165, y: 76, radius: 3, fill: "#3f485b", listening: false }),
+      );
+      this.text(card, "LOCKED", 115, 104, 12, 100, "white", true).align("center");
+    }
     this.text(card, tower.def.name, 20, 150, 24, 290, INK, true);
     this.text(
       card,
