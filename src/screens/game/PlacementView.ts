@@ -21,7 +21,7 @@ const OUTLINE = 2;
 const LOCKED_OUTLINE = 4;
 
 // The text above the square tower's block: its size and how fast it fires.
-const LABEL_SIZE = TILE * 0.4;
+const LABEL_SIZE = TILE * 0.2;
 const LABEL_GAP = 4;
 
 // A square with a white mark on it. Pressing it calls `onPress`.
