@@ -151,21 +151,21 @@
     },
     {
       "id": "hard-circle-diameter-t",
-      "template": "This tower covers an area of {area} tiles². What is its diameter?",
+      "template": "This tower covers an area of {areaOverPi}π tiles². What is its diameter?",
       "answer": "2 * radius",
       "hint": "Area = πr².",
       "relativeTolerance": 0.01
     },
     {
       "id": "hard-circle-circumference-t",
-      "template": "This tower covers an area of {area} tiles². What is its circumference?",
+      "template": "This tower covers an area of {areaOverPi}π tiles². What is its circumference?",
       "answer": "2 * pi * radius",
       "relativeTolerance": 0.01,
       "hint": "Area = πr². C = 2πr."
     },
     {
       "id": "hard-circle-area-t",
-      "template": "This tower's range has a circumference of {circumference} tiles. What is its area?",
+      "template": "This tower's range has a circumference of {circumferenceOverPi}π tiles. What is its area?",
       "answer": "pi * radius^2",
       "relativeTolerance": 0.01,
       "hint": "C = 2πr. Area = πr²."
@@ -202,7 +202,7 @@
     },
     {
       "id": "triangle-quarter",
-      "prompt": "A 90° cone covers what fraction of a full circle?",
+      "prompt": "A 90° sector covers what fraction of a full circle?",
       "answer": 0.25,
       "tolerance": 0.01,
       "hint": "How many degrees are in a full circle?"
@@ -216,56 +216,56 @@
     },
     {
       "id": "easy-triangle-area-t",
-      "template": "Your cone has a radius of {radius} tiles and an angle of {degrees}°. How much area does it cover?",
+      "template": "Your sector has a radius of {radius} tiles and an angle of {degrees}°. How much area does it cover?",
       "answer": "fraction * pi * radius^2",
       "relativeTolerance": 0.01,
       "hint": "Area = (angle ÷ degrees in a full circle) × πr²."
     },
     {
       "id": "easy-triangle-fraction-t",
-      "template": "Your cone has an angle of {degrees}°. What fraction of a full circle is that?",
+      "template": "Your sector has an angle of {degrees}°. What fraction of a full circle is that?",
       "answer": "degrees / 360",
       "tolerance": 0.01,
       "hint": "How many degrees are in a full circle?"
     },
     {
       "id": "easy-triangle-arc-t",
-      "template": "Your cone has a radius of {radius} tiles and an angle of {degrees}°. How long is its curved edge?",
+      "template": "Your sector has a radius of {radius} tiles and an angle of {degrees}°. How long is its curved edge?",
       "answer": "fraction * 2 * pi * radius",
       "relativeTolerance": 0.01,
       "hint": "Arc = (angle ÷ degrees in a full circle) × 2πr."
     },
     {
       "id": "hard1-triangle-radius-t",
-      "template": "Your cone has a curved edge of length {arc} tiles and an angle of {degrees}°. How long is its radius?",
+      "template": "Your sector has a curved edge of length {arcOverPi}π tiles and an angle of {degrees}°. How long is its radius? Round to the nearest thousandth.",
       "answer": "radius",
       "relativeTolerance": 0.01,
       "hint": "Arc = (angle ÷ degrees in a full circle) × 2πr."
     },
     {
       "id": "hard2-triangle-radius-t",
-      "template": "Your cone covers an area of {area} tiles² and has an angle of {degrees}°. How long is its radius?",
+      "template": "Your sector covers an area of {areaOverPi}π tiles² and has an angle of {degrees}°. How long is its radius? Round to the nearest thousandth.",
       "answer": "radius",
       "relativeTolerance": 0.01,
       "hint": "Area = (angle ÷ degrees in a full circle) × πr²."
     },
     {
       "id": "triangle-degrees-t",
-      "template": "Your cone is {fractionDecimal} of a full circle. What is the angle of the cone?",
+      "template": "Your sector is {fractionDecimal} of a full circle. What is the angle of the sector?",
       "answer": "degrees",
       "hint": "How many degrees are in a full circle?",
       "relativeTolerance": 0.01
     },
     {
       "id": "hard-triangle-area-t",
-      "template": "Your cone has a curved edge of length {arc} tiles and an angle of {degrees}°. How much area does it cover?",
+      "template": "Your sector has a curved edge of length {arcOverPi}π tiles and an angle of {degrees}°. How much area does it cover? Round to the nearest thousandth.",
       "answer": "fraction * pi * radius^2",
       "relativeTolerance": 0.01,
       "hint": "Arc = (angle ÷ degrees in a full circle) × 2πr. Area = (angle ÷ degrees in a full circle) × πr²."
     },
     {
       "id": "hard-triangle-arc-t",
-      "template": "Your cone covers an area of {area} tiles² and has an angle of {degrees}°. How long is its curved edge?",
+      "template": "Your sector covers an area of {areaOverPi}π tiles² and has an angle of {degrees}°. How long is its curved edge? Round to the nearest thousandth.",
       "answer": "fraction * 2 * pi * radius",
       "relativeTolerance": 0.01,
       "hint": "Area = (angle ÷ degrees in a full circle) × πr². Arc = (angle ÷ degrees in a full circle) × 2πr."

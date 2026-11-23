@@ -6,6 +6,12 @@ import type { Question, QuestionTemplate, TowerConfig, TowerDef } from "../types
 // How often a question comes from the general geometry group instead of the tower's own
 const GENERAL_SHARE = 0.3;
 
+// How many recent questions to skip, so the same one doesn't come back right away
+const RECENT_COUNT = 5;
+
+// A question plus a title for the popup, naming the pool it came from
+export type PickedQuestion = Question & { title: string };
+
 function fill(text: string, vars: Record<string, number>): string {
   return text.replace(/\{(\w+)\}/g, (_match, name: string) => String(vars[name]));
 }
@@ -140,7 +146,15 @@ function parseAnswer(input: string): number | null {
 
 // Picks a random geometry question and checks answers.
 export class QuestionService {
-  questionFor(tower: TowerDef, config: TowerConfig = defaultConfig(tower)): Question {
+  private recent: string[] = []; // ids of the last few questions asked, newest last
+
+  // Adds this id to the recent list, dropping the oldest once there are more than RECENT_COUNT
+  private remember(id: string): void {
+    this.recent.push(id);
+    if (this.recent.length > RECENT_COUNT) this.recent.shift();
+  }
+
+  questionFor(tower: TowerDef, config: TowerConfig = defaultConfig(tower)): PickedQuestion {
     const vars = towerVariables(tower, config);
     const own: Question[] = [];
     for (const entry of QUESTION_POOLS[tower.id] ?? []) {
@@ -158,7 +172,13 @@ export class QuestionService {
     }
     const useGeneral = own.length === 0 || (general.length > 0 && Math.random() < GENERAL_SHARE);
     const pool = useGeneral ? general : own;
-    return pool[Math.floor(Math.random() * pool.length)];
+    // Skip the last few questions while the pool has others to choose from
+    const fresh = pool.filter((q) => !this.recent.includes(q.id));
+    const choices = fresh.length > 0 ? fresh : pool;
+    const question = choices[Math.floor(Math.random() * choices.length)];
+    this.remember(question.id);
+    // A copy, so the title isn't written onto the shared GENERAL_QUESTIONS objects
+    return { ...question, title: `${useGeneral ? "General Geometry" : tower.name} Question` };
   }
 
   // Accepts parsed answers, within the question's tolerance.

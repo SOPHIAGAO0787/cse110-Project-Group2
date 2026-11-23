@@ -16,7 +16,8 @@ vi.mock("../loadContent", async (importOriginal) => {
   return { ...original, QUESTION_POOLS: pools.byGroup, GENERAL_QUESTIONS: pools.general };
 });
 
-const service = new QuestionService();
+// A fresh service for every test, since it remembers the last few questions it asked
+let service: QuestionService;
 
 // Mock question to eliminate dependency on questions.json
 const q = (answer: number, tolerance = 0): Question => ({
@@ -60,6 +61,10 @@ function sectorConfig(def: TowerDef, spread: number): TowerConfig {
 const circle = towerOfKind("circle");
 const sector = towerOfKind("sector");
 
+// questionFor adds a title naming the group the question came from
+const GENERAL_TITLE = "General Geometry Question";
+const ownTitle = (tower: TowerDef) => `${tower.name} Question`;
+
 // Sets the general group and one tower's own group for a test
 function setPools(general: Question[], own: QuestionEntry[], tower: TowerDef = circle): void {
   pools.general.push(...general);
@@ -69,6 +74,7 @@ function setPools(general: Question[], own: QuestionEntry[], tower: TowerDef = c
 const random = (value: number) => vi.spyOn(Math, "random").mockReturnValue(value);
 
 beforeEach(() => {
+  service = new QuestionService();
   pools.general.length = 0;
   for (const key of Object.keys(pools.byGroup)) delete pools.byGroup[key];
 });
@@ -127,7 +133,8 @@ describe("QuestionService functionality", () => {
     });
   });
 
-  // GENERAL_SHARE in QuestionService.ts is 0.3: a draw below it asks a general question
+  // GENERAL_SHARE in QuestionService.ts is 0.3: a draw below it asks a general question.
+  // questionFor returns a copy with a title, so these compare ids, not the objects themselves.
   describe("questionFor: choosing a group", () => {
     const [g1, g2] = [fixed("g1"), fixed("g2")];
     const [o1, o2, o3] = [fixed("o1"), fixed("o2"), fixed("o3")];
@@ -135,41 +142,42 @@ describe("QuestionService functionality", () => {
     it("asks a general question when Math.random is below 0.3", () => {
       setPools([g1, g2], [o1]);
       random(0.29);
-      expect(service.questionFor(circle)).toBe(g1);
+      expect(service.questionFor(circle).id).toBe("g1");
     });
 
     it("asks the tower's own question from 0.3 up", () => {
       setPools([g1, g2], [o1]);
       random(0.3);
-      expect(service.questionFor(circle)).toBe(o1);
+      expect(service.questionFor(circle).id).toBe("o1");
     });
 
     it("picks the last question just under 1, not past the end", () => {
       setPools([g1], [o1, o2, o3]);
       random(0.999999);
-      expect(service.questionFor(circle)).toBe(o3);
+      expect(service.questionFor(circle).id).toBe("o3");
     });
 
     it("asks only general questions when the tower has none of its own", () => {
       setPools([g1, g2], []);
       random(0.99);
-      expect(service.questionFor(circle)).toBe(g2);
+      expect(service.questionFor(circle).id).toBe("g2");
 
       delete pools.byGroup[circle.id]; // a tower with no group at all
-      expect(service.questionFor(circle)).toBe(g2);
+      // a new service, so g2 isn't skipped for having just been asked
+      expect(new QuestionService().questionFor(circle).id).toBe("g2");
     });
 
     it("asks only the tower's own questions when there are no general ones", () => {
       setPools([], [o1, o2]);
       random(0);
-      expect(service.questionFor(circle)).toBe(o1);
+      expect(service.questionFor(circle).id).toBe("o1");
     });
 
     it("never asks another tower's questions", () => {
       setPools([], [o1]);
       pools.byGroup[sector.id] = [fixed("theirs")];
       random(0.99);
-      expect(service.questionFor(circle)).toBe(o1);
+      expect(service.questionFor(circle).id).toBe("o1");
     });
 
     it("throws when there are no questions at all", () => {
@@ -177,9 +185,89 @@ describe("QuestionService functionality", () => {
       expect(() => service.questionFor(circle)).toThrow(/no questions/);
     });
 
-    it("returns a fixed question from the tower's group as it is", () => {
+    it("returns a fixed question from the tower's group unchanged, apart from the title", () => {
       setPools([], [o1]);
-      expect(service.questionFor(circle)).toBe(o1);
+      expect(service.questionFor(circle)).toEqual({ ...o1, title: ownTitle(circle) });
+    });
+  });
+
+  describe("questionFor: titles", () => {
+    const [g1, o1] = [fixed("g1"), fixed("o1")];
+
+    it("titles a general question as general geometry", () => {
+      setPools([g1], [o1]);
+      random(0);
+      expect(service.questionFor(circle).title).toBe(GENERAL_TITLE);
+    });
+
+    it("titles the tower's own questions with the tower's name", () => {
+      setPools([g1], [o1]);
+      random(0.5);
+      expect(service.questionFor(circle).title).toBe(ownTitle(circle));
+    });
+
+    it("titles a template question with the tower's name", () => {
+      setPools([], [template("t")]);
+      expect(service.questionFor(circle).title).toBe(ownTitle(circle));
+    });
+
+    it("titles a general question as general even when the tower has no questions", () => {
+      setPools([g1], []);
+      expect(service.questionFor(circle).title).toBe(GENERAL_TITLE);
+    });
+
+    it("doesn't write the title onto the shared question", () => {
+      setPools([g1], []);
+      service.questionFor(circle);
+      expect(g1).not.toHaveProperty("title");
+    });
+  });
+
+  // RECENT_COUNT in QuestionService.ts is 5
+  describe("questionFor: not repeating questions", () => {
+    const six = ["o1", "o2", "o3", "o4", "o5", "o6"].map((id) => fixed(id));
+
+    // With Math.random at 0, the first question that isn't skipped is always picked
+    it("asks six different questions in a row from a pool of six", () => {
+      setPools([], six);
+      random(0);
+      const ids = six.map(() => service.questionFor(circle).id);
+      expect(ids).toEqual(["o1", "o2", "o3", "o4", "o5", "o6"]);
+    });
+
+    it("remembers only the last five", () => {
+      setPools([], six);
+      random(0);
+      for (let i = 0; i < 6; i++) service.questionFor(circle);
+      // o2 to o6 are the last five, so o1 can come back
+      expect(service.questionFor(circle).id).toBe("o1");
+    });
+
+    it("asks a recent question again when there is nothing else to ask", () => {
+      setPools([], [fixed("o1")]);
+      expect(service.questionFor(circle).id).toBe("o1");
+      expect(service.questionFor(circle).id).toBe("o1");
+    });
+
+    it("skips recent template questions too, though they are built fresh each time", () => {
+      setPools([], [template("t1"), template("t2")]);
+      random(0);
+      expect(service.questionFor(circle).id).toBe("t1");
+      expect(service.questionFor(circle).id).toBe("t2");
+    });
+
+    it("skips recent general questions too", () => {
+      setPools([fixed("g1"), fixed("g2")], [fixed("o1")]);
+      random(0); // below 0.3, so the general group every time
+      expect(service.questionFor(circle).id).toBe("g1");
+      expect(service.questionFor(circle).id).toBe("g2");
+    });
+
+    it("keeps separate memories for separate services", () => {
+      setPools([], six);
+      random(0);
+      service.questionFor(circle);
+      expect(new QuestionService().questionFor(circle).id).toBe("o1");
     });
   });
 
@@ -279,7 +367,7 @@ describe("QuestionService functionality", () => {
         const g1 = fixed("g1");
         setPools([g1], [template("t", { answer: "radius +" })]);
         random(0.99);
-        expect(service.questionFor(circle)).toBe(g1);
+        expect(service.questionFor(circle).id).toBe("g1");
       });
     });
   });

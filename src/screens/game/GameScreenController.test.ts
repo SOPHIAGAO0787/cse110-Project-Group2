@@ -906,6 +906,7 @@ function openPlacementQuestion() {
     answer: 5,
     tolerance: 0,
     hint: "Add them.",
+    title: "Test Question",
   });
   const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
   const card = controller.group
@@ -955,6 +956,7 @@ it("prevents duplicate prompts and placements while retaining retries", async ()
   expect(model.towers).toHaveLength(0);
   expect(prompt.group.visible()).toBe(true);
   expect(ask).toHaveBeenCalledTimes(1);
+  press("Backspace"); // a wrong answer stays in the box, so clear it before retrying
   press("5");
   press("Enter");
   press("Enter");
@@ -964,14 +966,57 @@ it("prevents duplicate prompts and placements while retaining retries", async ()
 });
 
 it("does not place a tower after exhausting incorrect answers", async () => {
-  openPlacementQuestion();
+  const { prompt } = openPlacementQuestion();
   press("4");
   press("Enter");
-  press("4");
+  press("4"); // the box now reads "44", still wrong
   press("Enter");
+  expect(prompt.group.visible()).toBe(true); // showing the right answer until dismissed
   press("Enter");
   await settlePlacement();
   expect(model.towers).toHaveLength(0);
+  expect(prompt.group.visible()).toBe(false);
+});
+
+it("places the tower as soon as the answer is correct, while Correct! is still showing", async () => {
+  const { prompt } = openPlacementQuestion();
+  press("5");
+  press("Enter");
+  await settlePlacement();
+  expect(model.towers).toHaveLength(1);
+  expect(prompt.group.visible()).toBe(true);
+
+  press("Enter"); // closes the popup and places nothing more
+  await settlePlacement();
+  expect(prompt.group.visible()).toBe(false);
+  expect(model.towers).toHaveLength(1);
+});
+
+it("closes a Correct! popup when the game ends", async () => {
+  const { prompt } = openPlacementQuestion();
+  press("5");
+  press("Enter");
+  await settlePlacement();
+  model.lives.remaining = 0;
+  frames[frames.length - 1](0);
+  expect(prompt.group.visible()).toBe(false);
+});
+
+it("titles the question after the tower or the general pool", () => {
+  vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+  const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+  const circle = TOWERS.find((tower) => tower.id === "circle")!;
+  controller.group
+    .find<Konva.Text>("Text")
+    .find((text) => text.text() === circle.name)!
+    .getParent()!
+    .fire("pointerdown");
+  window.dispatchEvent(new Event("pointerup"));
+  press("Enter");
+  expect(ask).toHaveBeenCalledTimes(1);
+  expect(["General Geometry Question", `${circle.name} Question`]).toContain(
+    ask.mock.calls[0][0].title,
+  );
 });
 
 it.each(["defeat", "victory"])(
@@ -1003,10 +1048,10 @@ it("rejects an already-correct answer if game over occurs before the continuatio
 it("invalidates a resolved answer when leaving and immediately re-entering", async () => {
   const { prompt } = openPlacementQuestion();
   press("5");
-  press("Enter");
+  press("Enter"); // correct: the popup stays open showing Correct!
   const oldModel = model;
   controller.hide();
-  expect(prompt.group.visible()).toBe(false);
+  expect(prompt.group.visible()).toBe(false); // leaving closes it anyway
   controller.show();
   model = models[models.length - 1];
   await settlePlacement();
