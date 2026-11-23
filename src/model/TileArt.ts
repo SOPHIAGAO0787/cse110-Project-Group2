@@ -287,13 +287,13 @@ export function checkArt(map: MapConfig, tileset: Tileset): void {
         }
         continue;
       }
-        // Buildable and blocked pictures are only looks, so either may go on either kind of ground
-        const isGround = (kind: TileKind): boolean => kind !== "path";
-        if (def.kind !== expected && !(isGround(def.kind) && isGround(expected))) {
+      // Buildable and blocked pictures are only looks, so either may go on either kind of ground
+      const isGround = (kind: TileKind): boolean => kind !== "path";
+      if (def.kind !== expected && !(isGround(def.kind) && isGround(expected))) {
         throw new Error(
-            `${map.id}: art '${name}' at (${x}, ${y}) is a ${def.kind} picture on a ${expected} tile`,
+          `${map.id}: art '${name}' at (${x}, ${y}) is a ${def.kind} picture on a ${expected} tile`,
         );
-        }
+      }
       const open = sides.get(`${x},${y}`);
       if (def.kind === "path" && open !== undefined && !sameSides(def.connects ?? [], open)) {
         throw new Error(
