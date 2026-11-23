@@ -269,9 +269,9 @@ export class GameScreenController implements Screen {
 
     // One card and one preview per tower kind; picking a card switches which one is active.
     const choices = unlockedTowers.map((tower) => {
-      const view = new PlacementView(tower);
+      const view = new PlacementView(tower, { cols: this.map.cols, rows: this.map.rows });
       const card = new InGameTowerCard(tower, view.menuIcon);
-      this.view.mapGroup.add(view.group);
+      this.view.mapGroup.add(view.group, view.prompt);
       this.view.shopGroup.add(card.group);
       return { tower, view, card };
     });
@@ -314,6 +314,13 @@ export class GameScreenController implements Screen {
     };
 
     let pending = false; // blocks double-triggers while a question is open
+    // A click on the map locks the aim of a cone or block tower where it is, so the mouse can
+    // reach the confirm and cancel squares without changing it. Another click aims again.
+    let aimLocked = false;
+    const lockAim = (locked: boolean) => {
+      aimLocked = locked;
+      pv.setLocked(locked);
+    };
     const onUpgrade = () => {
       if (
         pending ||
@@ -409,7 +416,7 @@ export class GameScreenController implements Screen {
       if (s.kind === "dragging") {
         const tile = gridView.tileUnderMouse();
         if (tile) pv.show(tile, canPlace(tile));
-      } else if (s.kind === "configuring") {
+      } else if (s.kind === "configuring" && !aimLocked) {
         // Aim at the mouse: the cone's width or the block's size follows how far it is from the tower.
         const pointer = gridView.pointerInTiles();
         if (!pointer) return;
@@ -427,6 +434,8 @@ export class GameScreenController implements Screen {
       if (tile && canPlace(tile)) {
         placement.endDrag(tile, true); // state: placed, ghost stays
         pv.show(tile, true);
+        pv.showPrompt(tile); // the confirm and cancel squares
+        lockAim(false);
         const config = defaultConfig(def);
         if (config.kind !== "circle") {
           // a cone or block tower still needs aiming: show the default and follow the mouse from here
@@ -437,6 +446,12 @@ export class GameScreenController implements Screen {
         placement.cancel();
         pv.hide();
       }
+    };
+
+    const onMapClick = () => {
+      if (pending || placement.state.kind !== "configuring") return;
+      if (!gridView.tileUnderMouse()) return; // only a click on the map, not on the shop or buttons
+      lockAim(!aimLocked);
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -452,6 +467,21 @@ export class GameScreenController implements Screen {
       }
     };
 
+    // The squares at the tower do what Enter and Escape do
+    const cancelPlacement = () => {
+      if (pending || this.view.settings.isOpen()) return;
+      placement.cancel();
+      pv.hide();
+    };
+    const confirmPlacement = () => {
+      if (this.view.settings.isOpen()) return;
+      void requestPlace();
+    };
+    choices.forEach(({ view }) => {
+      view.onConfirm = confirmPlacement;
+      view.onCancel = cancelPlacement;
+    });
+
     choices.forEach((choice) => {
       choice.card.group.on("pointerdown", () => {
         if (pending || this.model.isOver) return;
@@ -465,6 +495,7 @@ export class GameScreenController implements Screen {
       });
     });
     stage?.on("pointermove.placement", onMove);
+    stage?.on("pointerdown.placement", onMapClick);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
 
@@ -480,6 +511,7 @@ export class GameScreenController implements Screen {
       for (const choice of choices) {
         choice.card.group.destroy();
         choice.view.group.destroy();
+        choice.view.prompt.destroy();
       }
     };
   }
