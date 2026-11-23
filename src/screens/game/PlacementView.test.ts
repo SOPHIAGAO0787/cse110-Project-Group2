@@ -209,6 +209,15 @@ describe("PlacementView", () => {
       view.prompt.getChildren().filter((n): n is Konva.Group => n instanceof Konva.Group);
     const hints = (view: PlacementView) =>
       view.prompt.find<Konva.Text>("Text").map((t) => t.text());
+    // Where the two squares really are, in map pixels, wherever the prompt group itself sits
+    const squaresBox = (view: PlacementView) => {
+      const boxes = squares(view).map((square) => square.getClientRect());
+      const left = Math.min(...boxes.map((b) => b.x));
+      const top = Math.min(...boxes.map((b) => b.y));
+      const right = Math.max(...boxes.map((b) => b.x + b.width));
+      const bottom = Math.max(...boxes.map((b) => b.y + b.height));
+      return { left, top, right, bottom };
+    };
 
     it("are hidden until a tower is dropped", () => {
       const view = new PlacementView(circle, bounds);
@@ -230,11 +239,16 @@ describe("PlacementView", () => {
       expect(confirm.x()).toBeLessThan(cancel.x());
     });
 
-    it("sit at the tower's bottom right corner", () => {
+    it("sit directly under the tower", () => {
       const view = new PlacementView(circle, bounds);
-      view.showPrompt({ x: 3, y: 3 });
-      expect(view.prompt.x()).toBe(4 * TILE);
-      expect(view.prompt.y()).toBe(4 * TILE);
+      view.showPrompt({ x: 3, y: 3 }); // the tile covers pixels 3·TILE to 4·TILE both ways
+      const box = squaresBox(view);
+      // just below the tile, not covering it
+      expect(box.top).toBeGreaterThanOrEqual(4 * TILE);
+      expect(box.top).toBeLessThanOrEqual(4.5 * TILE);
+      // and under the tower itself: the tile's middle is between the squares' left and right
+      expect(box.left).toBeLessThanOrEqual(3.5 * TILE);
+      expect(box.right).toBeGreaterThanOrEqual(3.5 * TILE);
     });
 
     it("move to the left of a tower at the right edge, and above one at the bottom edge", () => {
@@ -279,8 +293,12 @@ describe("PlacementView", () => {
 
     it("work without map bounds, and then never move aside", () => {
       const view = new PlacementView(circle);
-      view.showPrompt({ x: 15, y: 9 });
-      expect(view.prompt.x()).toBe(16 * TILE);
+      view.showPrompt({ x: 15, y: 9 }); // the last column and row of a 16 by 10 map
+      const box = squaresBox(view);
+      // still directly under the tower, even though that is off the map
+      expect(box.top).toBeGreaterThanOrEqual(10 * TILE);
+      expect(box.left).toBeLessThanOrEqual(15.5 * TILE);
+      expect(box.right).toBeGreaterThanOrEqual(15.5 * TILE);
     });
   });
 
