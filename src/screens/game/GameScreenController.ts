@@ -284,7 +284,7 @@ export class GameScreenController implements Screen {
     // Stack the cards under the shop title, shrinking them all if they would run off the screen
     // (the wave countdown and the Start Wave button sit at the bottom).
     const CARD_STEP = 352;
-    const SHOP_TOP = 64;
+    const SHOP_TOP = 84;
     const SHOP_BOTTOM = 160;
     this.layoutCards = () => {
       const room = this.screenHeight - SHOP_TOP - SHOP_BOTTOM;

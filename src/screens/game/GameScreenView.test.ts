@@ -41,10 +41,11 @@ describe("GameScreenView HUD", () => {
 
     const hud = view.group
       .getChildren()
-      .find((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
+      .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
+    expect(view.shopGroup.findOne<Konva.Text>(".game-coins")!.text()).toBe(`Coins: ${coins}`);
     expect(hud).toBeInstanceOf(Konva.Text);
     expect((hud as Konva.Text).text()).toBe(
-      `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${total}   ·   Enemies Remaining: ${enemies}`,
+      `Lives: ${lives}   ·   Wave: ${wave}/${total}   ·   Enemies Remaining: ${enemies}`,
     );
   });
 
@@ -55,10 +56,12 @@ describe("GameScreenView HUD", () => {
 
     const texts = view.group
       .getChildren()
-      .filter((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
+      .filter((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
     expect(texts).toHaveLength(1);
+    expect(view.shopGroup.find<Konva.Text>(".game-coins")).toHaveLength(1);
+    expect(view.shopGroup.findOne<Konva.Text>(".game-coins")!.text()).toBe("Coins: 0");
     expect((texts[0] as Konva.Text).text()).toBe(
-      "Coins: 0   ·   Lives: 0   ·   Wave: 2/2   ·   Enemies Remaining: 0",
+      "Lives: 0   ·   Wave: 2/2   ·   Enemies Remaining: 0",
     );
     expect(view.group.getChildren()).toHaveLength(childCount);
   });

@@ -32,10 +32,10 @@ const MESSAGE_MS = 2000; // how long showMessage() keeps a message on screen
 const SPEED_BUTTON_WIDTH = 72; // wider than the other icon buttons: it has a label too
 const FAST_SPEED_COLOR = "#ffd53d"; // the speed button's sign and label at double speed
 
-// Layout of the game screen: HUD bar on top, map below it, shop column on the right.
+// The HUD shows match status; the shop sidebar shows the gameplay coin balance.
 //
 //   ┌─────────────────────────────────────┬────────┐
-//   │ [←] coins · lives · wave [▶▶1x] [⚙] │  Shop  │
+//   │ [←] lives · wave [▶▶1x] [⚙]         │ Shop $ │
 //   ├─────────────────────────────────────┤        │
 //   │                 map                 │        │
 //   └─────────────────────────────────────┴────────┘
@@ -87,6 +87,17 @@ export class GameScreenView {
     fontFamily: FONT,
     fontStyle: "bold",
     fill: TITLE_TEXT,
+  });
+  private coinsText = new Konva.Text({
+    name: "game-coins",
+    x: 140,
+    y: 24,
+    width: 102,
+    fontSize: 15,
+    fontFamily: FONT,
+    fontStyle: "bold",
+    fill: TITLE_TEXT,
+    listening: false,
   });
   // A short message under the HUD, e.g. "Not enough coins". Hidden until showMessage() is called.
   private messageText = new Konva.Text({
@@ -178,9 +189,27 @@ export class GameScreenView {
       this.shopBackground,
       this.shopTitle,
       this.timerText,
+      new Konva.Rect({
+        x: 110,
+        y: 15,
+        width: 134,
+        height: 34,
+        fill: "#fff4cf",
+        cornerRadius: 17,
+        listening: false,
+      }),
+      new Konva.Circle({
+        x: 126,
+        y: 32,
+        radius: 8,
+        fill: "#ffc547",
+        stroke: "#e9aa29",
+        listening: false,
+      }),
+      this.coinsText,
       new Konva.Text({
         x: 20,
-        y: 48,
+        y: 60,
         width: SHOP_WIDTH - 32,
         text: "Hover a tower · click to upgrade",
         fontSize: 11,
@@ -233,8 +262,9 @@ export class GameScreenView {
     enemiesRemaining: number,
   ): void {
     this.hudText.text(
-      `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
+      `Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
     );
+    this.coinsText.text(`Coins: ${coins}`);
   }
 
   // Shows the game speed on the speed button, e.g. "2x" for speed 2.

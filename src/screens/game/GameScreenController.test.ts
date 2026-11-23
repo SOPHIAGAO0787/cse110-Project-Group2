@@ -68,14 +68,15 @@ let playSound: Mock<(name: EffectName) => void>; // counts the effects instead o
 function hud(): string {
   const text = controller.group
     .getChildren()
-    .find((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
+    .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
   if (!(text instanceof Konva.Text)) throw new Error("HUD text is missing from the screen");
   return text.text();
 }
 
 function expectHud(coins: number, lives: number, wave: number, enemies: number): void {
+  expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(`Coins: ${coins}`);
   expect(hud()).toBe(
-    `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${map.waves.length}   ·   Enemies Remaining: ${enemies}`,
+    `Lives: ${lives}   ·   Wave: ${wave}/${map.waves.length}   ·   Enemies Remaining: ${enemies}`,
   );
 }
 
@@ -257,7 +258,9 @@ describe("GameScreenController HUD event wiring", () => {
     expect(model.enemies).toHaveLength(5);
     const first = model.enemies[0];
     model.events.emit("enemyKilled", { enemyId: first.id, reward: first.def.reward });
-    expect(hud()).toContain(`Coins: ${map.startingCoins + first.def.reward}`);
+    expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
+      `Coins: ${map.startingCoins + first.def.reward}`,
+    );
     expect(hud()).toContain("Enemies Remaining: 4");
     for (let i = 1; i < 5; i++) {
       model.events.emit("enemyLeaked", { enemyId: model.enemies[i].id });
