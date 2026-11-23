@@ -21,7 +21,15 @@
     "d": { "kind": "buildable", "cells": [[3, 0]] },
     "e": { "kind": "buildable", "cells": [[4, 0]] },
     "f": { "kind": "buildable", "cells": [[5, 0]] },
-    ".": { "kind": "blocked", "cells": [[0, 1]] }
+    ".": { "kind": "blocked", "cells": [[0, 1]] },
+    "8": { "kind": "blocked", "cells": [[1, 1]] },
+    "2": { "kind": "blocked", "cells": [[2, 1]] },
+    "6": { "kind": "blocked", "cells": [[3, 1]] },
+    "4": { "kind": "blocked", "cells": [[4, 1]] },
+    "J": { "kind": "blocked", "cells": [[5, 1]] },
+    "r": { "kind": "blocked", "cells": [[0, 2]] },
+    "7": { "kind": "blocked", "cells": [[1, 2]] },
+    "L": { "kind": "blocked", "cells": [[2, 2]] }
   },
   "road": {
     "straight": [[4, 3]],
