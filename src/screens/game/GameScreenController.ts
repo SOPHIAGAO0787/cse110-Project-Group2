@@ -17,6 +17,7 @@ import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
+import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -29,6 +30,7 @@ export class GameScreenController implements Screen {
   private model: GameModel;
   private loop: GameLoop;
   private cleanupPlacement: (() => void) | null = null;
+  private refreshUpgradeHint: (() => void) | null = null;
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
   private screenHeight = 0; // last size given to resize(), used to fit the shop cards
@@ -123,6 +125,7 @@ export class GameScreenController implements Screen {
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
+      this.refreshUpgradeHint?.();
       this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
@@ -216,6 +219,7 @@ export class GameScreenController implements Screen {
     this.screenHeight = height;
     this.view.resize(width, height);
     this.layoutCards?.();
+    this.refreshUpgradeHint?.();
   }
 
   private refreshWaveTimers(): void {
@@ -233,6 +237,7 @@ export class GameScreenController implements Screen {
   // The game is paused while the settings are open
   private openSettings(): void {
     this.view.settings.open();
+    this.refreshUpgradeHint?.();
     this.loop.stop();
   }
 
@@ -314,6 +319,43 @@ export class GameScreenController implements Screen {
     };
 
     let pending = false; // blocks double-triggers while a question is open
+    let hovering = false;
+    const refreshUpgradeHint = () => {
+      const tile = hovering ? gridView.tileUnderMouse() : null;
+      const tower = tile
+        ? model.towers.find((item) => item.tile.x === tile.x && item.tile.y === tile.y)
+        : undefined;
+      const canShow =
+        hovering &&
+        !pending &&
+        !disposed &&
+        this.active &&
+        !model.isOver &&
+        !this.view.settings.isOpen() &&
+        placement.state.kind === "idle";
+      const container = stage?.container();
+      if (!canShow || !tower) {
+        this.view.hideTowerUpgradeHint();
+        if (container) container.style.cursor = "default";
+        return;
+      }
+      this.view.showTowerUpgradeHint(
+        tower,
+        SHOP_TOWERS.find((item) => item.def.id === tower.def.id),
+        this.towerProgress.getMaxLevel(tower.def.id),
+        model.wallet.coins,
+      );
+      if (container) container.style.cursor = "pointer";
+    };
+    this.refreshUpgradeHint = refreshUpgradeHint;
+    gridView.group.on("pointermove.upgrade pointerenter.upgrade", () => {
+      hovering = true;
+      refreshUpgradeHint();
+    });
+    gridView.group.on("pointerleave.upgrade", () => {
+      hovering = false;
+      refreshUpgradeHint();
+    });
     const onUpgrade = () => {
       if (
         pending ||
@@ -335,6 +377,7 @@ export class GameScreenController implements Screen {
 
       const message = this.model.tryUpgradeTower(tower.id);
       this.view.showMessage(message);
+      refreshUpgradeHint();
     };
 
     gridView.group.on("click.upgrade tap.upgrade", onUpgrade);
@@ -398,6 +441,8 @@ export class GameScreenController implements Screen {
 
     const onDown = () => {
       if (pending || !canCommit()) return;
+      hovering = false;
+      refreshUpgradeHint();
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
       gridView.showGrid(true);
@@ -471,6 +516,8 @@ export class GameScreenController implements Screen {
     return () => {
       // Invalidate pending answers before removing input handlers.
       disposed = true;
+      refreshUpgradeHint();
+      this.refreshUpgradeHint = null;
       placement.cancel();
       pv.hide();
       stage?.off(".placement");

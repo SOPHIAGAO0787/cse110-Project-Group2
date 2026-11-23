@@ -742,6 +742,52 @@ describe("GameScreenController tower upgrades", () => {
     return grid;
   }
 
+  it("shows upgrade information on hover and refreshes it after clicking", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    const hintText = () =>
+      hint
+        .find<Konva.Text>("Text")
+        .map((node) => node.text())
+        .join("\n");
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    expect(hintText()).toContain("Upgrade to Level 2 · 75 coins");
+    expect(hintText()).toContain("Click this tower to upgrade.");
+    grid.group.fire("click");
+    expect(hintText()).toContain("Circle Tower · Level 2");
+    expect(hintText()).toContain("Unlock Level 3 in the Tower Shop first.");
+    grid.group.fire("pointerleave");
+    expect(hint.visible()).toBe(false);
+  });
+
+  it("refreshes hover affordability when the wallet changes", () => {
+    const grid = prepareTower();
+    grid.group.fire("pointermove");
+    model.wallet.spend(model.wallet.coins);
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    expect(
+      hint.find<Konva.Text>("Text").some((node) => node.text().startsWith("Need 75 more coins.")),
+    ).toBe(true);
+  });
+
+  it("hides the upgrade hint on empty tiles, in settings, and when leaving the game", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 0, y: 2 });
+    grid.group.fire("pointermove");
+    clickIcon("settings");
+    expect(hint.visible()).toBe(false);
+    controller.hide();
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+  });
+
   it.each(["click", "tap"])("upgrades the clicked tower on %s and shows the result", (event) => {
     const grid = prepareTower();
     const message = vi.spyOn(GameScreenView.prototype, "showMessage");

@@ -20,6 +20,9 @@ import { SettingsPanel } from "./SettingsPanel";
 import type { Sound } from "../../core/Sound";
 import type { QuestionService } from "../../model/questions/QuestionService";
 import type { Vec } from "../../model/types";
+import type { Tower } from "../../model/Tower";
+import type { ShopTower } from "../../model/shop/types";
+import { TowerUpgradeHint } from "./TowerUpgradeHint";
 
 export const TILE = 48; // pixels per tile, before the map is scaled to fit the window
 const SHOP_WIDTH = 260;
@@ -51,6 +54,7 @@ export class GameScreenView {
   speedButton: Konva.Group;
   readonly prompt: QuestionPrompt;
   readonly settings: SettingsPanel;
+  private upgradeHint = new TowerUpgradeHint();
 
   private mapCols: number;
   private mapRows: number;
@@ -170,7 +174,21 @@ export class GameScreenView {
     this.speedButton = makeIconButton("speed", speedIcon, onToggleSpeed, SPEED_BUTTON_WIDTH);
     this.prompt = new QuestionPrompt(questions);
     this.settings = new SettingsPanel(onResume, onBack, onMainMenu, sound);
-    this.shopGroup.add(this.shopBackground, this.shopTitle, this.timerText);
+    this.shopGroup.add(
+      this.shopBackground,
+      this.shopTitle,
+      this.timerText,
+      new Konva.Text({
+        x: 20,
+        y: 48,
+        width: SHOP_WIDTH - 32,
+        text: "Hover a tower · click to upgrade",
+        fontSize: 11,
+        fontFamily: FONT,
+        fill: TITLE_TEXT,
+        listening: false,
+      }),
+    );
     this.group.add(
       this.background,
       this.mapGroup,
@@ -184,9 +202,26 @@ export class GameScreenView {
       this.messageText,
       this.leakFrame,
       this.waveBanner,
+      this.upgradeHint.group,
       this.prompt.group,
       this.settings.group,
     );
+  }
+
+  showTowerUpgradeHint(
+    tower: Tower,
+    shop: ShopTower | undefined,
+    maxLevel: number,
+    coins: number,
+  ): void {
+    this.upgradeHint.show(tower, shop, maxLevel, coins, this.tileToScreen(tower.tile), {
+      x: this.background.width(),
+      y: this.background.height(),
+    });
+  }
+
+  hideTowerUpgradeHint(): void {
+    this.upgradeHint.hide();
   }
 
   // Rewrites the HUD text. The controller calls this whenever one of these values changes.
