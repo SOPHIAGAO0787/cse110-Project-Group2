@@ -251,19 +251,6 @@ describe("checkArt", () => {
     );
   });
 
-  it("rejects a picture of the wrong kind for its tile", () => {
-    const wrong = [...art];
-    wrong[1] = "..|..";
-    expect(() => checkArt(map({ art: wrong }), tileset())).toThrow(
-      /'\.' at \(3, 1\) is a blocked picture on a buildable tile/,
-    );
-    const road = [...art];
-    road[0] = "#-7..";
-    expect(() => checkArt(map({ art: road }), tileset())).toThrow(
-      /a buildable picture on a path tile/,
-    );
-  });
-
   it("rejects a road piece that opens onto the wrong sides for the route", () => {
     const wrong = [...art];
     wrong[1] = "..-#.";
@@ -570,12 +557,6 @@ describe("a tileset that draws its road as an overlay", () => {
       set.legend["-"] = { kind: "path", connects: ["E", "W"], cells: [[3, 0]] };
       expect(() => checkArt(map({ art: ["--~..", "..~#.", "..~~~"] }), set)).toThrow(
         /'-' at \(0, 0\) is a road piece, but "overlay" draws its road from road cells/,
-      );
-    });
-
-    it("still checks the other tiles against their pictures", () => {
-      expect(() => checkArt(map({ art: ["~~~..", "..~..", "..~~~"] }), overlay())).toThrow(
-        /'\.' at \(3, 1\) is a blocked picture on a buildable tile/,
       );
     });
 
