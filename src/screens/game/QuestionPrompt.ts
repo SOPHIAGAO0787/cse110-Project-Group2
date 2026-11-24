@@ -188,6 +188,7 @@ export class QuestionPrompt {
       this.inputBox,
       this.inputText,
       this.symbolRow,
+      this.answerLabel,
       this.cursorBar,
       this.feedback,
       this.submitButton,

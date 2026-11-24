@@ -800,6 +800,7 @@ describe("QuestionPrompt answer output", () => {
       expect(inputShown()).toBe("5");
       expect(parts().inputText.fill()).toBe(ANSWER_GREEN);
       expect(parts().answerLabel.visible()).toBe(true);
+      expect(parts().answerLabel.getParent()).not.toBeNull();
     });
 
     it("says what the player answered, and gives the hint", () => {
