@@ -18,6 +18,7 @@ beforeEach(() => {
     () => {},
     () => {},
     () => {},
+    () => {},
     new QuestionService(),
     new Sound(),
   );

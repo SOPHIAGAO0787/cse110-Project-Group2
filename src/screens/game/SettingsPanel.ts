@@ -4,7 +4,7 @@ import { DEFAULT_BUTTON_WIDTH, makeButton, setButtonLabel } from "../button";
 import { FONT } from "../theme";
 
 const PANEL_WIDTH = 280;
-const PANEL_HEIGHT = 436;
+const PANEL_HEIGHT = 504;
 
 // The settings box over a dimmed screen, opened with the gear button on the game screen.
 // The game is paused while it is open; the controller does the pausing.
@@ -12,6 +12,7 @@ const PANEL_HEIGHT = 436;
 //
 //   ┌── Settings ──────┐
 //   │  [ Resume ]      │
+//   │  [ Restart ]     │
 //   │  [ Music: On ]   │
 //   │  [ Sound: On ]   │
 //   │  [ Back to maps ]│
@@ -28,6 +29,7 @@ export class SettingsPanel {
 
   constructor(
     onResume: () => void,
+    onRestart: () => void,
     onBackToMaps: () => void,
     onMainMenu: () => void,
     sound: Sound,
@@ -57,6 +59,7 @@ export class SettingsPanel {
       fill: "white",
     });
     const resumeButton = makeButton("Resume", onResume);
+    const restartButton = makeButton("Restart", onRestart);
     // The two switches get their labels in refreshSoundLabels()
     this.musicButton = makeButton("", () => {
       this.sound.toggleMusic();
@@ -72,15 +75,17 @@ export class SettingsPanel {
     // Center the buttons in the box
     const buttonX = (PANEL_WIDTH - DEFAULT_BUTTON_WIDTH) / 2;
     resumeButton.position({ x: buttonX, y: 84 });
-    this.musicButton.position({ x: buttonX, y: 152 });
-    this.effectsButton.position({ x: buttonX, y: 220 });
-    mapsButton.position({ x: buttonX, y: 288 });
-    menuButton.position({ x: buttonX, y: 356 });
+    restartButton.position({ x: buttonX, y: 152 });
+    this.musicButton.position({ x: buttonX, y: 220 });
+    this.effectsButton.position({ x: buttonX, y: 288 });
+    mapsButton.position({ x: buttonX, y: 356 });
+    menuButton.position({ x: buttonX, y: 424 });
 
     this.box.add(
       panel,
       title,
       resumeButton,
+      restartButton,
       this.musicButton,
       this.effectsButton,
       mapsButton,

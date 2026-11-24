@@ -40,6 +40,7 @@ beforeEach(() => {
     () => {},
     () => {},
     () => {},
+    () => {},
     sound,
   );
 });
@@ -51,7 +52,14 @@ afterEach(() => {
 
 describe("SettingsPanel sound switches", () => {
   it("shows both switches as on at first", () => {
-    expect(labels()).toEqual(["Resume", "Music: On", "Sound: On", "Back to maps", "Main menu"]);
+    expect(labels()).toEqual([
+      "Resume",
+      "Restart",
+      "Music: On",
+      "Sound: On",
+      "Back to maps",
+      "Main menu",
+    ]);
   });
 
   it("switches the music off and on again", () => {
@@ -77,13 +85,21 @@ describe("SettingsPanel sound switches", () => {
   it("changes only the switch that was clicked", () => {
     click("Music: On");
 
-    expect(labels()).toEqual(["Resume", "Music: Off", "Sound: On", "Back to maps", "Main menu"]);
+    expect(labels()).toEqual([
+      "Resume",
+      "Restart",
+      "Music: Off",
+      "Sound: On",
+      "Back to maps",
+      "Main menu",
+    ]);
     expect(sound.effectsOn).toBe(true);
   });
 
   it("shows a switch as off when the sound was already off", () => {
     sound.toggleEffects();
     const later = new SettingsPanel(
+      () => {},
       () => {},
       () => {},
       () => {},
@@ -113,6 +129,7 @@ describe("SettingsPanel Escape key", () => {
       onResume,
       () => {},
       () => {},
+      () => {},
       sound,
     );
     escapable.open();
@@ -127,6 +144,7 @@ describe("SettingsPanel Escape key", () => {
     const onResume = vi.fn();
     const escapable = new SettingsPanel(
       onResume,
+      () => {},
       () => {},
       () => {},
       sound,

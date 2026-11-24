@@ -52,6 +52,8 @@ export class GameScreenController implements Screen {
       () => this.app.switchTo("maps"),
       () => this.openSettings(),
       () => this.closeSettings(),
+      // Restart starts a new game on the same map, the way the map screen starts one
+      () => this.app.switchTo("game"),
       () => this.app.switchTo("menu"),
       () => this.toggleSpeed(),
       this.questions,

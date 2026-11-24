@@ -160,8 +160,8 @@ export class GameScreenView {
   });
 
   // onStartWave runs on Start Wave, onBack on the back arrow and on "Back to maps" in the
-  // settings, onOpenSettings on the gear, onResume / onMainMenu on those settings buttons,
-  // and onToggleSpeed on the speed button. The settings switch the sound on and off.
+  // settings, onOpenSettings on the gear, onResume / onRestart / onMainMenu on those settings
+  // buttons, and onToggleSpeed on the speed button. The settings switch the sound on and off.
   constructor(
     mapCols: number,
     mapRows: number,
@@ -169,6 +169,7 @@ export class GameScreenView {
     onBack: () => void,
     onOpenSettings: () => void,
     onResume: () => void,
+    onRestart: () => void,
     onMainMenu: () => void,
     onToggleSpeed: () => void,
     questions: QuestionService,
@@ -184,7 +185,7 @@ export class GameScreenView {
     speedIcon.add(this.speedArrowOne, this.speedArrowTwo, this.speedLabel);
     this.speedButton = makeIconButton("speed", speedIcon, onToggleSpeed, SPEED_BUTTON_WIDTH);
     this.prompt = new QuestionPrompt(questions);
-    this.settings = new SettingsPanel(onResume, onBack, onMainMenu, sound);
+    this.settings = new SettingsPanel(onResume, onRestart, onBack, onMainMenu, sound);
     this.shopGroup.add(
       this.shopBackground,
       this.shopTitle,

@@ -547,6 +547,13 @@ describe("GameScreenController settings", () => {
     expect(switchTo).toHaveBeenCalledWith("maps");
   });
 
+  it("restarts the same map without recording a result", () => {
+    clickIcon("settings");
+    clickButton("Restart");
+    expect(switchTo).toHaveBeenCalledWith("game");
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
   it("goes to the main menu without recording a result", () => {
     clickIcon("settings");
     clickButton("Main menu");
