@@ -18,6 +18,7 @@ import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
 import { TowerProgress } from "../../model/TowerProgress";
 import { TowersView } from "./TowersView";
+import { CIRCLE_TOWER_COLOR } from "../theme";
 import { Sound, type EffectName } from "../../core/Sound";
 
 // Capture real model instances without exposing the controller's private fields.
@@ -361,6 +362,12 @@ describe("GameScreenController questions during gameplay", () => {
     const add = vi.spyOn(TowersView.prototype, "add");
     const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
     const { answer } = openQuestion();
+    // The shop card's icon has the same color, so count the circles before and after placing
+    const circleTowerCount = () =>
+      controller.group
+        .find<Konva.Circle>("Circle")
+        .filter((circle) => circle.fill() === CIRCLE_TOWER_COLOR).length;
+    const before = circleTowerCount();
 
     answer(true);
     await settleAnswer();
@@ -368,9 +375,7 @@ describe("GameScreenController questions during gameplay", () => {
     expect(model.towers).toHaveLength(1);
     const tower = model.towers[0];
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
-    expect(
-      controller.group.find<Konva.Circle>("Circle").filter((circle) => circle.fill() === "#2a5d99"),
-    ).toHaveLength(1);
+    expect(circleTowerCount()).toBe(before + 1);
 
     model.spawnEnemy("basic");
     model.tick(1 / tower.fireRate);

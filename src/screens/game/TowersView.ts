@@ -1,5 +1,6 @@
 import Konva from "konva";
 import { TILE } from "./GameScreenView";
+import { CIRCLE_TOWER_COLOR, SQUARE_TOWER_COLOR, TRIANGLE_TOWER_COLOR } from "../theme";
 import { tileToPixel } from "./coords";
 import type { Enemy } from "../../model/Enemy";
 import type { Tower } from "../../model/Tower";
@@ -59,7 +60,7 @@ function pop(node: Konva.Node): void {
 
 class CircleSprite implements TowerSprite {
   group = new Konva.Group({ listening: false });
-  private body = new Konva.Circle({ radius: TILE / 2, fill: "#2a5d99" });
+  private body = new Konva.Circle({ radius: TILE / 2, fill: CIRCLE_TOWER_COLOR });
   private shake = new Shake(this.body, (t) => ({
     x: 3 * (1 - t) * Math.sin(t * Math.PI * 6), // wobbles x
     y: 2 * (1 - t) * Math.sin(t * Math.PI * 3), // wobbles y
@@ -75,7 +76,7 @@ class CircleSprite implements TowerSprite {
     // expanding ring up to the tower's current reach (read now, so changes to the range show up)
     const ring = new Konva.Circle({
       radius: 0,
-      stroke: "#4a90d9",
+      stroke: CIRCLE_TOWER_COLOR,
       strokeWidth: 3,
       opacity: 0.8,
       listening: false,
@@ -101,7 +102,7 @@ class TriangleSprite implements TowerSprite {
   private body = new Konva.Line({
     points: [TILE * 0.55, 0, -TILE * 0.35, TILE * 0.3, -TILE * 0.35, -TILE * 0.3],
     closed: true,
-    fill: "#2a8f5d",
+    fill: TRIANGLE_TOWER_COLOR,
   });
   private shake: Shake;
   private tower: Tower;
@@ -147,7 +148,7 @@ class TriangleSprite implements TowerSprite {
       radius: this.tower.reach * TILE,
       angle: toDegrees(this.spread),
       rotation: toDegrees(this.facing) - toDegrees(this.spread) / 2,
-      fill: "#4ad98f",
+      fill: TRIANGLE_TOWER_COLOR,
       opacity: 0.5,
       listening: false,
     });
@@ -183,14 +184,14 @@ class RectSprite implements TowerSprite {
         width: size,
         height: size,
         cornerRadius: 4,
-        fill: "#b5651d",
+        fill: SQUARE_TOWER_COLOR,
       }),
       new Konva.Rect({
         x: size / 2 - 2,
         y: -TILE * 0.1,
         width: TILE * 0.2,
         height: TILE * 0.2,
-        fill: "#7a420f",
+        fill: "#4a6fc4",
       }),
     );
     this.body.rotation(FACING_DEGREES[cfg.facing]); // the barrel starts out pointing right
@@ -213,7 +214,7 @@ class RectSprite implements TowerSprite {
       y: (row - 0.5 - this.tower.tile.y) * TILE,
       width: cols * TILE,
       height: rows * TILE,
-      fill: "#e8a14a",
+      fill: SQUARE_TOWER_COLOR,
       opacity: 0.5,
       listening: false,
     });
