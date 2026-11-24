@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import map1 from "../data/maps/map1.json";
 import { WAVE_PREPARATION_SECONDS } from "./WaveManager";
 import { GameModel } from "./GameModel";
-import { ENEMIES, loadMap, MAPS } from "./loadContent";
+import { ENEMIES, loadMap, MAPS, TOWERS } from "./loadContent";
 import { Progress } from "./Progress";
 
 // The stars a finished game earned
@@ -12,6 +12,16 @@ function finalStars(game: GameModel): number {
     throw new Error("The game is not over yet");
   }
   return result.stars;
+}
+
+// What one tower of this kind costs, read from towers.json
+function towerCost(defId: string): number {
+  for (const def of TOWERS) {
+    if (def.id === defId) {
+      return def.cost;
+    }
+  }
+  throw new Error(`Unknown tower "${defId}"`);
 }
 
 // These tests run a real game on map1 with no screen, to check that the parts work together.
@@ -121,7 +131,32 @@ describe("Integration: a game on map1", () => {
     expect(progress.starsFor("map1")).toBe(3);
   });
 
-  it.todo("a tower next to the path kills a passing enemy (B1, R3)");
+  it("a tower next to the path kills a passing enemy (B1, R3)", () => {
+    const game = new GameModel(loadMap(map1));
+    const rewards: number[] = [];
+    game.events.on("enemyKilled", ({ reward }) => {
+      rewards.push(reward);
+    });
+
+    // (6, 2) is inside the bend where the path goes down and then right,
+    // so the enemy stays in the circle's range on both sides of the corner.
+    expect(game.tryPlaceTower("circle", { x: 6, y: 2 })).toBe("ok");
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+
+    while (game.enemies.length > 0) {
+      game.tick(0.05);
+    }
+
+    // It died on the way, so it never reached the base
+    expect(enemy.isDead()).toBe(true);
+    expect(enemy.distance).toBeLessThan(game.path.length);
+    expect(game.lives.remaining).toBe(map1.startingLives);
+    // The kill paid the enemy's reward
+    expect(rewards).toEqual([enemy.def.reward]);
+    expect(game.wallet.coins).toBe(map1.startingCoins - towerCost("circle") + enemy.def.reward);
+  });
+
   it.todo(
     "a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)",
   );
