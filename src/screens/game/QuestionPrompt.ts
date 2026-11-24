@@ -8,7 +8,6 @@ const PAD = 16; // space around the edges of the panel
 const SECTION_GAP = 12; // space between the question and the input box
 const TITLE_GAP = 6; // space between the title and the question
 const INPUT_H = 40;
-const FORMAT_H = 16; // the grey line under the input box
 const MIN_FEEDBACK_H = 34; // room for two lines of feedback
 const SYMBOLS = ["π", "√", "^", "⌫", "C"];
 const SYMBOL_W = 40;
@@ -83,7 +82,6 @@ export class QuestionPrompt {
   private formatText = new Konva.Text({
     x: PAD,
     width: PANEL_W - 2 * PAD,
-    height: FORMAT_H,
     text: "You can type π, fractions or decimals",
     fontSize: 12,
     fill: "#aaa",
@@ -126,6 +124,7 @@ export class QuestionPrompt {
   private phase: "typing" | "wrong" | "correct" = "typing";
   private resolve: ((correct: boolean) => void) | null = null;
   private attemptsLeft = 0;
+  private cost = 0; // coins a wrong answer costs, shown after the last try
   private width = 0;
   private height = 0;
   private panelH = 0; // set by layout(), because it depends on the question
@@ -227,7 +226,7 @@ export class QuestionPrompt {
     this.formatText.y(formatY);
     this.answerLabel.y(formatY); // shown in place of the format line once the tries are used up
 
-    const symbolsY = formatY + FORMAT_H + 4;
+    const symbolsY = formatY + this.formatText.height() + 4;
     this.symbolRow.y(symbolsY);
 
     // Reserve room for the longest feedback this question can show, so the panel
@@ -237,7 +236,7 @@ export class QuestionPrompt {
     let feedbackH = MIN_FEEDBACK_H;
     for (const text of [
       `Not quite. ${hint}\n(${MAX_ATTEMPTS} tries left)`,
-      `Not quite.\nYou answered ${"8".repeat(MAX_TYPED)}.\n${hint}`, // the longest answer the box allows
+      this.lastTryText("8".repeat(MAX_TYPED), hint), // the longest answer the box allows
     ]) {
       this.feedback.text(text);
       feedbackH = Math.max(feedbackH, this.feedback.height());
@@ -252,12 +251,29 @@ export class QuestionPrompt {
     this.panel.height(this.panelH);
   }
 
+  // What the feedback says once the last try is wrong
+  private lastTryText(typed: string, hint: string): string {
+    let firstLine = "Not quite.";
+    if (this.cost > 0) {
+      firstLine = `Not quite. −${this.cost} coins`;
+    }
+    return `${firstLine}\nYou answered ${typed}.\n${hint}`;
+  }
+
   // Shows the popup next to `anchor` (screen pixels, not map pixels).
+  // cost is the coins a wrong answer takes, shown after the last try (0 shows nothing).
   // Resolves true if the player answers correctly, false otherwise.
-  ask(question: PickedQuestion, anchor: Vec): Promise<boolean> {
+  ask(question: PickedQuestion, anchor: Vec, cost = 0): Promise<boolean> {
     this.cancel(); // in case a previous question is somehow still open
 
     this.question = question;
+    this.cost = cost;
+    // Skipping costs coins too, so the player is told before closing the question
+    if (cost > 0) {
+      this.formatText.text(`You can type π, fractions or decimals\nSkipping costs ${cost} coins`);
+    } else {
+      this.formatText.text("You can type π, fractions or decimals");
+    }
     this.typed = "";
     this.cursor = 0;
     this.phase = "typing";
@@ -442,7 +458,7 @@ export class QuestionPrompt {
       this.cursorBar.visible(false);
       this.formatText.visible(false);
       this.answerLabel.visible(true);
-      this.feedback.text(`Not quite.\nYou answered ${this.typed}.\n${this.question.hint}`);
+      this.feedback.text(this.lastTryText(this.typed, this.question.hint));
       this.inputText.text(formatAnswer(this.question.answer));
       this.inputText.fill("#15803d");
       this.inputBox.stroke("#4ade80");
