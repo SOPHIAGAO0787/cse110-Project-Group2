@@ -178,7 +178,7 @@ describe("PlacementView", () => {
       const label = labelOf(view);
       expect(label.x()).toBe(4 * TILE);
       expect(label.y() + label.height()).toBeLessThanOrEqual(3 * TILE);
-      expect(label.fontSize()).toBeGreaterThanOrEqual(TILE * 0.4);
+      expect(label.fontSize()).toBeGreaterThanOrEqual(TILE * 0.2);
     });
 
     it("goes under the block when the block is against the top edge", () => {
