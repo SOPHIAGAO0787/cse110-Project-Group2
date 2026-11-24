@@ -57,11 +57,15 @@ export class GeometryMiniGameScreen implements Screen {
     fill: TITLE_TEXT,
     align: "center",
   });
+  // Fills the space where the answer and buttons were, so the feedback sits in the middle of it
   private feedback = new Konva.Text({
     x: 20,
-    y: 285,
+    y: 230,
     width: 480,
-    fontSize: 18,
+    height: 160,
+    verticalAlign: "middle",
+    fontSize: 22,
+    fontStyle: "bold",
     fontFamily: FONT,
     fill: TITLE_TEXT,
     align: "center",
