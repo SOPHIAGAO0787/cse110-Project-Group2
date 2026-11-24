@@ -560,6 +560,27 @@ describe("GameScreenController settings", () => {
     controller.show();
     expect(settingsOpen()).toBe(false);
   });
+
+  it("closes with Escape and the game goes on", () => {
+    const start = vi.spyOn(GameLoop.prototype, "start");
+    clickIcon("settings");
+    start.mockClear(); // show() already started the loop once
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(settingsOpen()).toBe(false);
+    expect(start).toHaveBeenCalled();
+  });
+
+  it("ignores Escape after leaving the game from the settings", () => {
+    const start = vi.spyOn(GameLoop.prototype, "start");
+    clickIcon("settings");
+    clickButton("Back to maps");
+    controller.hide(); // the App hides the game screen on the switch
+    start.mockClear();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(start).not.toHaveBeenCalled();
+  });
 });
 
 describe("GameScreenController mini-game bonus coins", () => {
@@ -994,6 +1015,18 @@ it("keeps simulation and automatic waves running while an unanswered prompt stay
   expect(model.towers).toHaveLength(1);
   expect(stop).not.toHaveBeenCalled();
   expect(start).not.toHaveBeenCalled();
+});
+
+it("keeps the settings closed while a question is open, so one Escape only closes the question", () => {
+  const { prompt } = openPlacementQuestion();
+  clickIcon("settings");
+
+  const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Settings");
+  if (title === undefined) {
+    throw new Error("Settings title is missing from the screen");
+  }
+  expect(title.isVisible()).toBe(false);
+  expect(prompt.group.visible()).toBe(true);
 });
 
 it("prevents duplicate prompts and placements while retaining retries", async () => {

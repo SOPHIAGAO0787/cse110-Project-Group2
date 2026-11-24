@@ -8,6 +8,7 @@ const PANEL_HEIGHT = 436;
 
 // The settings box over a dimmed screen, opened with the gear button on the game screen.
 // The game is paused while it is open; the controller does the pausing.
+// Escape does the same as Resume.
 //
 //   ┌── Settings ──────┐
 //   │  [ Resume ]      │
@@ -23,6 +24,7 @@ export class SettingsPanel {
   private sound: Sound;
   private musicButton: Konva.Group;
   private effectsButton: Konva.Group;
+  private onEscapeKey: (e: KeyboardEvent) => void; // listens only while the panel is open
 
   constructor(
     onResume: () => void,
@@ -31,6 +33,11 @@ export class SettingsPanel {
     sound: Sound,
   ) {
     this.sound = sound;
+    this.onEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onResume();
+      }
+    };
     const panel = new Konva.Rect({
       width: PANEL_WIDTH,
       height: PANEL_HEIGHT,
@@ -104,10 +111,12 @@ export class SettingsPanel {
     // The main menu can switch the music too, so the labels may be out of date
     this.refreshSoundLabels();
     this.group.visible(true);
+    window.addEventListener("keydown", this.onEscapeKey);
   }
 
   close(): void {
     this.group.visible(false);
+    window.removeEventListener("keydown", this.onEscapeKey);
   }
 
   // Covers the whole screen and keeps the box in the middle

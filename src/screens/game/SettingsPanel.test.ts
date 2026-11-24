@@ -101,3 +101,41 @@ describe("SettingsPanel sound switches", () => {
     expect(labels()).toContain("Music: Off");
   });
 });
+
+describe("SettingsPanel Escape key", () => {
+  function pressEscape(): void {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  }
+
+  it("does what Resume does while the panel is open", () => {
+    const onResume = vi.fn();
+    const escapable = new SettingsPanel(
+      onResume,
+      () => {},
+      () => {},
+      sound,
+    );
+    escapable.open();
+    pressEscape();
+
+    expect(onResume).toHaveBeenCalledTimes(1);
+    escapable.close();
+    escapable.group.destroy();
+  });
+
+  it("does nothing once the panel is closed", () => {
+    const onResume = vi.fn();
+    const escapable = new SettingsPanel(
+      onResume,
+      () => {},
+      () => {},
+      sound,
+    );
+    escapable.open();
+    escapable.close();
+    pressEscape();
+
+    expect(onResume).not.toHaveBeenCalled();
+    escapable.group.destroy();
+  });
+});

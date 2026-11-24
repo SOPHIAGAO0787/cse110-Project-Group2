@@ -215,6 +215,7 @@ export class GameScreenController implements Screen {
     this.active = false;
     window.removeEventListener("keydown", this.onSpeedKey);
     this.view.prompt.cancel(); // closes the popup and removes its key listener
+    this.view.settings.close(); // also removes its Escape listener
     this.disposePlacement();
     this.loop.stop();
     this.model.events.clear();
@@ -243,6 +244,10 @@ export class GameScreenController implements Screen {
 
   // The game is paused while the settings are open
   private openSettings(): void {
+    // Escape closes both the settings and an open question, so the gear waits until it is answered
+    if (this.view.prompt.group.visible()) {
+      return;
+    }
     this.view.settings.open();
     this.refreshUpgradeHint();
     this.loop.stop();
