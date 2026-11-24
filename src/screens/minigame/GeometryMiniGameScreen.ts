@@ -11,6 +11,10 @@ import { CARD_FILL, FONT, PAGE_BACKGROUND, TITLE_TEXT } from "../theme";
 
 // How long "Correct!" or the right answer stays on screen before the next question shows
 const FEEDBACK_MS = 1200;
+// The most characters the answer can have, so it fits on one line
+const MAX_TYPED = 28;
+// The π and √ buttons are narrow, so both fit under the answer
+const SYMBOL_BUTTON_WIDTH = 60;
 
 export class GeometryMiniGameScreen implements Screen {
   group = new Konva.Group({ visible: false });
@@ -73,6 +77,8 @@ export class GeometryMiniGameScreen implements Screen {
   });
   private submitButton = makeButton("Submit", () => this.submit());
   private restartButton = makeButton("Restart", () => this.restart());
+  private piButton = makeButton("π", () => this.typeSymbol("π"), SYMBOL_BUTTON_WIDTH);
+  private rootButton = makeButton("√", () => this.typeSymbol("√"), SYMBOL_BUTTON_WIDTH);
   private model = new GeometryMiniGame();
   private loop: GameLoop;
   private active = false;
@@ -97,6 +103,10 @@ export class GeometryMiniGameScreen implements Screen {
       button.position({ x: 160, y: 345 });
       this.panel.add(button);
     }
+    // The symbol buttons sit side by side, centered under the answer
+    this.piButton.position({ x: 195, y: 285 });
+    this.rootButton.position({ x: 265, y: 285 });
+    this.panel.add(this.piButton, this.rootButton);
     // The back arrow goes in the panel's top-left corner. It works at any point in a round.
     const backButton = makeBackButton(onBack);
     backButton.position({ x: 20, y: 16 });
@@ -181,6 +191,15 @@ export class GeometryMiniGameScreen implements Screen {
     }
   }
 
+  // The π and √ buttons add their symbol to the answer, the same as typing it
+  private typeSymbol(symbol: string): void {
+    if (!this.active || this.model.phase !== "answering" || this.typed.length >= MAX_TYPED) {
+      return;
+    }
+    this.typed += symbol;
+    this.render();
+  }
+
   private onKey = (event: KeyboardEvent): void => {
     if (!this.active || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.key === "Enter") {
@@ -192,7 +211,7 @@ export class GeometryMiniGameScreen implements Screen {
     if (event.key === "Backspace") {
       event.preventDefault();
       this.typed = this.typed.slice(0, -1);
-    } else if (/^[0-9.piπsqrt√^*+\-/() ]$/i.test(event.key) && this.typed.length < 28) {
+    } else if (/^[0-9.piπsqrt√^*+\-/() ]$/i.test(event.key) && this.typed.length < MAX_TYPED) {
       event.preventDefault();
       this.typed += event.key;
     } else return;
@@ -222,6 +241,8 @@ export class GeometryMiniGameScreen implements Screen {
     );
     this.submitButton.visible(answering);
     this.restartButton.visible(finished);
+    this.piButton.visible(answering);
+    this.rootButton.visible(answering);
     this.instructions.visible(answering);
     this.group.getLayer()?.batchDraw();
   }

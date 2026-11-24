@@ -128,6 +128,22 @@ describe("GeometryMiniGameScreen", () => {
     expect(frames).toHaveLength(1);
   });
 
+  it("types π and √ with the symbol buttons and hides them during the feedback", () => {
+    click("√");
+    press("Backspace");
+    press("4");
+    click("π");
+    expect(texts()).toContain("4π|");
+    press("Enter");
+    expect(texts()).toContain("Correct!");
+    const pi = screen.group.find<Konva.Text>("Text").find((text) => text.text() === "π")!;
+    expect(pi.getParent()!.visible()).toBe(false);
+    waitForNext();
+    click("√");
+    press("4");
+    expect(texts()).toContain("√4|");
+  });
+
   it("does not move on by itself after the screen is closed during the feedback", () => {
     press("0");
     press("Enter");
