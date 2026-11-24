@@ -20,6 +20,8 @@ let screen: GeometryMiniGameScreen;
 let complete: ReturnType<typeof vi.fn<(result: GeometryMiniGameResult) => void>>;
 let frame: (dt: number) => void;
 const press = (key: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key }));
+// The feedback shows for 1.2 seconds before the next question
+const waitForNext = () => vi.advanceTimersByTime(1200);
 const texts = () => screen.group.find<Konva.Text>("Text").map((text) => text.text());
 function click(label: string) {
   const text = screen.group.find<Konva.Text>("Text").find((text) => text.text() === label)!;
@@ -28,6 +30,7 @@ function click(label: string) {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers();
   frames.length = 0;
   vi.spyOn(Math, "random").mockReturnValue(0);
   complete = vi.fn();
@@ -40,6 +43,7 @@ afterEach(() => {
   screen.hide();
   screen.group.destroy();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("GeometryMiniGameScreen", () => {
@@ -56,20 +60,26 @@ describe("GeometryMiniGameScreen", () => {
     expect(texts()).toContain("Correct!");
     frame(100);
     expect(texts()).toContain("Question 1/5   ·   Time: 22s   ·   Correct: 1");
-    click("Next Question");
+    vi.advanceTimersByTime(1199);
+    expect(texts()).toContain("Correct!");
+    vi.advanceTimersByTime(1);
     expect(texts()).toContain("Question 2/5   ·   Time: 25s   ·   Correct: 1");
     expect(screen.group.find("Text")).toHaveLength(count);
   });
 
-  it("allows one incorrect submission and shows timeout feedback", () => {
+  it("allows one incorrect submission, shows timeout feedback, and moves on after both", () => {
     press("0");
     press("Enter");
     expect(texts().some((text) => text.startsWith("Incorrect."))).toBe(true);
-    click("Next Question");
+    press("Enter"); // Enter does not skip the feedback
+    expect(texts().some((text) => text.startsWith("Incorrect."))).toBe(true);
+    waitForNext();
     frame(25);
     expect(texts().some((text) => text.startsWith("Time's up!"))).toBe(true);
     press("2");
     expect(texts()).toContain("Question 2/5   ·   Time: 0s   ·   Correct: 0");
+    waitForNext();
+    expect(texts()).toContain("Question 3/5   ·   Time: 25s   ·   Correct: 0");
   });
 
   it("shows final results, calls completion once, and supports restart", () => {
@@ -77,7 +87,7 @@ describe("GeometryMiniGameScreen", () => {
     for (const answer of ["4*pi", "2", "4", "8", "2"]) {
       for (const key of answer) press(key);
       press("Enter");
-      click("Next Question");
+      waitForNext();
     }
     expect(texts()).toContain("Round complete");
     expect(texts()).toContain("You answered 5 of 5 correctly.");
@@ -90,7 +100,7 @@ describe("GeometryMiniGameScreen", () => {
     expect(texts()).toContain("Question 1/5   ·   Time: 25s   ·   Correct: 0");
     for (let i = 0; i < 5; i++) {
       frame(25);
-      click("Next Question");
+      waitForNext();
     }
     expect(complete).toHaveBeenCalledTimes(2);
     expect(complete).toHaveBeenLastCalledWith({ correctAnswers: 0, totalQuestions: 5 });
@@ -108,6 +118,7 @@ describe("GeometryMiniGameScreen", () => {
     expect(remove).toHaveBeenCalledWith("keydown", expect.any(Function));
     press("9");
     frame(25);
+    vi.advanceTimersByTime(5000);
     expect(texts()).toEqual(before);
     screen.show();
     screen.show();
@@ -115,6 +126,16 @@ describe("GeometryMiniGameScreen", () => {
     expect(texts()).toContain("2|");
     expect(texts()).toContain("Question 1/5   ·   Time: 25s   ·   Correct: 0");
     expect(frames).toHaveLength(1);
+  });
+
+  it("does not move on by itself after the screen is closed during the feedback", () => {
+    press("0");
+    press("Enter");
+    const before = texts();
+    screen.hide();
+    waitForNext();
+    expect(texts()).toEqual(before);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("runs the back callback when the back arrow is clicked", () => {

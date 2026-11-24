@@ -9,6 +9,9 @@ import {
 import { makeBackButton, makeButton } from "../button";
 import { CARD_FILL, FONT, PAGE_BACKGROUND, TITLE_TEXT } from "../theme";
 
+// How long "Correct!" or the right answer stays on screen before the next question shows
+const FEEDBACK_MS = 1200;
+
 export class GeometryMiniGameScreen implements Screen {
   group = new Konva.Group({ visible: false });
   private background = new Konva.Rect({ fill: PAGE_BACKGROUND });
@@ -62,20 +65,20 @@ export class GeometryMiniGameScreen implements Screen {
     x: 20,
     y: 405,
     width: 480,
-    text: "Type a number, fraction, or expression (e.g. 4*pi).\nPress Enter to submit or continue. Backspace deletes.",
+    text: "Type a number, fraction, or expression (e.g. 4*pi).\nPress Enter to submit. Backspace deletes.",
     fontSize: 15,
     fontFamily: FONT,
     fill: TITLE_TEXT,
     align: "center",
   });
   private submitButton = makeButton("Submit", () => this.submit());
-  private nextButton = makeButton("Next Question", () => this.next());
   private restartButton = makeButton("Restart", () => this.restart());
   private model = new GeometryMiniGame();
   private loop: GameLoop;
   private active = false;
   private notified = false;
   private typed = "";
+  private nextTimer: number | null = null; // waits to show the next question; null when not waiting
 
   constructor(
     private onComplete: (result: GeometryMiniGameResult) => void = () => {},
@@ -90,7 +93,7 @@ export class GeometryMiniGameScreen implements Screen {
       this.feedback,
       this.instructions,
     );
-    for (const button of [this.submitButton, this.nextButton, this.restartButton]) {
+    for (const button of [this.submitButton, this.restartButton]) {
       button.position({ x: 160, y: 345 });
       this.panel.add(button);
     }
@@ -102,6 +105,7 @@ export class GeometryMiniGameScreen implements Screen {
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
       this.model.tick(dt);
+      this.waitForNext(); // the time may have just run out
       this.render();
     });
   }
@@ -117,6 +121,7 @@ export class GeometryMiniGameScreen implements Screen {
   hide(): void {
     this.active = false;
     this.loop.stop();
+    this.stopWaitingForNext();
     window.removeEventListener("keydown", this.onKey);
     this.group.visible(false);
   }
@@ -130,6 +135,7 @@ export class GeometryMiniGameScreen implements Screen {
 
   private restart(): void {
     if (!this.active) return;
+    this.stopWaitingForNext();
     this.model.restart();
     this.typed = "";
     this.notified = false;
@@ -140,7 +146,27 @@ export class GeometryMiniGameScreen implements Screen {
   private submit(): void {
     if (!this.active) return;
     this.model.submit(this.typed);
+    this.waitForNext();
     this.render();
+  }
+
+  // While the feedback shows, starts a timer that moves on to the next question by itself
+  private waitForNext(): void {
+    if (this.model.phase !== "feedback" || this.nextTimer !== null) {
+      return;
+    }
+    this.nextTimer = window.setTimeout(() => {
+      this.nextTimer = null;
+      this.next();
+    }, FEEDBACK_MS);
+  }
+
+  // Cancels the timer, so a closed or restarted screen doesn't move on by itself
+  private stopWaitingForNext(): void {
+    if (this.nextTimer !== null) {
+      window.clearTimeout(this.nextTimer);
+      this.nextTimer = null;
+    }
   }
 
   private next(): void {
@@ -160,7 +186,6 @@ export class GeometryMiniGameScreen implements Screen {
     if (event.key === "Enter") {
       event.preventDefault();
       if (this.model.phase === "answering") this.submit();
-      else if (this.model.phase === "feedback") this.next();
       return;
     }
     if (this.model.phase !== "answering") return;
@@ -196,7 +221,6 @@ export class GeometryMiniGameScreen implements Screen {
           : `${this.model.feedback === "timeout" ? "Time's up!" : "Incorrect."} Answer: ${this.model.currentQuestion.answer.toFixed(2)}`,
     );
     this.submitButton.visible(answering);
-    this.nextButton.visible(this.model.phase === "feedback");
     this.restartButton.visible(finished);
     this.instructions.visible(answering);
     this.group.getLayer()?.batchDraw();
