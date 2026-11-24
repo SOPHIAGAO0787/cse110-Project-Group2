@@ -7,6 +7,7 @@ import type { MapConfig, TowerConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
+import { createTerrain } from "./TerrainView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
@@ -114,7 +115,11 @@ export class GameScreenController implements Screen {
     });
     this.view.mapGroup.destroyChildren();
 
-    const gridView = new GridView(this.map, (tile) => this.model.grid.isBuildable(tile));
+    const gridView = new GridView(
+      this.map,
+      (tile) => this.model.grid.isBuildable(tile),
+      createTerrain(this.map),
+    );
 
     //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);

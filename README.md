@@ -6,7 +6,7 @@ A tower defense game where you answer geometry questions to build your defenses.
 
 ## Features
 
-- **Four maps** (Circle Grove, Angle Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
+- **Four maps** (Circle Grove, s Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
 - **Three towers, three shapes.** The circle tower hits everything in its circle. The triangle and square towers are aimed by the player.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
 - **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
@@ -80,6 +80,7 @@ src/
   model/              game rules and state: plain TypeScript, no Konva, unit tested
     GameModel.ts      holds everything for one game and runs each tick in order
     types.ts          shared shapes and the list of game events
+    TileArt.ts        which picture goes on which tile of a textured map
     Progress.ts       what is kept between games: the chosen map, stars, and bonus coins
     geometry/         tower range shapes
     questions/        picks and checks geometry questions
@@ -94,6 +95,7 @@ src/
     shop/             the Tower Shop screen
 assets/               images for this README
 public/audio/         the music loop and the sound effects, made for this game
+public/tilesets/      the picture sheets that textured maps are drawn from
 ```
 
 Three rules keep it working:
@@ -101,6 +103,25 @@ Three rules keep it working:
 - **A number or a decision goes in `model/`. A pixel goes in `screens/`.** Model code never imports Konva, so it can be tested without a browser.
 - **Positions in the model are in tiles**, not pixels. `(3, 2)` is the center of the tile in column 3, row 2. Views multiply by `TILE`.
 - **Parts talk through events.** For example, an enemy dying emits `enemyKilled`, and the wallet listens for it. In tests, emit the event yourself instead of waiting for another part to be finished.
+
+## Drawing a map with pictures
+
+A map is drawn in plain colors unless it names a **tileset**. A tileset is one picture sheet, cut into square cells, plus a legend that gives each cell a one-character name (`src/data/tilesets/<id>.json`, with the sheet in `public/tilesets/`).
+
+```json
+"tileset": "meadow",
+"art": [
+  "................",
+  "----7...........",
+  "##..|.###......."
+]
+```
+
+- `art` is one character per tile, the same size as `tiles`. Each character is a name from the legend. Leave `art` out and it is worked out from `tiles` and `path`.
+- **A picture has to match its tile.** `#` tiles take a `buildable` picture, `.` a `blocked` one, and `P` a `path` one. A road piece also lists the sides it opens onto (`connects`), and it has to match the route there. `npm test` fails with the tile's position if it does not.
+- A legend entry with several `cells` picks one for each tile, always the same one, so grass does not repeat. Give it a single cell to choose by hand.
+- `rotation` turns a cell, so one drawing can stand in for a corner you have not drawn yet. `inset` shaves pixels off every cell edge if the export left a thin line there.
+- Maps without a `tileset` keep working, and so does a map whose sheet fails to load.
 
 ## Scripts
 
