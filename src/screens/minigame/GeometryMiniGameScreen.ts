@@ -6,6 +6,7 @@ import {
   QUESTIONS_PER_ROUND,
   type GeometryMiniGameResult,
 } from "../../model/minigame/GeometryMiniGame";
+import { COINS_PER_CORRECT_ANSWER, MAX_BONUS_COINS } from "../../model/Progress";
 import { makeBackButton, makeButton } from "../button";
 import { CARD_FILL, FONT, PAGE_BACKGROUND, TITLE_TEXT } from "../theme";
 
@@ -67,10 +68,21 @@ export class GeometryMiniGameScreen implements Screen {
   });
   private instructions = new Konva.Text({
     x: 20,
-    y: 405,
+    y: 395,
     width: 480,
     text: "Type a number, fraction, or expression (e.g. 4*pi).\nPress Enter to submit. Backspace deletes.",
     fontSize: 15,
+    fontFamily: FONT,
+    fill: TITLE_TEXT,
+    align: "center",
+  });
+  // What the round is worth: the coins per answer during it, and the coins earned after it
+  private reward = new Konva.Text({
+    x: 20,
+    y: 440,
+    width: 480,
+    fontSize: 16,
+    fontStyle: "bold",
     fontFamily: FONT,
     fill: TITLE_TEXT,
     align: "center",
@@ -98,6 +110,7 @@ export class GeometryMiniGameScreen implements Screen {
       this.input,
       this.feedback,
       this.instructions,
+      this.reward,
     );
     for (const button of [this.submitButton, this.restartButton]) {
       button.position({ x: 160, y: 345 });
@@ -232,6 +245,17 @@ export class GeometryMiniGameScreen implements Screen {
         : this.model.currentQuestion.prompt,
     );
     this.input.text(answering ? `${this.typed}|` : "");
+    if (finished) {
+      const coins = this.model.correctAnswers * COINS_PER_CORRECT_ANSWER;
+      // Bonus coins stop adding up at MAX_BONUS_COINS, so say so instead of promising more
+      this.reward.text(
+        `+${coins} coins for your next game (you can save up to ${MAX_BONUS_COINS})`,
+      );
+    } else {
+      this.reward.text(
+        `${COINS_PER_CORRECT_ANSWER} coins per correct answer, added to your next game`,
+      );
+    }
     this.feedback.text(
       finished || answering
         ? ""

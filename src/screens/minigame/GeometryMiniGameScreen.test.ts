@@ -50,6 +50,7 @@ describe("GeometryMiniGameScreen", () => {
   it("shows the question, input, score, and decreasing timer without creating nodes", () => {
     const count = screen.group.find("Text").length;
     expect(texts()).toContain("Question 1/5   ·   Time: 25s   ·   Correct: 0");
+    expect(texts()).toContain("5 coins per correct answer, added to your next game");
     frame(3);
     expect(texts()).toContain("Question 1/5   ·   Time: 22s   ·   Correct: 0");
     press("9");
@@ -91,6 +92,8 @@ describe("GeometryMiniGameScreen", () => {
     }
     expect(texts()).toContain("Round complete");
     expect(texts()).toContain("You answered 5 of 5 correctly.");
+    expect(texts()).toContain("+25 coins for your next game (you can save up to 50)");
+    expect(texts()).not.toContain("5 coins per correct answer, added to your next game");
     expect(complete).toHaveBeenCalledExactlyOnceWith({ correctAnswers: 5, totalQuestions: 5 });
     expect(stop).toHaveBeenCalledTimes(1);
     press("Enter");
@@ -98,12 +101,14 @@ describe("GeometryMiniGameScreen", () => {
     expect(complete).toHaveBeenCalledTimes(1);
     click("Restart");
     expect(texts()).toContain("Question 1/5   ·   Time: 25s   ·   Correct: 0");
+    expect(texts()).toContain("5 coins per correct answer, added to your next game");
     for (let i = 0; i < 5; i++) {
       frame(25);
       waitForNext();
     }
     expect(complete).toHaveBeenCalledTimes(2);
     expect(complete).toHaveBeenLastCalledWith({ correctAnswers: 0, totalQuestions: 5 });
+    expect(texts()).toContain("+0 coins for your next game (you can save up to 50)");
   });
 
   it("stops timers and removes keyboard listeners when hidden, resetting on re-entry", () => {
