@@ -101,6 +101,8 @@ export class SettingsPanel {
   }
 
   open(): void {
+    // The main menu can switch the music too, so the labels may be out of date
+    this.refreshSoundLabels();
     this.group.visible(true);
   }
 

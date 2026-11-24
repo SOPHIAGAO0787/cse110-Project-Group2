@@ -94,4 +94,10 @@ describe("SettingsPanel sound switches", () => {
     expect(texts.some((text) => text.text() === "Sound: Off")).toBe(true);
     later.group.destroy();
   });
+
+  it("shows a change made on the main menu when it opens", () => {
+    sound.toggleMusic();
+    panel.open();
+    expect(labels()).toContain("Music: Off");
+  });
 });
