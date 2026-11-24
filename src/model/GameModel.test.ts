@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GameModel } from "./GameModel";
 import { TowerProgress } from "./TowerProgress";
 import { loadMap, TOWERS } from "./loadContent";
+import { WAVE_PREPARATION_SECONDS } from "./WaveManager";
 import map1 from "../data/maps/map1.json";
 import type { Vec } from "./types";
 
@@ -590,5 +591,71 @@ describe("GameModel enemy difficulty scaling", () => {
     expect(game.waves.currentWave).toBe(2);
     expect(game.enemies[0].hp).toBe(23);
     expect(game.enemies[0].def.speed).toBeCloseTo(1.575);
+  });
+});
+
+describe("GameModel wave clear bonus", () => {
+  // Map 1 with a bonus on its first wave: one basic enemy, so clearing it is easy
+  const map = loadMap({
+    ...map1,
+    waves: [
+      { clearBonus: 40, groups: [{ enemy: "basic", count: 1, intervalSec: 1 }] },
+      { groups: [{ enemy: "basic", count: 1, intervalSec: 1 }] },
+    ],
+  });
+
+  it("adds the bonus on top of the kill reward when the wave is cleared", () => {
+    const game = new GameModel(map);
+    const start = game.wallet.coins;
+    game.startNextWave();
+    game.tick(0);
+    const enemy = game.enemies[0];
+    const reward = enemy.def.reward;
+
+    enemy.takeDamage(enemy.hp);
+    game.tick(0);
+
+    expect(game.wallet.coins).toBe(start + reward + 40);
+  });
+
+  it("adds nothing while enemies of the wave are still alive", () => {
+    const game = new GameModel(map);
+    const start = game.wallet.coins;
+    game.startNextWave();
+    game.tick(0);
+
+    expect(game.wallet.coins).toBe(start);
+  });
+
+  it("adds the bonus when the last enemy leaks, without a kill reward", () => {
+    const game = new GameModel(map);
+    const start = game.wallet.coins;
+    game.startNextWave();
+    game.tick(0);
+    const enemy = game.enemies[0];
+
+    enemy.update(game.path.length / enemy.def.speed);
+    game.tick(0);
+
+    expect(game.wallet.coins).toBe(start + 40);
+  });
+
+  it("adds no bonus for a wave that has none", () => {
+    const game = new GameModel(map);
+    game.startNextWave();
+    game.tick(0);
+    game.enemies[0].takeDamage(game.enemies[0].hp);
+    game.tick(0); // wave 1 cleared
+    const afterFirst = game.wallet.coins;
+
+    // run out the countdown, which starts wave 2 (without moving its enemy along the path)
+    for (const defId of game.waves.tick(WAVE_PREPARATION_SECONDS)) game.spawnEnemy(defId);
+    game.tick(0);
+    const enemy = game.enemies[0];
+    const reward = enemy.def.reward;
+    enemy.takeDamage(enemy.hp);
+    game.tick(0);
+
+    expect(game.wallet.coins).toBe(afterFirst + reward);
   });
 });

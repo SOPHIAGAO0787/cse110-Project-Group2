@@ -114,7 +114,7 @@ describe("Integration: a game on map1", () => {
     expect(progress.isUnlocked("map2")).toBe(false);
 
     const won = new GameModel(loadMap(map1));
-    won.events.emit("waveCleared", { wave: map1.waves.length });
+    won.events.emit("waveCleared", { wave: map1.waves.length, bonus: 0 });
     won.tick(0);
     progress.recordResult("map1", finalStars(won));
     expect(progress.isUnlocked("map2")).toBe(true);

@@ -205,6 +205,13 @@ export function loadMap(data: unknown): MapConfig {
     }
   }
 
+  map.waves.forEach((wave, i) => {
+    const bonus = wave.clearBonus;
+    if (bonus !== undefined && !(Number.isInteger(bonus) && bonus >= 0)) {
+      throw new Error(`${map.id}: wave ${i + 1} clearBonus must be a whole number, 0 or more`);
+    }
+  });
+
   if (map.tileset === undefined) {
     if (map.art !== undefined) {
       throw new Error(`${map.id}: has art but no tileset to read it with`);

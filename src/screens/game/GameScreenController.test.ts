@@ -179,7 +179,7 @@ describe("GameScreenController HUD event wiring", () => {
       expectHud(map.startingCoins, map.startingLives, number, enemies);
 
       model.waves.enemiesLeft = 0;
-      model.events.emit("waveCleared", { wave: number });
+      model.events.emit("waveCleared", { wave: number, bonus: 0 });
       expectHud(map.startingCoins, map.startingLives, number, 0);
     }
   });
@@ -316,6 +316,24 @@ describe("GameScreenController feedback", () => {
   it("shows the wave number when a wave starts", () => {
     clickButton("Start Wave");
     expect(textsOnScreen()).toContain("Wave 1");
+  });
+
+  it("says how many coins clearing a wave gave", () => {
+    model.events.emit("waveCleared", { wave: 1, bonus: 25 });
+    expect(textsOnScreen()).toContain("Wave 1 cleared: +25 coins");
+  });
+
+  it("says nothing about coins for a wave with no bonus", () => {
+    model.events.emit("waveCleared", { wave: 1, bonus: 0 });
+    expect(textsOnScreen().some((text) => text.includes("cleared"))).toBe(false);
+  });
+
+  it("shows the bonus in the coins at the top", () => {
+    const before = model.wallet.coins;
+    model.events.emit("waveCleared", { wave: 1, bonus: 25 });
+    expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
+      `Coins: ${before + 25}`,
+    );
   });
 
   it("flashes the red frame when an enemy leaks", () => {
@@ -470,7 +488,7 @@ describe("GameScreenController game over (So1)", () => {
 
   it("records a win so the next map unlocks", () => {
     // Clearing the last wave with every life left is a 3-star win
-    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.events.emit("waveCleared", { wave: map.waves.length, bonus: 0 });
     model.tick(0);
 
     expect(model.result).toMatchObject({ won: true, stars: 3 });
@@ -591,7 +609,7 @@ describe("GameScreenController mini-game bonus coins", () => {
     progress.addMiniGameReward(3);
     const bonus = progress.bonusCoins;
     startNewGame();
-    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.events.emit("waveCleared", { wave: map.waves.length, bonus: 0 });
     model.tick(0);
 
     // The bonus was part of this game's coins, so it counts in the final coins
@@ -1073,7 +1091,7 @@ it.each(["defeat", "victory"])(
   async (outcome) => {
     const { prompt } = openPlacementQuestion();
     if (outcome === "defeat") model.lives.remaining = 0;
-    else model.events.emit("waveCleared", { wave: model.waves.totalWaves });
+    else model.events.emit("waveCleared", { wave: model.waves.totalWaves, bonus: 0 });
     frames[frames.length - 1](0);
     expect(prompt.group.visible()).toBe(false);
     press("5");

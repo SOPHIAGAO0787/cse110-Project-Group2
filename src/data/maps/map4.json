@@ -47,15 +47,18 @@
 
   "waves": [
     {
+      "clearBonus": 10,
       "groups": [{ "enemy": "basic", "count": 8, "intervalSec": 1.0 }]
     },
     {
+      "clearBonus": 15,
       "groups": [
         { "enemy": "basic", "count": 7, "intervalSec": 0.8 },
         { "enemy": "fast", "count": 5, "intervalSec": 0.8 }
       ]
     },
     {
+      "clearBonus": 20,
       "groups": [
         { "enemy": "basic", "count": 6, "intervalSec": 0.7 },
         { "enemy": "fast", "count": 5, "intervalSec": 0.7 },

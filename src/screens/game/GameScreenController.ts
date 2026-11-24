@@ -168,6 +168,9 @@ export class GameScreenController implements Screen {
     // Once a round has started, leaving goes through the settings instead
     events.on("waveStarted", () => this.view.backButton.visible(false));
     events.on("waveCleared", refreshHud);
+    events.on("waveCleared", ({ wave, bonus }) => {
+      if (bonus > 0) this.view.showMessage(`Wave ${wave} cleared: +${bonus} coins`, true);
+    });
     events.on("enemyKilled", refreshHud);
     events.on("enemyLeaked", refreshHud); //listeners for add/fire
     events.on("towerPlaced", ({ towerId }) => {

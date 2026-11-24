@@ -63,7 +63,7 @@ describe("Lives (N2)", () => {
     events.emit("enemyKilled", { enemyId: 1, reward: 5 });
     events.emit("coinsChanged", { coins: 100 });
     events.emit("waveStarted", { wave: 1, totalWaves: 2 });
-    events.emit("waveCleared", { wave: 1 });
+    events.emit("waveCleared", { wave: 1, bonus: 0 });
     expect(lives.remaining).toBe(3);
     expect(totals).toEqual([]);
   });

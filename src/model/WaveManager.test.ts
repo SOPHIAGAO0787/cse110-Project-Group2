@@ -366,3 +366,54 @@ it("manually skips preparation, resets timing, and ignores repeated or active st
   expect(manager.preparationRemaining).toBeNull();
   expect(started).toEqual([1, 2]);
 });
+
+describe("WaveManager clear bonus", () => {
+  // Kills every enemy that spawns after this long and returns what waveCleared announced
+  function clearWave(events: EventBus, spawn: (dt: number) => { id: number }[], seconds = 100) {
+    const cleared: { wave: number; bonus: number }[] = [];
+    events.on("waveCleared", (e) => cleared.push(e));
+    for (const { id } of spawn(seconds)) {
+      events.emit("enemyKilled", { enemyId: id, reward: 5 });
+    }
+    return cleared;
+  }
+
+  it("announces the clearBonus of the wave that was cleared", () => {
+    const { manager, events, spawn } = setup([{ clearBonus: 25, groups: [group("basic", 1, 1)] }]);
+    manager.start();
+    expect(clearWave(events, spawn)).toEqual([{ wave: 1, bonus: 25 }]);
+  });
+
+  it("announces a bonus of 0 when the wave has none", () => {
+    const { manager, events, spawn } = setup([{ groups: [group("basic", 1, 1)] }]);
+    manager.start();
+    expect(clearWave(events, spawn)).toEqual([{ wave: 1, bonus: 0 }]);
+  });
+
+  it("uses each wave's own bonus", () => {
+    const { manager, events, spawn } = setup([
+      { clearBonus: 10, groups: [group("basic", 1, 1)] },
+      { clearBonus: 15, groups: [group("basic", 1, 1)] },
+    ]);
+    const cleared: { wave: number; bonus: number }[] = [];
+    events.on("waveCleared", (e) => cleared.push(e));
+    manager.start();
+    for (const { id } of spawn(10)) events.emit("enemyKilled", { enemyId: id, reward: 5 });
+    for (const { id } of spawn(WAVE_PREPARATION_SECONDS)) {
+      events.emit("enemyKilled", { enemyId: id, reward: 5 });
+    }
+    expect(cleared).toEqual([
+      { wave: 1, bonus: 10 },
+      { wave: 2, bonus: 15 },
+    ]);
+  });
+
+  it("gives the bonus when the last enemy leaks instead of dying", () => {
+    const { manager, events, spawn } = setup([{ clearBonus: 25, groups: [group("basic", 1, 1)] }]);
+    const cleared: { wave: number; bonus: number }[] = [];
+    events.on("waveCleared", (e) => cleared.push(e));
+    manager.start();
+    for (const { id } of spawn(10)) events.emit("enemyLeaked", { enemyId: id });
+    expect(cleared).toEqual([{ wave: 1, bonus: 25 }]);
+  });
+});

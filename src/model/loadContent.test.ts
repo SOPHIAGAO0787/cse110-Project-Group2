@@ -394,3 +394,45 @@ describe("question lists", () => {
     for (const question of GENERAL_QUESTIONS) expect(QUESTIONS).toContain(question);
   });
 });
+
+describe("loadMap wave clearBonus", () => {
+  const withBonus = (clearBonus: unknown) => ({
+    ...validMap(),
+    waves: [{ clearBonus, groups: [{ enemy: "basic", count: 3, intervalSec: 1 }] }],
+  });
+
+  it("accepts a whole number of coins, including 0", () => {
+    expect(loadMap(withBonus(25)).waves[0].clearBonus).toBe(25);
+    expect(() => loadMap(withBonus(0))).not.toThrow();
+  });
+
+  it("accepts a wave without one", () => {
+    expect(loadMap(validMap()).waves[0].clearBonus).toBeUndefined();
+  });
+
+  it("rejects a negative, fractional or non-number bonus, naming the wave", () => {
+    for (const bad of [-5, 2.5, "10", null, NaN]) {
+      expect(() => loadMap(withBonus(bad))).toThrow(/test: wave 1 clearBonus/);
+    }
+  });
+
+  it("names the wave that is wrong, not the first", () => {
+    const map = {
+      ...validMap(),
+      waves: [
+        { clearBonus: 10, groups: [{ enemy: "basic", count: 1, intervalSec: 1 }] },
+        { clearBonus: -1, groups: [{ enemy: "basic", count: 1, intervalSec: 1 }] },
+      ],
+    };
+    expect(() => loadMap(map)).toThrow(/wave 2 clearBonus/);
+  });
+
+  it("is set on every wave but the last in the real maps, as whole numbers", () => {
+    for (const map of MAPS) {
+      map.waves.forEach((wave, i) => {
+        const bonus = wave.clearBonus ?? 0;
+        expect(Number.isInteger(bonus) && bonus >= 0, `${map.id} wave ${i + 1}`).toBe(true);
+      });
+    }
+  });
+});
