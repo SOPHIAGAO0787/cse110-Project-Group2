@@ -1,7 +1,7 @@
 import { EventBus } from "../core/EventBus";
 import { Enemy } from "./Enemy";
 import { Grid } from "./Grid";
-import { starRating, type GameResult } from "./GameResult";
+import { shopCoinReward, starRating, type GameResult } from "./GameResult";
 import { ENEMIES, TOWERS } from "./loadContent";
 import { Lives } from "./Lives";
 import { Path } from "./Path";
@@ -215,9 +215,10 @@ export class GameModel {
   }
 
   private finish(won: boolean): void {
+    const stars = starRating(won, this.lives.remaining, this.map.startingLives);
     this.finalResult = {
       won,
-      stars: starRating(won, this.lives.remaining, this.map.startingLives),
+      stars,
       elapsedSeconds: this.elapsedSeconds,
       towersPlaced: this.towersPlaced,
       remainingLives: this.lives.remaining,
@@ -226,7 +227,7 @@ export class GameModel {
       enemiesDefeated: this.enemiesDefeated,
       coinsEarned: this.coinsEarned,
       score: this.enemiesDefeated * 100,
-      shopCoinsEarned: 0,
+      shopCoinsEarned: shopCoinReward(stars),
     };
     this.events.emit("gameOver", { won });
   }

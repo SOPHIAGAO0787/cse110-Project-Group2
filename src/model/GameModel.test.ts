@@ -438,6 +438,7 @@ describe("GameModel game result (So1)", () => {
       enemiesDefeated: 1,
       coinsEarned: defeated.def.reward,
       score: 100,
+      shopCoinsEarned: 25,
     });
     expect(game.waves.currentWave).toBe(map1.waves.length);
   });

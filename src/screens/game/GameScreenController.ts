@@ -2,7 +2,6 @@ import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { Sound } from "../../core/Sound";
 import { GameModel } from "../../model/GameModel";
-import { shopCoinReward } from "../../model/GameResult";
 import { findMap } from "../../model/loadContent";
 import type { MapConfig } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
@@ -155,12 +154,7 @@ export class GameScreenController implements Screen {
       this.refreshWaveTimers();
       const result = this.model.result;
       if (result) {
-        // Only a map's first win pays Tower Shop coins, so replaying a map can't farm them.
-        // This runs before recordResult, which saves this game's stars.
-        if (result.won && this.progress.starsFor(this.map.id) === 0) {
-          result.shopCoinsEarned = shopCoinReward(result.stars);
-          this.towerProgress.shopCoins += result.shopCoinsEarned;
-        }
+        this.towerProgress.shopCoins += result.shopCoinsEarned;
         // A win unlocks the next map and its stars show on the map screen
         this.progress.recordResult(this.map.id, result.stars);
         // This game had the bonus coins. Leaving early (no result) keeps them for the next game.

@@ -85,7 +85,7 @@ describe("ResultScreen (So1)", () => {
     expect(shownText()).not.toContain("Tower Shop coins");
   });
 
-  it("shows the Tower Shop coins a first win paid, above the buttons", () => {
+  it("shows the Tower Shop coins a win paid, above the buttons", () => {
     screen.show({ ...defeat, won: true, stars: 3, shopCoinsEarned: 75 });
     expect(shownText()).toContain("+75 Tower Shop coins");
 

@@ -574,20 +574,20 @@ describe("GameScreenController Tower Shop coins", () => {
     [20, 3, 75],
     [10, 2, 50],
     [1, 1, 25],
-  ])("pays a first win with %i lives left (%i stars) %i coins", (lives, stars, reward) => {
+  ])("pays a win with %i lives left (%i stars) %i coins", (lives, stars, reward) => {
     win(lives);
     expect(model.result).toMatchObject({ won: true, stars, shopCoinsEarned: reward });
     expect(towerProgress.shopCoins).toBe(200 + reward);
   });
 
-  it("pays nothing for winning the same map again", () => {
+  it("pays again for winning the same map again", () => {
     win(1);
     controller.hide();
     controller.show();
     model = models[models.length - 1];
     win(20);
-    expect(model.result).toMatchObject({ won: true, stars: 3, shopCoinsEarned: 0 });
-    expect(towerProgress.shopCoins).toBe(225);
+    expect(model.result).toMatchObject({ won: true, stars: 3, shopCoinsEarned: 75 });
+    expect(towerProgress.shopCoins).toBe(300);
   });
 
   it("pays nothing for a loss", () => {
