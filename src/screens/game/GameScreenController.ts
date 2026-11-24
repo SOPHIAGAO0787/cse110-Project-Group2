@@ -2,23 +2,19 @@ import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { Sound } from "../../core/Sound";
 import { GameModel } from "../../model/GameModel";
-import { findMap, TOWERS } from "../../model/loadContent";
-import type { MapConfig, TowerConfig, Vec } from "../../model/types";
+import { findMap } from "../../model/loadContent";
+import type { MapConfig } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
 import { createTerrain } from "./TerrainView";
-import { PlacementModel } from "../../model/PlacementModel";
-import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { EnemiesView } from "./EnemiesView";
 import { EffectsView } from "./EffectsView";
-import { InGameTowerCard } from "./InGameTowerCard";
 import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
-import { configFromPointer, defaultConfig } from "../../model/towerConfig";
-import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
+import { PlacementController } from "./PlacementController";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -30,12 +26,10 @@ export class GameScreenController implements Screen {
   private view: GameScreenView;
   private model: GameModel;
   private loop: GameLoop;
-  private cleanupPlacement: (() => void) | null = null;
-  private refreshUpgradeHint: (() => void) | null = null;
+  private placement: PlacementController | null = null; // null while no game is running
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
   private screenHeight = 0; // last size given to resize(), used to fit the shop cards
-  private layoutCards: (() => void) | null = null;
   private speed = 1; // model steps per frame: 1 is normal speed, 2 is double. Kept between games.
   private onSpeedKey: (e: KeyboardEvent) => void; // the Space key listener, added in show()
 
@@ -127,10 +121,19 @@ export class GameScreenController implements Screen {
     this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
     this.view.mapGroup.add(effectsView.group); // on top, so the bars and popups are never covered
 
-    this.cleanupPlacement = this.wirePlacement(gridView);
+    this.placement = new PlacementController(
+      this.view,
+      this.model,
+      this.map,
+      this.towerProgress,
+      this.questions,
+      gridView,
+      () => this.active,
+      this.screenHeight,
+    );
 
     const refreshHud = () => {
-      this.refreshUpgradeHint?.();
+      this.refreshUpgradeHint();
       this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
@@ -147,8 +150,7 @@ export class GameScreenController implements Screen {
     events.on("gameOver", () => {
       this.loop.stop();
       this.view.prompt.cancel();
-      this.cleanupPlacement?.();
-      this.cleanupPlacement = null;
+      this.disposePlacement();
       this.refreshWaveTimers();
       const result = this.model.result;
       if (result) {
@@ -213,8 +215,7 @@ export class GameScreenController implements Screen {
     this.active = false;
     window.removeEventListener("keydown", this.onSpeedKey);
     this.view.prompt.cancel(); // closes the popup and removes its key listener
-    this.cleanupPlacement?.();
-    this.cleanupPlacement = null;
+    this.disposePlacement();
     this.loop.stop();
     this.model.events.clear();
     this.group.visible(false);
@@ -223,8 +224,9 @@ export class GameScreenController implements Screen {
   resize(width: number, height: number): void {
     this.screenHeight = height;
     this.view.resize(width, height);
-    this.layoutCards?.();
-    this.refreshUpgradeHint?.();
+    if (this.placement) {
+      this.placement.resize(height);
+    }
   }
 
   private refreshWaveTimers(): void {
@@ -242,13 +244,27 @@ export class GameScreenController implements Screen {
   // The game is paused while the settings are open
   private openSettings(): void {
     this.view.settings.open();
-    this.refreshUpgradeHint?.();
+    this.refreshUpgradeHint();
     this.loop.stop();
   }
 
   private closeSettings(): void {
     this.view.settings.close();
     this.loop.start();
+  }
+
+  private refreshUpgradeHint(): void {
+    if (this.placement) {
+      this.placement.refreshUpgradeHint();
+    }
+  }
+
+  // Removes the tower cards and the placement listeners when a game ends or the screen closes
+  private disposePlacement(): void {
+    if (this.placement) {
+      this.placement.dispose();
+      this.placement = null;
+    }
   }
 
   // Switches between normal and double speed
@@ -259,312 +275,5 @@ export class GameScreenController implements Screen {
       this.speed = 1;
     }
     this.view.setSpeed(this.speed);
-  }
-
-  private wirePlacement(gridView: GridView): () => void {
-    const model = this.model;
-    let disposed = false;
-    const canCommit = () => !disposed && this.active && !model.isOver;
-    const placement = new PlacementModel();
-
-    this.layoutCards = null;
-
-    // Only the towers bought in the Tower Shop can be placed.
-    const unlockedTowers = TOWERS.filter((tower) => this.towerProgress.getMaxLevel(tower.id) >= 0);
-
-    // No unlocked towers means there is nothing to place.
-    if (unlockedTowers.length === 0) {
-      return () => {};
-    }
-
-    // One card and one preview per tower kind; picking a card switches which one is active.
-    const choices = unlockedTowers.map((tower) => {
-      const view = new PlacementView(tower, { cols: this.map.cols, rows: this.map.rows });
-      const card = new InGameTowerCard(tower, view.menuIcon);
-      this.view.mapGroup.add(view.group, view.prompt);
-      this.view.shopGroup.add(card.group);
-      return { tower, view, card };
-    });
-
-    // Stack the cards under the shop title, shrinking them all if they would run off the screen
-    // (the wave countdown and the Start Wave button sit at the bottom).
-    const CARD_STEP = 352;
-    const SHOP_TOP = 84;
-    const SHOP_BOTTOM = 160;
-    this.layoutCards = () => {
-      const room = this.screenHeight - SHOP_TOP - SHOP_BOTTOM;
-      const scale =
-        this.screenHeight > 0
-          ? Math.min(1, Math.max(0.35, room / (choices.length * CARD_STEP)))
-          : 1;
-      choices.forEach(({ card }, index) => {
-        card.group.scale({ x: scale, y: scale });
-        card.group.position({
-          x: 16 + (228 * (1 - scale)) / 2,
-          y: SHOP_TOP + index * CARD_STEP * scale,
-        });
-      });
-    };
-    this.layoutCards();
-
-    // These change when the player picks another tower.
-    let def = choices[0].tower;
-    let pv = choices[0].view;
-
-    const stage = this.group.getStage();
-    const canPlace = (t: Vec) => this.model.grid.isBuildable(t);
-
-    // Asks the question and returns true only if the player answered correctly.
-    const beforeCommit = async (tile: Vec, config?: TowerConfig): Promise<boolean> => {
-      const question = this.questions.questionFor(def, config);
-      const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
-      if (!canCommit()) return false;
-      if (correct) model.recordQuestionSolved();
-      return correct;
-    };
-
-    let pending = false; // blocks double-triggers while a question is open
-    // A click on the map locks the aim of a cone or block tower where it is, so the mouse can
-    // reach the confirm and cancel squares without changing it. Another click aims again.
-    let aimLocked = false;
-    const lockAim = (locked: boolean) => {
-      aimLocked = locked;
-      pv.setLocked(locked);
-    };
-    let hovering = false;
-    const refreshUpgradeHint = () => {
-      const tile = hovering ? gridView.tileUnderMouse() : null;
-      const tower = tile
-        ? model.towers.find((item) => item.tile.x === tile.x && item.tile.y === tile.y)
-        : undefined;
-      const canShow =
-        hovering &&
-        !pending &&
-        !disposed &&
-        this.active &&
-        !model.isOver &&
-        !this.view.settings.isOpen() &&
-        placement.state.kind === "idle";
-      const container = stage?.container();
-      if (!canShow || !tower) {
-        this.view.hideTowerUpgradeHint();
-        if (container) container.style.cursor = "default";
-        return;
-      }
-      this.view.showTowerUpgradeHint(
-        tower,
-        SHOP_TOWERS.find((item) => item.def.id === tower.def.id),
-        this.towerProgress.getMaxLevel(tower.def.id),
-        model.wallet.coins,
-      );
-      if (container) container.style.cursor = "pointer";
-    };
-    this.refreshUpgradeHint = refreshUpgradeHint;
-    gridView.group.on("pointermove.upgrade pointerenter.upgrade", () => {
-      hovering = true;
-      refreshUpgradeHint();
-    });
-    gridView.group.on("pointerleave.upgrade", () => {
-      hovering = false;
-      refreshUpgradeHint();
-    });
-    const onUpgrade = () => {
-      if (
-        pending ||
-        disposed ||
-        this.model.isOver ||
-        this.view.settings.isOpen() ||
-        placement.state.kind !== "idle"
-      ) {
-        return;
-      }
-
-      const tile = gridView.tileUnderMouse();
-      if (!tile) return;
-
-      const tower = this.model.towers.find(
-        (item) => item.tile.x === tile.x && item.tile.y === tile.y,
-      );
-      if (!tower) return;
-
-      const message = this.model.tryUpgradeTower(tower.id);
-      this.view.showMessage(message);
-      refreshUpgradeHint();
-    };
-
-    gridView.group.on("click.upgrade tap.upgrade", onUpgrade);
-
-    const requestPlace = async () => {
-      const s = placement.state;
-      if (!canCommit() || (s.kind !== "placed" && s.kind !== "configuring") || pending) return;
-      const tile = s.pos;
-      const config = s.kind === "configuring" ? s.config : undefined; // e.g. where the triangle aims
-
-      // Check coins before asking, so the player isn't asked a question for a tower they can't buy.
-      // tryPlaceTower checks again, because coins can change while the question is open.
-      if (!this.model.wallet.canAfford(def.cost)) {
-        placement.cancel();
-        pv.hide();
-        this.view.showMessage("Not enough coins");
-        return;
-      }
-
-      pending = true;
-      let ok = false;
-      try {
-        ok = await beforeCommit(tile, config);
-      } finally {
-        pending = false;
-      }
-
-      if (!ok || !canCommit()) {
-        placement.cancel();
-        pv.hide();
-        return;
-      }
-
-      const now = placement.state;
-      if (
-        (now.kind !== "placed" && now.kind !== "configuring") ||
-        now.pos.x !== tile.x ||
-        now.pos.y !== tile.y
-      ) {
-        return;
-      }
-
-      placement.confirm(); // state: idle
-      pv.hide();
-      const result = this.model.tryPlaceTower(def.id, tile, config);
-      // TowersView draws successful placements through the towerPlaced event.
-      if (result === "ok") {
-        return;
-      }
-
-      if (result === "funds") {
-        this.view.showMessage("Not enough coins");
-      } else if (result === "locked") {
-        this.view.showMessage("Unlock this tower in the Tower Shop first");
-      } else if (result === "occupied") {
-        this.view.showMessage("There is already a tower on this tile");
-      } else {
-        this.view.showMessage("Can't place a tower here");
-      }
-    };
-
-    const onDown = () => {
-      if (pending || !canCommit()) return;
-      hovering = false;
-      refreshUpgradeHint();
-      const tile = gridView.tileUnderMouse();
-      if (tile) placement.startDrag(tile);
-      gridView.showGrid(true);
-    };
-
-    const onMove = () => {
-      if (pending) return; // the preview stays put while a question is open
-      const s = placement.state;
-      if (s.kind === "dragging") {
-        const tile = gridView.tileUnderMouse();
-        if (tile) pv.show(tile, canPlace(tile));
-      } else if (s.kind === "configuring" && !aimLocked) {
-        // Aim at the mouse: the cone's width or the block's size follows how far it is from the tower.
-        const pointer = gridView.pointerInTiles();
-        if (!pointer) return;
-        const config = configFromPointer(def, s.pos, pointer);
-        if (!config) return;
-        placement.configure(config);
-        pv.showConfig(s.pos, config);
-      }
-    };
-
-    const onUp = () => {
-      gridView.showGrid(false); // also when Escape already ended the drag
-      if (placement.state.kind !== "dragging") return;
-      const tile = gridView.tileUnderMouse();
-      if (tile && canPlace(tile)) {
-        placement.endDrag(tile, true); // state: placed, ghost stays
-        pv.show(tile, true);
-        pv.showPrompt(tile); // the confirm and cancel squares
-        lockAim(false);
-        const config = defaultConfig(def);
-        if (config.kind !== "circle") {
-          // a cone or block tower still needs aiming: show the default and follow the mouse from here
-          placement.configure(config);
-          pv.showConfig(tile, config);
-        }
-      } else {
-        placement.cancel();
-        pv.hide();
-      }
-    };
-
-    const onMapClick = () => {
-      if (pending || placement.state.kind !== "configuring") return;
-      if (!gridView.tileUnderMouse()) return; // only a click on the map, not on the shop or buttons
-      lockAim(!aimLocked);
-    };
-
-    const onKey = (e: KeyboardEvent) => {
-      if (pending) return; // while a question is open, the prompt owns the keyboard
-      if (this.view.settings.isOpen()) {
-        return; // paused: Enter must not open a question behind the settings
-      }
-      if (e.key === "Enter") {
-        void requestPlace();
-      } else if (e.key === "Escape") {
-        placement.cancel();
-        pv.hide();
-      }
-    };
-
-    // The squares at the tower do what Enter and Escape do
-    const cancelPlacement = () => {
-      if (pending || this.view.settings.isOpen()) return;
-      placement.cancel();
-      pv.hide();
-    };
-    const confirmPlacement = () => {
-      if (this.view.settings.isOpen()) return;
-      void requestPlace();
-    };
-    choices.forEach(({ view }) => {
-      view.onConfirm = confirmPlacement;
-      view.onCancel = cancelPlacement;
-    });
-
-    choices.forEach((choice) => {
-      choice.card.group.on("pointerdown", () => {
-        if (pending || this.model.isOver) return;
-
-        placement.cancel();
-        pv.hide();
-
-        def = choice.tower;
-        pv = choice.view;
-        onDown();
-      });
-    });
-    stage?.on("pointermove.placement", onMove);
-    stage?.on("pointerdown.placement", onMapClick);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("keydown", onKey);
-
-    return () => {
-      // Invalidate pending answers before removing input handlers.
-      disposed = true;
-      refreshUpgradeHint();
-      this.refreshUpgradeHint = null;
-      placement.cancel();
-      pv.hide();
-      stage?.off(".placement");
-      gridView.group.off(".upgrade");
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("keydown", onKey);
-      for (const choice of choices) {
-        choice.card.group.destroy();
-        choice.view.group.destroy();
-        choice.view.prompt.destroy();
-      }
-    };
   }
 }
