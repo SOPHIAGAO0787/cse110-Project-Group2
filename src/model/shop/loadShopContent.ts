@@ -3,11 +3,17 @@ import { TOWERS } from "../loadContent";
 import { rangeReach } from "../towerConfig";
 import type { ShopLevel, ShopTower } from "./types";
 
+const upgradeConfigs: {
+  towerId: string;
+  upgrades: { cost: number; damage: number; attackSpeed: number; radius?: number }[];
+}[] = upgradesJson;
+
 // Check for unknown tower IDs and duplicate upgrade records.
 const configuredIds = new Set<string>();
 
-for (const entry of upgradesJson) {
-  if (!TOWERS.some((tower) => tower.id === entry.towerId)) {
+for (const entry of upgradeConfigs) {
+  const tower = TOWERS.find((tower) => tower.id === entry.towerId);
+  if (!tower) {
     throw new Error(`Unknown tower in upgrades: "${entry.towerId}"`);
   }
 
@@ -22,7 +28,11 @@ for (const entry of upgradesJson) {
       throw new Error(`Invalid upgrade cost for "${entry.towerId}"`);
     }
 
-    const stats = [upgrade.damage, upgrade.attackSpeed, upgrade.radius];
+    const stats = [upgrade.damage, upgrade.attackSpeed];
+    // Only circles need a radius upgrade. Other towers keep their aimed range.
+    if (tower.range.kind === "circle" || upgrade.radius !== undefined) {
+      stats.push(upgrade.radius ?? NaN);
+    }
 
     if (stats.some((value) => !Number.isFinite(value) || value <= 0)) {
       throw new Error(`Invalid upgrade stats for "${entry.towerId}"`);
@@ -31,7 +41,7 @@ for (const entry of upgradesJson) {
 }
 
 export const SHOP_TOWERS: ShopTower[] = TOWERS.map((def) => {
-  const config = upgradesJson.find((entry) => entry.towerId === def.id);
+  const config = upgradeConfigs.find((entry) => entry.towerId === def.id);
 
   // A tower without upgrade configuration has only its base level.
   const upgrades = config?.upgrades ?? [];
@@ -46,7 +56,7 @@ export const SHOP_TOWERS: ShopTower[] = TOWERS.map((def) => {
   const upgradedLevels: ShopLevel[] = upgrades.map((upgrade, index) => ({
     damage: upgrade.damage,
     attackSpeed: upgrade.attackSpeed,
-    radius: upgrade.radius,
+    radius: upgrade.radius ?? rangeReach(def),
 
     // This level's price to reach the following level.
     upgradeCost: upgrades[index + 1]?.cost ?? null,

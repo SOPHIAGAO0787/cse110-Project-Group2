@@ -1,6 +1,8 @@
 import Konva from "konva";
 import { makeButton } from "../button";
-import type { ShopTower } from "../../model/shop/types";
+import type { ShopLevel, ShopTower } from "../../model/shop/types";
+import { rectSizes } from "../../model/geometry/rect";
+import { fireRateFor } from "../../model/towerConfig";
 
 interface ShopViewState {
   towers: ShopTower[];
@@ -124,17 +126,7 @@ export class TowerShopView {
     this.text(this.content, tower.def.description, 334, 211, 18);
 
     // Show current tower details.
-    this.text(
-      this.content,
-      [
-        `Damage: ${current.damage}`,
-        `Attack speed: ${current.attackSpeed} shots/sec`,
-        `Range radius: ${current.radius} tiles`,
-      ].join("\n"),
-      334,
-      275,
-      20,
-    );
+    this.text(this.content, this.describeAbilities(tower, current).join("\n"), 334, 275, 17);
 
     //show upgrade cost for each abilities
     if (next) {
@@ -143,16 +135,18 @@ export class TowerShopView {
         [
           locked ? "Next upgrade after unlocking:" : "Next upgrade:",
           `Damage: ${current.damage} → ${next.damage}`,
-          `Attack speed: ${current.attackSpeed} → ${next.attackSpeed} shots/sec`,
-          `Range radius: ${current.radius} → ${next.radius} tiles`,
+          `Attack speed: ${this.describeAttackSpeed(tower, current)} → ${this.describeAttackSpeed(tower, next)} shots/sec`,
+          ...(tower.def.range.kind === "circle"
+            ? [`Range radius: ${current.radius} → ${next.radius} tiles`]
+            : []),
           `Upgrade cost: ${current.upgradeCost} coins`,
         ].join("\n"),
         334,
-        375,
-        18,
+        400,
+        16,
       );
     } else {
-      this.text(this.content, "Maximum level reached", 334, 390, 22);
+      this.text(this.content, "No further upgrades available", 334, 410, 18);
     }
 
     if (locked || next) {
@@ -166,6 +160,44 @@ export class TowerShopView {
         this.callbacks.onAction,
       );
     }
+  }
+
+  private describeAbilities(tower: ShopTower, level: ShopLevel): string[] {
+    const { range } = tower.def;
+    const damage = `Damage: ${level.damage}`;
+    const speed = `Attack speed: ${this.describeAttackSpeed(tower, level)} shots/sec`;
+
+    switch (range.kind) {
+      case "circle":
+        return [damage, speed, `Range radius: ${level.radius} tiles`];
+      case "sector":
+        return [
+          damage,
+          speed,
+          `Aimed cone: ${range.area} tiles²`,
+          "Wider cones reach less far; narrower cones reach farther.",
+        ];
+      case "rect":
+        return [
+          damage,
+          speed,
+          `Aimed block: up to ${range.maxArea} tiles²`,
+          "Smaller blocks fire faster; aim to choose the size.",
+        ];
+    }
+  }
+
+  private describeAttackSpeed(tower: ShopTower, level: ShopLevel): string {
+    if (tower.def.range.kind !== "rect") return `${level.attackSpeed}`;
+
+    // Use the same block sizes and fire-rate calculation as the placed tower.
+    const def = { ...tower.def, fireRatePerSec: level.attackSpeed };
+    const rates = rectSizes(tower.def.range.maxArea).map(({ width, depth }) =>
+      fireRateFor(def, { kind: "rect", facing: "up", width, depth, side: 1 }),
+    );
+    const slowest = Number(Math.min(...rates).toFixed(2));
+    const fastest = Number(Math.max(...rates).toFixed(2));
+    return slowest === fastest ? `${slowest}` : `${slowest}–${fastest}`;
   }
 
   //pop up message for not enough money
