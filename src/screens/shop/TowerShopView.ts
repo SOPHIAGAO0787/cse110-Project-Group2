@@ -1,5 +1,6 @@
 import Konva from "konva";
 import { makeClickable } from "../button";
+import { Page, CARD_WIDTH as PAGE_WIDTH, CARD_HEIGHT as PAGE_HEIGHT } from "../Page";
 import {
   FONT,
   HEADER_BACKGROUND,
@@ -24,13 +25,11 @@ interface ShopCallbacks {
   onBack: () => void;
 }
 
-const WIDTH = 1120;
-const HEIGHT = 800;
+const ROW_WIDTH = 1120;
 const CARD_WIDTH = 330;
 const CARD_HEIGHT = 554;
 const INK = "#20283d";
 const MUTED = "#65738b";
-const PAGE = "#f0f3fa";
 
 function towerStyle(tower: ShopTower): { color: string; tint: string } {
   switch (tower.def.range.kind) {
@@ -44,55 +43,59 @@ function towerStyle(tower: ShopTower): { color: string; tint: string } {
 }
 
 export class TowerShopView {
-  group = new Konva.Group();
+  private page = new Page();
+  group = this.page.group;
 
-  private backdrop = new Konva.Rect({ fill: PAGE, listening: false });
-  private scene = new Konva.Group();
   private content = new Konva.Group();
   private popup = new Konva.Group({ visible: false });
 
   constructor(private callbacks: ShopCallbacks) {
-    this.scene.add(this.content, this.popup);
-    this.group.add(this.backdrop, this.scene);
+    this.page.content.add(this.content, this.popup);
   }
 
   render(state: ShopViewState): void {
     this.content.destroyChildren();
-    this.content.add(new Konva.Rect({ width: WIDTH, height: HEIGHT, fill: PAGE }));
-    this.content.add(new Konva.Rect({ width: WIDTH, height: 88, fill: HEADER_BACKGROUND }));
-    this.text(this.content, "Geometry game", 40, 27, 28, 250, "white", true);
-    this.content.add(
-      new Konva.Line({
-        points: [305, 31, 305, 57],
-        stroke: "#ffffff66",
-        listening: false,
-      }),
-    );
-    this.text(this.content, "Tower Shop", 329, 34, 15, 170, "white", true);
-    this.button(this.content, "←  Main menu", 926, 25, 154, 38, this.callbacks.onBack, "#638ce4");
-
-    this.text(this.content, "Choose a tower", 40, 117, 29, 650, INK, true);
+    this.text(this.content, "Tower Shop", 56, 47, 28, 650, INK, true);
     this.text(
       this.content,
-      "Unlock new shapes. Build a stronger defense.",
-      40,
-      155,
+      "Choose a tower. Unlock new shapes and build a stronger defense.",
+      56,
+      91,
       15,
-      650,
+      850,
       MUTED,
     );
+    this.button(
+      this.content,
+      "←  Main menu",
+      PAGE_WIDTH - 210,
+      42,
+      154,
+      38,
+      this.callbacks.onBack,
+      HEADER_BACKGROUND,
+    );
+
+    const coinsX = PAGE_WIDTH - 225;
     this.content.add(
-      new Konva.Rect({ x: 911, y: 121, width: 169, height: 44, fill: "white", cornerRadius: 22 }),
+      new Konva.Rect({
+        x: coinsX,
+        y: 99,
+        width: 169,
+        height: 44,
+        fill: "#fff4cf",
+        cornerRadius: 22,
+      }),
       new Konva.Circle({
-        x: 935,
-        y: 143,
+        x: coinsX + 24,
+        y: 121,
         radius: 10,
         fill: "#ffc547",
         stroke: "#e9aa29",
         strokeWidth: 1.5,
       }),
     );
-    this.text(this.content, `${state.coins} coins`, 954, 132, 17, 115, INK, true);
+    this.text(this.content, `${state.coins} coins`, coinsX + 43, 110, 17, 115, INK, true);
 
     const order = ["circle", "sector", "rect"];
     const towers = [...state.towers].sort(
@@ -103,13 +106,13 @@ export class TowerShopView {
     this.text(
       this.content,
       "Shop purchases unlock levels. Upgrade placed towers separately during a game.",
-      40,
-      763,
+      56,
+      747,
       13,
-      850,
+      900,
       MUTED,
     );
-    this.text(this.content, "Progress resets on refresh", 863, 763, 12, 217, MUTED);
+    this.text(this.content, "Progress resets on refresh", PAGE_WIDTH - 273, 747, 12, 217, MUTED);
   }
 
   private renderCard(tower: ShopTower, index: number, state: ShopViewState): void {
@@ -119,7 +122,11 @@ export class TowerShopView {
     const current = tower.levels[Math.max(0, levelIndex)];
     const next = tower.levels[Math.max(0, levelIndex) + 1];
     const selected = tower.def.id === state.selectedId;
-    const card = new Konva.Group({ x: 40 + index * 355, y: 190, name: `tower-${tower.def.id}` });
+    const card = new Konva.Group({
+      x: (PAGE_WIDTH - ROW_WIDTH) / 2 + 40 + index * 355,
+      y: 160,
+      name: `tower-${tower.def.id}`,
+    });
     card.add(
       new Konva.Rect({
         width: CARD_WIDTH,
@@ -364,11 +371,18 @@ export class TowerShopView {
 
   showPopup(message: string): void {
     this.popup.destroyChildren();
+    const x = (PAGE_WIDTH - 460) / 2;
+    const y = (PAGE_HEIGHT - 250) / 2;
     this.popup.add(
-      new Konva.Rect({ width: WIDTH, height: HEIGHT, fill: "#20283d88" }),
       new Konva.Rect({
-        x: 330,
-        y: 260,
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        fill: "#20283d88",
+        cornerRadius: 24,
+      }),
+      new Konva.Rect({
+        x,
+        y,
         width: 460,
         height: 250,
         fill: "white",
@@ -378,13 +392,13 @@ export class TowerShopView {
         shadowOpacity: 0.15,
       }),
     );
-    this.text(this.popup, "A few more coins to go", 362, 292, 25, 396, INK, true);
-    this.text(this.popup, message, 362, 342, 17, 396, MUTED);
+    this.text(this.popup, "A few more coins to go", x + 32, y + 32, 25, 396, INK, true);
+    this.text(this.popup, message, x + 32, y + 82, 17, 396, MUTED);
     this.button(
       this.popup,
       "Got it",
-      362,
-      434,
+      x + 32,
+      y + 174,
       396,
       44,
       () => this.closePopup(),
@@ -400,10 +414,7 @@ export class TowerShopView {
   }
 
   resize(width: number, height: number): void {
-    this.backdrop.size({ width, height });
-    const scale = Math.max(0.01, Math.min(width / WIDTH, height / HEIGHT));
-    this.scene.scale({ x: scale, y: scale });
-    this.scene.position({ x: (width - WIDTH * scale) / 2, y: (height - HEIGHT * scale) / 2 });
+    this.page.resize(width, height);
   }
 
   private text(
