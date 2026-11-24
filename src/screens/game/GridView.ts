@@ -4,7 +4,8 @@ import { TILE } from "./GameScreenView";
 
 const PATCH_EDGE = 3; // how far the dark edge around a patch of build tiles sticks out, in pixels
 
-// Draws the map: the scenery, the build spots, and a road along the enemy route.
+// Draws the map: the scenery, the build spots, and a road along the enemy route,
+// with an arrow where enemies come in and a flag where they leave.
 // While the player places a tower, grid lines show each tile, and the tile under
 // the mouse is tinted green if a tower can go there and red if not.
 export class GridView {
@@ -40,6 +41,8 @@ export class GridView {
     } else {
       this.drawColored(map);
     }
+    // After the ground, so the markers show on both looks
+    this.drawPathEnds(map);
 
     // One line along every tile edge, hidden until showGrid(true)
     for (let x = 0; x <= map.cols; x++) {
@@ -150,6 +153,44 @@ export class GridView {
         listening: false,
       }),
     );
+  }
+
+  // An arrow on the first path tile, pointing the way enemies walk,
+  // and a flag on the last path tile, where they leave the map.
+  private drawPathEnds(map: MapConfig): void {
+    const start = map.path[0];
+    const next = map.path[1];
+    const end = map.path[map.path.length - 1];
+
+    // -1, 0 or 1 on each axis: which way the first stretch of road goes
+    const dx = Math.sign(next.x - start.x);
+    const dy = Math.sign(next.y - start.y);
+    const startX = (start.x + 0.5) * TILE;
+    const startY = (start.y + 0.5) * TILE;
+    this.group.add(
+      new Konva.Arrow({
+        name: "spawn-arrow",
+        // From a little behind the tile center to a little past it
+        points: [startX - dx * 14, startY - dy * 14, startX + dx * 14, startY + dy * 14],
+        stroke: "white",
+        fill: "white",
+        strokeWidth: 5,
+        pointerLength: 10,
+        pointerWidth: 16,
+        // A dark glow so the white arrow stands out on a light road
+        shadowColor: "black",
+        shadowBlur: 4,
+        listening: false,
+      }),
+    );
+
+    // A pole with a red triangle at the top
+    const endX = (end.x + 0.5) * TILE;
+    const endY = (end.y + 0.5) * TILE;
+    const flag = new Konva.Group({ name: "exit-flag", x: endX, y: endY, listening: false });
+    flag.add(new Konva.Line({ points: [-6, 14, -6, -14], stroke: "#333333", strokeWidth: 3 }));
+    flag.add(new Konva.Line({ points: [-6, -14, 12, -8, -6, -2], closed: true, fill: "#e53935" }));
+    this.group.add(flag);
   }
 
   // The tile the mouse is over, or null if the mouse is not on the page.
