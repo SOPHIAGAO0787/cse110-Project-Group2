@@ -1168,7 +1168,7 @@ it("rechecks funds after a correct answer", async () => {
 });
 
 describe("GameScreenController game speed", () => {
-  // The text on the speed button: "1x" or "2x"
+  // The text on the speed button: "1x", "2x" or "0.5x"
   function speedLabel(): string {
     const button = controller.group.findOne<Konva.Group>(".speed");
     if (button === undefined) {
@@ -1201,7 +1201,17 @@ describe("GameScreenController game speed", () => {
     expect(model.elapsedSeconds).toBeCloseTo(0.2);
   });
 
-  it("goes back to normal speed on a second click", () => {
+  it("runs at half speed after a second click", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("0.5x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.05);
+  });
+
+  it("goes back to normal speed on a third click", () => {
+    clickIcon("speed");
     clickIcon("speed");
     clickIcon("speed");
     runFrame(0.1);
@@ -1213,6 +1223,9 @@ describe("GameScreenController game speed", () => {
   it("switches the speed with the Space key", () => {
     press(" ");
     expect(speedLabel()).toBe("2x");
+
+    press(" ");
+    expect(speedLabel()).toBe("0.5x");
 
     press(" ");
     expect(speedLabel()).toBe("1x");
@@ -1239,6 +1252,16 @@ describe("GameScreenController game speed", () => {
 
     expect(speedLabel()).toBe("2x");
     expect(model.elapsedSeconds).toBeCloseTo(0.1);
+  });
+
+  it("stays at half speed while a question is open", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    openPlacementQuestion();
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("0.5x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.05);
   });
 
   it("keeps the chosen speed for the next game", () => {
