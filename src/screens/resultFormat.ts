@@ -1,6 +1,6 @@
 import { MAX_STARS, type GameResult } from "../model/GameResult";
 
-// So1: turns a GameResult into the text the result screen shows. No Konva, so it is easy to test.
+// Turns a GameResult into the text the result screen shows. No Konva, so it is easy to test.
 
 // 75.4 -> "1:15". Bad or negative input shows "0:00".
 export function formatTime(seconds: number): string {

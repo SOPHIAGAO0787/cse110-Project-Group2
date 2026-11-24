@@ -17,7 +17,8 @@ function fill(text: string, vars: Record<string, number>): string {
 }
 
 // Turns a template into a question using this tower's numbers.
-// Returns null if the tower doesn't provide a number the template needs.
+// Returns null if the tower doesn't provide a number the template needs,
+// or if the answer formula can't be worked out.
 function build(t: QuestionTemplate, vars: Record<string, number>): Question | null {
   const needed = [...(t.template + t.hint).matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
   if (needed.some((name) => vars[name] === undefined)) return null;

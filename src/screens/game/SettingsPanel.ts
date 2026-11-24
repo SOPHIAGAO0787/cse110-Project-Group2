@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { Sound } from "../../core/Sound";
-import { makeButton, setButtonLabel } from "../button";
+import { DEFAULT_BUTTON_WIDTH, makeButton, setButtonLabel } from "../button";
 import { FONT } from "../theme";
 
 const PANEL_WIDTH = 280;
@@ -62,8 +62,8 @@ export class SettingsPanel {
     this.refreshSoundLabels();
     const mapsButton = makeButton("Back to maps", onBackToMaps);
     const menuButton = makeButton("Main menu", onMainMenu);
-    // Buttons are 200 wide; center them in the box
-    const buttonX = (PANEL_WIDTH - 200) / 2;
+    // Center the buttons in the box
+    const buttonX = (PANEL_WIDTH - DEFAULT_BUTTON_WIDTH) / 2;
     resumeButton.position({ x: buttonX, y: 84 });
     this.musicButton.position({ x: buttonX, y: 152 });
     this.effectsButton.position({ x: buttonX, y: 220 });

@@ -6,7 +6,7 @@ import { defaultConfig } from "../towerConfig";
 import type { Question, QuestionTemplate, TowerConfig, TowerDef } from "../types";
 
 // questionFor reads its questions from loadContent. These tests swap in their own groups so they
-// don't break when someone edits questions.json. towerQuestions.test.ts checks the real file.
+// don't break when someone edits questions.json. loadContent.test.ts checks the real file.
 const pools = vi.hoisted(() => ({
   byGroup: {} as Record<string, QuestionEntry[]>,
   general: [] as Question[],

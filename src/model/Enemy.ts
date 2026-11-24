@@ -4,8 +4,8 @@ import type { EnemyDef, Vec } from "./types";
 /*
  * Represents a single enemy traveling along a predefined path.
  *
- * R1: Tracks the enemy's position, distance traveled, and remaining health.
- * R2: Handles damage, death, and reaching the end of the path.
+ * Tracks the enemy's position, distance traveled, and remaining health.
+ * Handles damage, death, and reaching the end of the path.
  * Enemy-specific attributes such as speed, maximum health, and reward
  * are provided through the EnemyDef configuration.
  */
@@ -26,24 +26,18 @@ export class Enemy {
   }
 
   update(dt: number): void {
-    // R1
     // If the enemy has reached the end of the path or is dead, do not update its position
     if (dt <= 0 || this.reachedEnd() || this.isDead()) {
       return;
     }
 
-    // Calculate how far the enemy should move in this update
     const movement = this.def.speed * dt;
-
-    // Update the total distance travelled along the path
     this.distance = Math.min(this.distance + movement, this.path.length);
-
-    // Convert the distance travelled along the path to a position
     this.pos = this.path.pointAt(this.distance);
   }
 
   takeDamage(amount: number): void {
-    // R2: Ignore zero or negative damage
+    // Ignore zero or negative damage
     if (amount <= 0) {
       return;
     }

@@ -1,14 +1,13 @@
 import Konva from "konva";
 import type { Question, Vec } from "../../model/types";
 import type { PickedQuestion, QuestionService } from "../../model/questions/QuestionService";
-import { makeButton, makeClickable, setHoverCursor } from "../button";
+import { BUTTON_HEIGHT, makeButton, makeClickable, setHoverCursor } from "../button";
 
 const PANEL_W = 320;
 const PAD = 16; // space around the edges of the panel
 const SECTION_GAP = 12; // space between the question and the input box
 const TITLE_GAP = 6; // space between the title and the question
 const INPUT_H = 40;
-const BUTTON_H = 48; // same as BUTTON_HEIGHT in button.ts
 const MIN_FEEDBACK_H = 34; // room for two lines of feedback
 const SYMBOLS = ["π", "√", "^", "⌫", "C"];
 const SYMBOL_W = 40;
@@ -202,7 +201,7 @@ export class QuestionPrompt {
 
   // Stacks everything from the top down, so the panel is as tall as this question needs:
   // question, input box, symbol row, a reserved feedback area, then the buttons.
-  private layout(hint: string, answerText = ""): void {
+  private layout(hint: string): void {
     this.titleText.y(PAD);
     const closeBottom = CLOSE_MARGIN + CLOSE_SIZE;
     this.promptText.y(Math.max(PAD + this.titleText.height() + TITLE_GAP, closeBottom + TITLE_GAP));
@@ -233,7 +232,7 @@ export class QuestionPrompt {
     this.submitButton.y(buttonsY);
     this.continueButton.y(buttonsY);
 
-    this.panelH = buttonsY + BUTTON_H + PAD;
+    this.panelH = buttonsY + BUTTON_HEIGHT + PAD;
     this.panel.height(this.panelH);
   }
 
@@ -257,7 +256,7 @@ export class QuestionPrompt {
     this.cursorBar.visible(true);
     this.titleText.text(question.title);
     this.promptText.text(question.prompt);
-    this.layout(question.hint, formatAnswer(question.answer)); // must come before placeNear, which needs panelH
+    this.layout(question.hint); // must come before placeNear, which needs panelH
     this.refreshInput();
     this.feedback.text("");
     this.placeNear(anchor);

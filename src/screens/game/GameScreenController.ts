@@ -7,6 +7,7 @@ import type { MapConfig, TowerConfig, Vec } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
+import { createTerrain } from "./TerrainView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "./PlacementView";
 import { QuestionService } from "../../model/questions/QuestionService";
@@ -17,6 +18,7 @@ import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
+import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -29,6 +31,7 @@ export class GameScreenController implements Screen {
   private model: GameModel;
   private loop: GameLoop;
   private cleanupPlacement: (() => void) | null = null;
+  private refreshUpgradeHint: (() => void) | null = null;
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
   private screenHeight = 0; // last size given to resize(), used to fit the shop cards
@@ -112,7 +115,11 @@ export class GameScreenController implements Screen {
     });
     this.view.mapGroup.destroyChildren();
 
-    const gridView = new GridView(this.map, (tile) => this.model.grid.isBuildable(tile));
+    const gridView = new GridView(
+      this.map,
+      (tile) => this.model.grid.isBuildable(tile),
+      createTerrain(this.map),
+    );
 
     //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
@@ -123,6 +130,7 @@ export class GameScreenController implements Screen {
     this.cleanupPlacement = this.wirePlacement(gridView);
 
     const refreshHud = () => {
+      this.refreshUpgradeHint?.();
       this.refreshWaveTimers();
       this.view.setHud(
         this.model.wallet.coins,
@@ -216,6 +224,7 @@ export class GameScreenController implements Screen {
     this.screenHeight = height;
     this.view.resize(width, height);
     this.layoutCards?.();
+    this.refreshUpgradeHint?.();
   }
 
   private refreshWaveTimers(): void {
@@ -233,6 +242,7 @@ export class GameScreenController implements Screen {
   // The game is paused while the settings are open
   private openSettings(): void {
     this.view.settings.open();
+    this.refreshUpgradeHint?.();
     this.loop.stop();
   }
 
@@ -269,9 +279,9 @@ export class GameScreenController implements Screen {
 
     // One card and one preview per tower kind; picking a card switches which one is active.
     const choices = unlockedTowers.map((tower) => {
-      const view = new PlacementView(tower);
+      const view = new PlacementView(tower, { cols: this.map.cols, rows: this.map.rows });
       const card = new InGameTowerCard(tower, view.menuIcon);
-      this.view.mapGroup.add(view.group);
+      this.view.mapGroup.add(view.group, view.prompt);
       this.view.shopGroup.add(card.group);
       return { tower, view, card };
     });
@@ -279,7 +289,7 @@ export class GameScreenController implements Screen {
     // Stack the cards under the shop title, shrinking them all if they would run off the screen
     // (the wave countdown and the Start Wave button sit at the bottom).
     const CARD_STEP = 352;
-    const SHOP_TOP = 64;
+    const SHOP_TOP = 84;
     const SHOP_BOTTOM = 160;
     this.layoutCards = () => {
       const room = this.screenHeight - SHOP_TOP - SHOP_BOTTOM;
@@ -314,6 +324,50 @@ export class GameScreenController implements Screen {
     };
 
     let pending = false; // blocks double-triggers while a question is open
+    // A click on the map locks the aim of a cone or block tower where it is, so the mouse can
+    // reach the confirm and cancel squares without changing it. Another click aims again.
+    let aimLocked = false;
+    const lockAim = (locked: boolean) => {
+      aimLocked = locked;
+      pv.setLocked(locked);
+    };
+    let hovering = false;
+    const refreshUpgradeHint = () => {
+      const tile = hovering ? gridView.tileUnderMouse() : null;
+      const tower = tile
+        ? model.towers.find((item) => item.tile.x === tile.x && item.tile.y === tile.y)
+        : undefined;
+      const canShow =
+        hovering &&
+        !pending &&
+        !disposed &&
+        this.active &&
+        !model.isOver &&
+        !this.view.settings.isOpen() &&
+        placement.state.kind === "idle";
+      const container = stage?.container();
+      if (!canShow || !tower) {
+        this.view.hideTowerUpgradeHint();
+        if (container) container.style.cursor = "default";
+        return;
+      }
+      this.view.showTowerUpgradeHint(
+        tower,
+        SHOP_TOWERS.find((item) => item.def.id === tower.def.id),
+        this.towerProgress.getMaxLevel(tower.def.id),
+        model.wallet.coins,
+      );
+      if (container) container.style.cursor = "pointer";
+    };
+    this.refreshUpgradeHint = refreshUpgradeHint;
+    gridView.group.on("pointermove.upgrade pointerenter.upgrade", () => {
+      hovering = true;
+      refreshUpgradeHint();
+    });
+    gridView.group.on("pointerleave.upgrade", () => {
+      hovering = false;
+      refreshUpgradeHint();
+    });
     const onUpgrade = () => {
       if (
         pending ||
@@ -335,6 +389,7 @@ export class GameScreenController implements Screen {
 
       const message = this.model.tryUpgradeTower(tower.id);
       this.view.showMessage(message);
+      refreshUpgradeHint();
     };
 
     gridView.group.on("click.upgrade tap.upgrade", onUpgrade);
@@ -398,6 +453,8 @@ export class GameScreenController implements Screen {
 
     const onDown = () => {
       if (pending || !canCommit()) return;
+      hovering = false;
+      refreshUpgradeHint();
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
       gridView.showGrid(true);
@@ -409,7 +466,7 @@ export class GameScreenController implements Screen {
       if (s.kind === "dragging") {
         const tile = gridView.tileUnderMouse();
         if (tile) pv.show(tile, canPlace(tile));
-      } else if (s.kind === "configuring") {
+      } else if (s.kind === "configuring" && !aimLocked) {
         // Aim at the mouse: the cone's width or the block's size follows how far it is from the tower.
         const pointer = gridView.pointerInTiles();
         if (!pointer) return;
@@ -427,6 +484,8 @@ export class GameScreenController implements Screen {
       if (tile && canPlace(tile)) {
         placement.endDrag(tile, true); // state: placed, ghost stays
         pv.show(tile, true);
+        pv.showPrompt(tile); // the confirm and cancel squares
+        lockAim(false);
         const config = defaultConfig(def);
         if (config.kind !== "circle") {
           // a cone or block tower still needs aiming: show the default and follow the mouse from here
@@ -437,6 +496,12 @@ export class GameScreenController implements Screen {
         placement.cancel();
         pv.hide();
       }
+    };
+
+    const onMapClick = () => {
+      if (pending || placement.state.kind !== "configuring") return;
+      if (!gridView.tileUnderMouse()) return; // only a click on the map, not on the shop or buttons
+      lockAim(!aimLocked);
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -452,6 +517,21 @@ export class GameScreenController implements Screen {
       }
     };
 
+    // The squares at the tower do what Enter and Escape do
+    const cancelPlacement = () => {
+      if (pending || this.view.settings.isOpen()) return;
+      placement.cancel();
+      pv.hide();
+    };
+    const confirmPlacement = () => {
+      if (this.view.settings.isOpen()) return;
+      void requestPlace();
+    };
+    choices.forEach(({ view }) => {
+      view.onConfirm = confirmPlacement;
+      view.onCancel = cancelPlacement;
+    });
+
     choices.forEach((choice) => {
       choice.card.group.on("pointerdown", () => {
         if (pending || this.model.isOver) return;
@@ -465,12 +545,15 @@ export class GameScreenController implements Screen {
       });
     });
     stage?.on("pointermove.placement", onMove);
+    stage?.on("pointerdown.placement", onMapClick);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
 
     return () => {
       // Invalidate pending answers before removing input handlers.
       disposed = true;
+      refreshUpgradeHint();
+      this.refreshUpgradeHint = null;
       placement.cancel();
       pv.hide();
       stage?.off(".placement");
@@ -480,6 +563,7 @@ export class GameScreenController implements Screen {
       for (const choice of choices) {
         choice.card.group.destroy();
         choice.view.group.destroy();
+        choice.view.prompt.destroy();
       }
     };
   }

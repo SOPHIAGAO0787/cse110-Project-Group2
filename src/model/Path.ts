@@ -23,11 +23,9 @@ export class Path {
       const start = this.points[i - 1];
       const end = this.points[i];
 
-      // Calculate the horizontal and vertical displacement
       const dx = end.x - start.x;
       const dy = end.y - start.y;
 
-      // Add the distance of the current segment
       total += Math.hypot(dx, dy);
     }
 

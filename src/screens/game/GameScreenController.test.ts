@@ -68,14 +68,15 @@ let playSound: Mock<(name: EffectName) => void>; // counts the effects instead o
 function hud(): string {
   const text = controller.group
     .getChildren()
-    .find((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
+    .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
   if (!(text instanceof Konva.Text)) throw new Error("HUD text is missing from the screen");
   return text.text();
 }
 
 function expectHud(coins: number, lives: number, wave: number, enemies: number): void {
+  expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(`Coins: ${coins}`);
   expect(hud()).toBe(
-    `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${map.waves.length}   ·   Enemies Remaining: ${enemies}`,
+    `Lives: ${lives}   ·   Wave: ${wave}/${map.waves.length}   ·   Enemies Remaining: ${enemies}`,
   );
 }
 
@@ -257,7 +258,9 @@ describe("GameScreenController HUD event wiring", () => {
     expect(model.enemies).toHaveLength(5);
     const first = model.enemies[0];
     model.events.emit("enemyKilled", { enemyId: first.id, reward: first.def.reward });
-    expect(hud()).toContain(`Coins: ${map.startingCoins + first.def.reward}`);
+    expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
+      `Coins: ${map.startingCoins + first.def.reward}`,
+    );
     expect(hud()).toContain("Enemies Remaining: 4");
     for (let i = 1; i < 5; i++) {
       model.events.emit("enemyLeaked", { enemyId: model.enemies[i].id });
@@ -742,6 +745,52 @@ describe("GameScreenController tower upgrades", () => {
     return grid;
   }
 
+  it("shows upgrade information on hover and refreshes it after clicking", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    const hintText = () =>
+      hint
+        .find<Konva.Text>("Text")
+        .map((node) => node.text())
+        .join("\n");
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    expect(hintText()).toContain("Upgrade to Level 2 · 75 coins");
+    expect(hintText()).toContain("Click this tower to upgrade.");
+    grid.group.fire("click");
+    expect(hintText()).toContain("Circle Tower · Level 2");
+    expect(hintText()).toContain("Unlock Level 3 in the Tower Shop first.");
+    grid.group.fire("pointerleave");
+    expect(hint.visible()).toBe(false);
+  });
+
+  it("refreshes hover affordability when the wallet changes", () => {
+    const grid = prepareTower();
+    grid.group.fire("pointermove");
+    model.wallet.spend(model.wallet.coins);
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    expect(
+      hint.find<Konva.Text>("Text").some((node) => node.text().startsWith("Need 75 more coins.")),
+    ).toBe(true);
+  });
+
+  it("hides the upgrade hint on empty tiles, in settings, and when leaving the game", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 0, y: 2 });
+    grid.group.fire("pointermove");
+    clickIcon("settings");
+    expect(hint.visible()).toBe(false);
+    controller.hide();
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+  });
+
   it.each(["click", "tap"])("upgrades the clicked tower on %s and shows the result", (event) => {
     const grid = prepareTower();
     const message = vi.spyOn(GameScreenView.prototype, "showMessage");
@@ -1211,5 +1260,167 @@ describe("GameScreenController sound effects", () => {
     model.events.emit("enemyKilled", { enemyId: 1, reward: 5 });
 
     expect(playSound).not.toHaveBeenCalled();
+  });
+});
+
+describe("GameScreenController confirm and cancel squares", () => {
+  // The square tower is unlocked too, so there is an aimed tower to test with. The screen sits on
+  // a real stage, because the aiming listens to the stage's pointer moves.
+  let stage: Konva.Stage;
+  beforeEach(() => {
+    controller.hide();
+    stage = new Konva.Stage({ container: document.createElement("div"), width: 1280, height: 720 });
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    layer.add(controller.group);
+    for (const tower of TOWERS) towerProgress.maxLevels.set(tower.id, 0);
+    controller.show();
+    model = models[models.length - 1];
+    vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    vi.spyOn(QuestionService.prototype, "questionFor").mockReturnValue({
+      id: "test",
+      title: "Test Question",
+      prompt: "2 + 3?",
+      answer: 5,
+      tolerance: 0,
+      hint: "Add them.",
+    });
+  });
+  afterEach(() => stage.destroy());
+
+  const textNamed = (name: string) =>
+    controller.group.find<Konva.Text>("Text").find((text) => text.text() === name)!;
+  const dropTower = (name: string) => {
+    textNamed(name).getParent()!.fire("pointerdown");
+    window.dispatchEvent(new Event("pointerup"));
+  };
+  // The group holding the two squares: it is the parent of the "Enter" key hint
+  const squares = () => textNamed("Enter").getParent() as Konva.Group;
+  const green = () => squares().getChildren((n) => n instanceof Konva.Group)[0];
+  const red = () => squares().getChildren((n) => n instanceof Konva.Group)[1];
+
+  it("shows no squares until a tower is dropped, then shows them", () => {
+    expect(squares().visible()).toBe(false);
+    textNamed("Circle Tower").getParent()!.fire("pointerdown"); // picked up, still being dragged
+    expect(squares().visible()).toBe(false);
+    window.dispatchEvent(new Event("pointerup"));
+    expect(squares().visible()).toBe(true);
+  });
+
+  it("asks the question when the green square is pressed, like Enter does", async () => {
+    const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+    dropTower("Circle Tower");
+    green().fire("pointerdown");
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(squares().visible()).toBe(true); // stays up while the question is open
+
+    // answering finishes the placement through the same path as Enter
+    const prompt = ask.mock.instances[0] as QuestionPrompt;
+    expect(prompt.group.visible()).toBe(true);
+    press("5");
+    press("Enter");
+    await settlePlacement();
+    expect(model.towers).toHaveLength(1);
+    expect(squares().visible()).toBe(false);
+  });
+
+  it("drops the tower without a question when the red square is pressed, like Escape does", () => {
+    const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+    dropTower("Circle Tower");
+    red().fire("pointerdown");
+    expect(squares().visible()).toBe(false);
+    expect(ask).not.toHaveBeenCalled();
+    press("Enter"); // nothing is waiting to be confirmed any more
+    expect(ask).not.toHaveBeenCalled();
+    expect(model.towers).toHaveLength(0);
+  });
+
+  it("ignores the red square while a question is open", () => {
+    const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+    dropTower("Circle Tower");
+    green().fire("pointerdown");
+    red().fire("pointerdown");
+    expect(squares().visible()).toBe(true);
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask again when the green square is pressed twice", () => {
+    const ask = vi.spyOn(QuestionPrompt.prototype, "ask");
+    dropTower("Circle Tower");
+    green().fire("pointerdown");
+    green().fire("pointerdown");
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  // The block's outlined cells, as "x,y" so two aims can be compared
+  const blockCells = () =>
+    controller.group
+      .find<Konva.Rect>("Rect")
+      .filter((r) => r.stroke() === "#e8a14a" && r.getParent()!.visible());
+  const cellKeys = () => blockCells().map((c) => `${c.x()},${c.y()}`);
+
+  describe("locking the aim with a click", () => {
+    const pointAt = (x: number, y: number) => {
+      vi.spyOn(GridView.prototype, "pointerInTiles").mockReturnValue({ x, y });
+      stage.fire("pointermove");
+    };
+
+    it("follows the pointer until the map is clicked, then stays where it is", () => {
+      dropTower("Square Tower");
+      pointAt(4.5, 2.5);
+      const aimed = cellKeys();
+      expect(aimed.length).toBeGreaterThan(0);
+
+      stage.fire("pointerdown"); // a click on the map locks the aim
+      pointAt(0.5, 0.2);
+      expect(cellKeys()).toEqual(aimed);
+    });
+
+    it("aims again after a second click", () => {
+      dropTower("Square Tower");
+      pointAt(4.5, 2.5);
+      const aimed = cellKeys();
+      stage.fire("pointerdown");
+      stage.fire("pointerdown");
+      pointAt(0.5, 0.2);
+      expect(cellKeys()).not.toEqual(aimed);
+    });
+
+    it("draws the locked block with a heavier outline", () => {
+      dropTower("Square Tower");
+      pointAt(4.5, 2.5);
+      const before = blockCells()[0].strokeWidth();
+      stage.fire("pointerdown");
+      expect(blockCells()[0].strokeWidth()).toBeGreaterThan(before);
+    });
+
+    it("does nothing for a click that is not on the map", () => {
+      dropTower("Square Tower");
+      pointAt(4.5, 2.5);
+      const aimed = cellKeys();
+      vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue(null);
+      stage.fire("pointerdown");
+      pointAt(0.5, 0.2);
+      expect(cellKeys()).not.toEqual(aimed); // still following the pointer
+    });
+
+    it("starts unlocked again for the next tower", () => {
+      dropTower("Square Tower");
+      pointAt(4.5, 2.5);
+      stage.fire("pointerdown");
+      red().fire("pointerdown"); // cancel
+      dropTower("Square Tower");
+      const aimed = cellKeys();
+      pointAt(4.5, 2.5);
+      pointAt(0.5, 0.2);
+      expect(cellKeys()).not.toEqual(aimed);
+    });
+  });
+
+  it("removes the squares from the screen with the rest of the placement preview", () => {
+    controller.hide();
+    expect(
+      controller.group.find<Konva.Text>("Text").filter((text) => text.text() === "Enter"),
+    ).toHaveLength(0);
   });
 });
