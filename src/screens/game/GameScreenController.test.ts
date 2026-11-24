@@ -562,42 +562,39 @@ describe("GameScreenController settings", () => {
   });
 });
 
-describe("GameScreenController match shop rewards", () => {
+describe("GameScreenController Tower Shop coins", () => {
+  // Wins the current game with this many lives left
+  function win(lives: number): void {
+    model.lives.remaining = lives;
+    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.tick(0);
+  }
+
   it.each([
     [20, 3, 75],
     [10, 2, 50],
     [1, 1, 25],
-  ])("awards %i remaining lives a %i-star win and %i shop coins", (lives, stars, reward) => {
-    const startingShopCoins = towerProgress.shopCoins;
-    model.lives.remaining = lives;
-    model.events.emit("waveCleared", { wave: map.waves.length });
-    model.tick(0);
-
-    expect(model.result).toMatchObject({ won: true, stars, finalCoins: map.startingCoins });
-    expect(towerProgress.shopCoins).toBe(startingShopCoins + reward);
-    expect([...towerProgress.maxLevels]).toEqual([["circle", 0]]);
+  ])("pays a first win with %i lives left (%i stars) %i coins", (lives, stars, reward) => {
+    win(lives);
+    expect(model.result).toMatchObject({ won: true, stars, shopCoinsEarned: reward });
+    expect(towerProgress.shopCoins).toBe(200 + reward);
   });
 
-  it("awards a completed loss once, even if game-over handling runs again", () => {
-    const startingShopCoins = towerProgress.shopCoins;
-    model.lives.remaining = 0;
-    model.tick(0);
-    expect(towerProgress.shopCoins).toBe(startingShopCoins + 10);
-    model.tick(0);
-    model.events.emit("gameOver", { won: false });
-    expect(towerProgress.shopCoins).toBe(startingShopCoins + 10);
-    expect(switchTo).toHaveBeenCalledTimes(1);
-  });
-
-  it("awards each new completed match separately", () => {
-    model.lives.remaining = 0;
-    model.tick(0);
+  it("pays nothing for winning the same map again", () => {
+    win(1);
     controller.hide();
     controller.show();
     model = models[models.length - 1];
+    win(20);
+    expect(model.result).toMatchObject({ won: true, stars: 3, shopCoinsEarned: 0 });
+    expect(towerProgress.shopCoins).toBe(225);
+  });
+
+  it("pays nothing for a loss", () => {
     model.lives.remaining = 0;
     model.tick(0);
-    expect(towerProgress.shopCoins).toBe(220);
+    expect(model.result).toMatchObject({ won: false, shopCoinsEarned: 0 });
+    expect(towerProgress.shopCoins).toBe(200);
   });
 
   it("does not reward leaving an unfinished match", () => {

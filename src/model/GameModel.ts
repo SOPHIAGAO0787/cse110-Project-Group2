@@ -226,6 +226,7 @@ export class GameModel {
       enemiesDefeated: this.enemiesDefeated,
       coinsEarned: this.coinsEarned,
       score: this.enemiesDefeated * 100,
+      shopCoinsEarned: 0,
     };
     this.events.emit("gameOver", { won });
   }

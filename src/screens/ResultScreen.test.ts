@@ -19,6 +19,7 @@ const defeat: GameResult = {
   enemiesDefeated: 3,
   coinsEarned: 17,
   score: 300,
+  shopCoinsEarned: 0,
 };
 
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
@@ -84,18 +85,23 @@ describe("ResultScreen (So1)", () => {
     expect(shownText()).not.toContain("Tower Shop coins");
   });
 
-  it.each([
-    [false, 0, 10],
-    [true, 1, 25],
-    [true, 2, 50],
-    [true, 3, 75],
-  ] as const)("shows the shop reward for won=%s, stars=%i", (won, stars, reward) => {
-    screen.show({ ...defeat, won, stars });
-    expect(shownText()).toContain(`+${reward} Tower Shop coins`);
-    const rewardText = screen.group
-      .find<Konva.Text>("Text")
-      .find((node) => node.text().includes("Tower Shop coins"))!;
+  it("shows the Tower Shop coins a first win paid, above the buttons", () => {
+    screen.show({ ...defeat, won: true, stars: 3, shopCoinsEarned: 75 });
+    expect(shownText()).toContain("+75 Tower Shop coins");
+
+    let rewardText = new Konva.Text();
+    for (const node of screen.group.find<Konva.Text>("Text")) {
+      if (node.text().includes("Tower Shop coins")) {
+        rewardText = node;
+      }
+    }
     expect(rewardText.y() + rewardText.height()).toBeLessThan(buttonWithLabel("Back to menu").y());
+  });
+
+  it("shows no Tower Shop coins when the game paid none", () => {
+    screen.show({ ...defeat, won: true, stars: 3, shopCoinsEarned: 75 });
+    screen.show({ ...defeat, won: true, stars: 3, shopCoinsEarned: 0 });
+    expect(shownText()).not.toContain("Tower Shop coins");
   });
 
   it("goes back to the menu", () => {

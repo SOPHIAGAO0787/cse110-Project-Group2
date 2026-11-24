@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { Screen, ScreenSwitcher } from "../app/types";
-import { shopCoinReward, type GameResult } from "../model/GameResult";
+import type { GameResult } from "../model/GameResult";
 import { makeButton } from "./button";
 import { CARD_WIDTH, Page } from "./Page";
 import { formatStars, resultSubtitle, resultTitle, statLines } from "./resultFormat";
@@ -77,7 +77,11 @@ export class ResultScreen implements Screen {
       this.stars.text(formatStars(result.stars));
       this.subtitle.text(resultSubtitle(result.won));
       this.stats.text(statLines(result).join("\n"));
-      this.reward.text(`+${shopCoinReward(result)} Tower Shop coins`);
+      if (result.shopCoinsEarned > 0) {
+        this.reward.text(`+${result.shopCoinsEarned} Tower Shop coins`);
+      } else {
+        this.reward.text("");
+      }
     } else {
       this.title.text("Game over");
       this.title.fill(TITLE_TEXT);

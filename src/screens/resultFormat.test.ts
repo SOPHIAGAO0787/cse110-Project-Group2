@@ -13,6 +13,7 @@ const result: GameResult = {
   enemiesDefeated: 6,
   coinsEarned: 35,
   score: 600,
+  shopCoinsEarned: 0,
 };
 
 describe("formatTime (So1)", () => {

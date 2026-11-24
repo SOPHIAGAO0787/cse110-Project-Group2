@@ -10,13 +10,16 @@ export interface GameResult {
   enemiesDefeated: number;
   coinsEarned: number; // kill rewards earned this run, before spending
   score: number; // 100 points per enemy defeated
+  // Tower Shop coins this game paid. Only a map's first win pays them. The model doesn't know
+  // past games, so it leaves this 0 and the game screen fills it in.
+  shopCoinsEarned: number;
 }
 
 export const MAX_STARS = 3;
 
-// Finished matches earn shop coins; match coins and mini-game bonuses stay separate.
-export function shopCoinReward(result: Pick<GameResult, "won" | "stars">): number {
-  return result.won ? result.stars * 25 : 10;
+// Tower Shop coins for winning a map for the first time: 25 per star
+export function shopCoinReward(stars: number): number {
+  return stars * 25;
 }
 
 // Victory earns stars by the share of lives kept: all of them = 3, at least half = 2, fewer = 1.

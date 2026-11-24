@@ -540,6 +540,7 @@ describe("GameModel game result (So1)", () => {
       enemiesDefeated: 2,
       coinsEarned: earned,
       score: 200,
+      shopCoinsEarned: 0,
     });
   });
 
