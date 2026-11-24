@@ -81,6 +81,21 @@ describe("ResultScreen (So1)", () => {
 
     expect(shownText()).toContain("Game over");
     expect(shownText()).not.toContain("Time:");
+    expect(shownText()).not.toContain("Tower Shop coins");
+  });
+
+  it.each([
+    [false, 0, 10],
+    [true, 1, 25],
+    [true, 2, 50],
+    [true, 3, 75],
+  ] as const)("shows the shop reward for won=%s, stars=%i", (won, stars, reward) => {
+    screen.show({ ...defeat, won, stars });
+    expect(shownText()).toContain(`+${reward} Tower Shop coins`);
+    const rewardText = screen.group
+      .find<Konva.Text>("Text")
+      .find((node) => node.text().includes("Tower Shop coins"))!;
+    expect(rewardText.y() + rewardText.height()).toBeLessThan(buttonWithLabel("Back to menu").y());
   });
 
   it("goes back to the menu", () => {

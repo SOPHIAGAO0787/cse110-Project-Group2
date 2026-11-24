@@ -60,7 +60,7 @@ Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or 
 
 ## Tower Shop and mini-game
 
-The **Tower Shop** unlocks the triangle and square towers and raises each tower's upgrade level. A placed tower can be upgraded in a game up to the level bought here. The shop has its own coins for now; coins earned in games do not count there yet.
+The **Tower Shop** unlocks the triangle and square towers and raises each tower's upgrade level. A placed tower can be upgraded in a game up to the level bought here. The shop has its own coin balance. Finishing a match earns 25 shop coins per star on a win (25, 50, or 75), or 10 coins on a loss. The reward appears on the results screen. Leaving a match early earns nothing; gameplay coins and mini-game bonuses remain separate.
 
 ![The Tower Shop showing the circle tower's stats and next upgrade](assets/tower-shop.png)
 

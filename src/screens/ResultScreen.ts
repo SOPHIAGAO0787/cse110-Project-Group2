@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { Screen, ScreenSwitcher } from "../app/types";
-import type { GameResult } from "../model/GameResult";
+import { shopCoinReward, type GameResult } from "../model/GameResult";
 import { makeButton } from "./button";
 import { CARD_WIDTH, Page } from "./Page";
 import { formatStars, resultSubtitle, resultTitle, statLines } from "./resultFormat";
@@ -19,6 +19,7 @@ export class ResultScreen implements Screen {
   private stars: Konva.Text;
   private subtitle: Konva.Text;
   private stats: Konva.Text;
+  private reward: Konva.Text;
 
   constructor(app: ScreenSwitcher) {
     this.app = app;
@@ -31,6 +32,8 @@ export class ResultScreen implements Screen {
     this.subtitle = this.makeLine(262, 24, MUTED_TEXT);
     this.stats = this.makeLine(322, 22, TITLE_TEXT);
     this.stats.lineHeight(1.5);
+    this.reward = this.makeLine(600, 20, WIN_TEXT);
+    this.reward.fontStyle("bold");
 
     // The two buttons sit side by side, centered under the stats
     const mapsButton = makeButton("Choose a map", () => this.app.switchTo("maps"), BUTTON_WIDTH);
@@ -44,6 +47,7 @@ export class ResultScreen implements Screen {
       this.stars,
       this.subtitle,
       this.stats,
+      this.reward,
       mapsButton,
       menuButton,
     );
@@ -73,12 +77,14 @@ export class ResultScreen implements Screen {
       this.stars.text(formatStars(result.stars));
       this.subtitle.text(resultSubtitle(result.won));
       this.stats.text(statLines(result).join("\n"));
+      this.reward.text(`+${shopCoinReward(result)} Tower Shop coins`);
     } else {
       this.title.text("Game over");
       this.title.fill(TITLE_TEXT);
       this.stars.text("");
       this.subtitle.text("");
       this.stats.text("");
+      this.reward.text("");
     }
     this.group.visible(true);
   }
