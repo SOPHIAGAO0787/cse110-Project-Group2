@@ -4,7 +4,7 @@
     "name": "Circle Tower",
     "description": "Hits enemies inside a circle around it.",
     "cost": 50,
-    "damage": 5,
+    "damage": 7,
     "fireRatePerSec": 0.8,
     "attack": "all",
     "range": { "kind": "circle", "radius": 2.5 }
@@ -25,7 +25,7 @@
     "description": "Hits the front-most enemy in an aimed block of tiles. Smaller blocks fire faster.",
     "cost": 80,
     "damage": 15,
-    "fireRatePerSec": 0.6,
+    "fireRatePerSec": 0.9,
     "attack": "all",
     "range": { "kind": "rect", "maxArea": 6, "rateArea": 6 }
   }

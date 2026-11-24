@@ -2,22 +2,22 @@
   {
     "towerId": "circle",
     "upgrades": [
-      { "cost": 75, "damage": 8, "attackSpeed": 1.2, "radius": 2.8 },
-      {"cost": 125, "damage": 10, "attackSpeed": 1.5, "radius": 3 }
+      { "cost": 75, "damage": 10, "attackSpeed": 1.2, "radius": 2.8 },
+      {"cost": 125, "damage": 12, "attackSpeed": 2, "radius": 3.2 }
     ]
   },
   {
     "towerId": "triangle",
     "upgrades": [
-      { "cost": 100, "damage": 15, "attackSpeed": 1 },
-      { "cost": 150, "damage": 20, "attackSpeed": 1.2 }
+      { "cost": 100, "damage": 25, "attackSpeed": 1 },
+      { "cost": 150, "damage": 30, "attackSpeed": 1.2 }
     ]
   },
   {
     "towerId": "rectangle",
     "upgrades": [
-      { "cost": 125, "damage": 18, "attackSpeed": 0.9 },
-      { "cost": 175, "damage": 24, "attackSpeed": 1.1 }
+      { "cost": 125, "damage": 20, "attackSpeed": 1.1 },
+      { "cost": 175, "damage": 25, "attackSpeed": 1.4 }
     ]
   }
 ]
