@@ -1,5 +1,5 @@
 import Konva from "konva";
-import { makeClickable } from "../button";
+import { makeClickable, makeSettingsButton } from "../button";
 import { Page, CARD_WIDTH as PAGE_WIDTH, CARD_HEIGHT as PAGE_HEIGHT } from "../Page";
 import {
   FONT,
@@ -23,6 +23,7 @@ interface ShopCallbacks {
   onSelect: (id: string) => void;
   onAction: () => void;
   onBack: () => void;
+  onSettings: () => void;
 }
 
 const ROW_WIDTH = 1120;
@@ -47,10 +48,13 @@ export class TowerShopView {
   group = this.page.group;
 
   private content = new Konva.Group();
+  private settingsButton: Konva.Group;
   private popup = new Konva.Group({ visible: false });
 
   constructor(private callbacks: ShopCallbacks) {
     this.page.content.add(this.content, this.popup);
+    this.settingsButton = makeSettingsButton(this.callbacks.onSettings);
+    this.group.add(this.settingsButton);
   }
 
   render(state: ShopViewState): void {
@@ -415,6 +419,7 @@ export class TowerShopView {
 
   resize(width: number, height: number): void {
     this.page.resize(width, height);
+    this.settingsButton.position({ x: width - 72, y: 30 });
   }
 
   private text(
