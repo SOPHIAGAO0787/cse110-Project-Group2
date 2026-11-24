@@ -11,13 +11,20 @@ import {
   TITLE_TEXT,
 } from "../theme";
 
+// The shop places the cards a fixed distance apart, so every card is this tall
+const CARD_HEIGHT = 340;
+// Space between the description, the stats and the instructions
+const TEXT_GAP = 6;
+
+// One tower in the game's shop: its name, picture, cost, stats and how to place it.
+// The texts are stacked, so a description that wraps onto more lines pushes the rest down.
 export class InGameTowerCard {
   group = new Konva.Group({ x: 16, y: 64 });
 
   constructor(def: TowerDef, icon: Konva.Shape) {
     const background = new Konva.Rect({
       width: 228,
-      height: 340,
+      height: CARD_HEIGHT,
       fill: CARD_FILL,
       stroke: CARD_BORDER,
       strokeWidth: 2,
@@ -26,7 +33,7 @@ export class InGameTowerCard {
 
     const title = new Konva.Text({
       x: 12,
-      y: 16,
+      y: 12,
       width: 204,
       text: def.name,
       fontSize: 20,
@@ -38,11 +45,11 @@ export class InGameTowerCard {
     });
 
     // Reuse the existing placement icon.
-    icon.position({ x: 114, y: 76 });
+    icon.position({ x: 114, y: 66 });
 
     const cost = new Konva.Text({
       x: 12,
-      y: 115,
+      y: 96,
       width: 204,
       text: `${def.cost} coins`,
       fontSize: 20,
@@ -55,7 +62,7 @@ export class InGameTowerCard {
 
     const description = new Konva.Text({
       x: 16,
-      y: 155,
+      y: 126,
       width: 196,
       text: def.description,
       fontSize: 15,
@@ -67,7 +74,7 @@ export class InGameTowerCard {
 
     const abilities = new Konva.Text({
       x: 16,
-      y: 215,
+      y: description.y() + description.height() + TEXT_GAP,
       width: 196,
       text: [
         `Damage: ${def.damage}`,
@@ -81,14 +88,16 @@ export class InGameTowerCard {
       listening: false,
     });
 
+    // The ✓ and ✕ are the green and red squares that show up next to a dropped tower
+    let placeText = "Drag onto a tile that turns green.";
+    if (def.range.kind !== "circle") {
+      placeText = "Drag onto a tile that turns green, then aim with the mouse.";
+    }
     const instructions = new Konva.Text({
       x: 16,
-      y: 292,
+      y: abilities.y() + abilities.height() + TEXT_GAP,
       width: 196,
-      text:
-        def.range.kind === "circle"
-          ? "Drag onto a tile that turns green.\nPress Enter to answer the question."
-          : "Drag onto a tile that turns green, then aim with the mouse.\nPress Enter to answer the question.",
+      text: placeText + "\n✓ or Enter: answer the question.\n✕ or Escape: cancel.",
       fontSize: 13,
       fontFamily: FONT,
       fill: MUTED_TEXT,
