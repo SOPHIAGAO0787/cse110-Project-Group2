@@ -4,6 +4,7 @@ import { WAVE_PREPARATION_SECONDS } from "./WaveManager";
 import { GameModel } from "./GameModel";
 import { ENEMIES, loadMap, MAPS, TOWERS } from "./loadContent";
 import { Progress } from "./Progress";
+import type { Vec } from "./types";
 
 // The stars a finished game earned
 function finalStars(game: GameModel): number {
@@ -22,6 +23,24 @@ function towerCost(defId: string): number {
     }
   }
   throw new Error(`Unknown tower "${defId}"`);
+}
+
+// Runs the game in small steps until it ends. Whenever a wave is cleared and the next one is
+// waiting, it first places circle towers on the free tiles it can afford, then starts the wave
+// at once instead of waiting out the preparation time.
+function playUntilOver(game: GameModel, towerTiles: Vec[]): void {
+  const step = 0.05; // seconds per tick, about 3 frames
+  while (!game.isOver) {
+    if (game.waves.currentWave === 0 || game.waves.preparationRemaining !== null) {
+      for (const tile of towerTiles) {
+        if (game.wallet.canAfford(towerCost("circle"))) {
+          game.tryPlaceTower("circle", tile);
+        }
+      }
+      game.startNextWave();
+    }
+    game.tick(step);
+  }
 }
 
 // These tests run a real game on map1 with no screen, to check that the parts work together.
@@ -157,9 +176,58 @@ describe("Integration: a game on map1", () => {
     expect(game.wallet.coins).toBe(map1.startingCoins - towerCost("circle") + enemy.def.reward);
   });
 
-  it.todo(
-    "a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)",
-  );
+  it("a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)", () => {
+    const won = new GameModel(loadMap(map1));
+    let spent = 0;
+    let rewards = 0;
+    won.events.on("towerPlaced", ({ defId }) => {
+      spent += towerCost(defId);
+    });
+    // Every time the coins go up it is a reward (kill rewards, plus any bonus the game pays)
+    let lastCoins = won.wallet.coins;
+    won.events.on("coinsChanged", ({ coins }) => {
+      if (coins > lastCoins) {
+        rewards += coins - lastCoins;
+      }
+      lastCoins = coins;
+    });
+
+    // Buildable tiles beside the path, best first
+    const towerTiles: Vec[] = [
+      { x: 6, y: 3 },
+      { x: 6, y: 2 },
+      { x: 4, y: 5 },
+      { x: 13, y: 4 },
+      { x: 7, y: 3 },
+      { x: 3, y: 5 },
+    ];
+    playUntilOver(won, towerTiles);
+
+    const wonResult = won.result;
+    if (wonResult === null) {
+      throw new Error("The game should be over");
+    }
+    expect(wonResult.won).toBe(true);
+    expect(won.towers.length).toBeGreaterThan(0);
+    expect(rewards).toBeGreaterThan(0);
+    expect(won.wallet.coins).toBe(map1.startingCoins - spent + rewards);
+    expect(wonResult.finalCoins).toBe(won.wallet.coins);
+
+    // With no towers every enemy gets through. One life left means the first one ends the game.
+    const lost = new GameModel(loadMap(map1));
+    lost.lives.remaining = 1;
+    playUntilOver(lost, []);
+
+    const lostResult = lost.result;
+    if (lostResult === null) {
+      throw new Error("The game should be over");
+    }
+    expect(lostResult.won).toBe(false);
+    expect(lostResult.towersPlaced).toBe(0);
+    expect(lostResult.enemiesDefeated).toBe(0);
+    expect(lost.wallet.coins).toBe(map1.startingCoins);
+    expect(lostResult.finalCoins).toBe(map1.startingCoins);
+  });
 });
 
 it("prepares the next wave only after cleanup, then ends normally after the final wave", () => {
