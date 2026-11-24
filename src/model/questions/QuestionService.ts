@@ -32,7 +32,41 @@ function build(t: QuestionTemplate, vars: Record<string, number>): Question | nu
 
   const tolerance =
     t.tolerance ?? (t.relativeTolerance !== undefined ? Math.abs(answer) * t.relativeTolerance : 0);
-  return { id: t.id, prompt: fill(t.template, vars), answer, tolerance, hint: fill(t.hint, vars) };
+  return {
+    id: t.id,
+    level: t.level,
+    prompt: fill(t.template, vars),
+    answer,
+    tolerance,
+    hint: fill(t.hint, vars),
+  };
+}
+
+// The question levels asked on each map (1 is the first map): easy questions first, harder later
+function levelsForMap(mapNumber: number): number[] {
+  if (mapNumber <= 1) {
+    return [1];
+  }
+  if (mapNumber === 2) {
+    return [1, 2];
+  }
+  return [2, 3];
+}
+
+// Keeps the questions whose level this map asks. If none match, keeps the whole pool,
+// so the player is still asked something.
+function forMap(pool: Question[], mapNumber: number): Question[] {
+  const levels = levelsForMap(mapNumber);
+  const kept: Question[] = [];
+  for (const question of pool) {
+    if (question.level !== undefined && levels.includes(question.level)) {
+      kept.push(question);
+    }
+  }
+  if (kept.length === 0) {
+    return pool;
+  }
+  return kept;
 }
 
 // Splits typed text into tokens, or returns null if it contains anything unknown.
@@ -155,19 +189,26 @@ export class QuestionService {
     if (this.recent.length > RECENT_COUNT) this.recent.shift();
   }
 
-  questionFor(tower: TowerDef, config: TowerConfig = defaultConfig(tower)): PickedQuestion {
+  // mapNumber is the map's place in the map list, starting at 1. Later maps ask harder questions.
+  questionFor(
+    tower: TowerDef,
+    config: TowerConfig = defaultConfig(tower),
+    mapNumber = 1,
+  ): PickedQuestion {
     const vars = towerVariables(tower, config);
-    const own: Question[] = [];
+    const allOwn: Question[] = [];
     for (const entry of QUESTION_POOLS[tower.id] ?? []) {
       if (!isTemplate(entry)) {
-        own.push(entry);
+        allOwn.push(entry);
         continue;
       }
       const built = build(entry, vars);
-      if (built) own.push(built);
+      if (built) allOwn.push(built);
     }
 
-    const general = GENERAL_QUESTIONS;
+    // Only the levels this map asks, unless a group has none of them
+    const own = forMap(allOwn, mapNumber);
+    const general = forMap(GENERAL_QUESTIONS, mapNumber);
     if (own.length === 0 && general.length === 0) {
       throw new Error("questions.json has no questions");
     }
