@@ -14,6 +14,11 @@ export interface GameResult {
 
 export const MAX_STARS = 3;
 
+// Finished matches earn shop coins; match coins and mini-game bonuses stay separate.
+export function shopCoinReward(result: Pick<GameResult, "won" | "stars">): number {
+  return result.won ? result.stars * 25 : 10;
+}
+
 // Victory earns stars by the share of lives kept: all of them = 3, at least half = 2, fewer = 1.
 // Defeat always earns 0.
 export function starRating(won: boolean, remainingLives: number, startingLives: number): number {

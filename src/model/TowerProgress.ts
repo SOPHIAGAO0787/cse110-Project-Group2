@@ -1,3 +1,5 @@
+import { shopCoinReward, type GameResult } from "./GameResult";
+
 export class TowerProgress {
   shopCoins = 200; // FIX: needs to be connected to the database in sprint3
 
@@ -10,6 +12,10 @@ export class TowerProgress {
   constructor() {
     // Circle is available from the beginning.
     this.maxLevels.set("circle", 0);
+  }
+
+  addMatchReward(result: GameResult): void {
+    this.shopCoins += shopCoinReward(result);
   }
 
   getMaxLevel(towerId: string): number {

@@ -146,14 +146,17 @@ export class GameScreenController implements Screen {
 
     refreshHud();
     const events = this.model.events;
-    // So1: the model builds the final stats; the result screen only displays them
+    let resultHandled = false;
+    // The model builds the final stats; rewards are applied once when the match ends.
     events.on("gameOver", () => {
       this.loop.stop();
       this.view.prompt.cancel();
       this.disposePlacement();
       this.refreshWaveTimers();
       const result = this.model.result;
-      if (result) {
+      if (result && !resultHandled) {
+        resultHandled = true;
+        this.towerProgress.addMatchReward(result);
         // A win unlocks the next map and its stars show on the map screen
         this.progress.recordResult(this.map.id, result.stars);
         // This game had the bonus coins. Leaving early (no result) keeps them for the next game.
