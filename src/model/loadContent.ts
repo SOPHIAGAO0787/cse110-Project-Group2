@@ -20,8 +20,17 @@ export const ENEMIES = enemiesJson as EnemyDef[];
 // Every tower also gets the common ones.
 export const COMMON_VARIABLES = ["damage", "rate"];
 export const VARIABLES_BY_KIND: Record<string, string[]> = {
-  circle: ["radius", "diameter", "circumference", "area"],
-  sector: ["degrees", "radius", "fraction", "fractionDecimal", "area", "arc"],
+  circle: ["radius", "diameter", "circumference", "area", "areaOverPi", "circumferenceOverPi"],
+  sector: [
+    "degrees",
+    "radius",
+    "fraction",
+    "fractionDecimal",
+    "area",
+    "arc",
+    "areaOverPi",
+    "arcOverPi",
+  ],
   rect: ["width", "depth", "area", "baseRate", "rateArea"],
 };
 

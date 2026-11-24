@@ -333,6 +333,17 @@ describe("checkQuestions", () => {
       }
     });
 
+    it("lets circle and cone templates use the numbers divided by π, but not block ones", () => {
+      const piQ = (id: string) =>
+        templateQ(id, {
+          template: "The range covers {areaOverPi}π tiles². What is its radius?",
+          answer: "sqrt(areaOverPi)",
+        });
+      expect(check({ [circle.id]: [piQ("c")] })).not.toThrow();
+      expect(check({ [towerOfKind("sector").id]: [piQ("s")] })).not.toThrow();
+      expect(check({ [towerOfKind("rect").id]: [piQ("r")] })).toThrow(/does not provide/);
+    });
+
     it("rejects an unknown name in the answer formula", () => {
       expect(check({ [circle.id]: [templateQ("t", { answer: "2 * r" })] })).toThrow(
         /answer uses unknown name "r"/,

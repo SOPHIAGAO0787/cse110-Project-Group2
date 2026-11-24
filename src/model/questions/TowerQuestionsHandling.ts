@@ -24,6 +24,10 @@ export function towerVariables(
     vars.diameter = round(2 * radius);
     vars.circumference = round(2 * Math.PI * radius);
     vars.area = round(Math.PI * radius ** 2);
+
+    // The same numbers divided by π, so prompts show "9π" instead of 28.27 for instance
+    vars.circumferenceOverPi = round(2 * radius);
+    vars.areaOverPi = round(radius ** 2);
   } else if (def.range.kind === "sector" && config.kind === "sector") {
     const degrees = Math.round((config.spread * 180) / Math.PI);
     const radius = round(rangeReach(def, config), 1);
@@ -34,6 +38,10 @@ export function towerVariables(
     vars.fractionDecimal = round(fraction, 3); // what the player sees, e.g. 0.125 for 45°
     vars.area = round(fraction * Math.PI * radius ** 2);
     vars.arc = round(fraction * 2 * Math.PI * radius);
+
+    // The same numbers divided by π, so prompts show "9π" instead of 28.27 for instance
+    vars.areaOverPi = round(fraction * radius ** 2);
+    vars.arcOverPi = round(fraction * 2 * radius);
   } else if (def.range.kind === "rect" && config.kind === "rect") {
     vars.width = config.width;
     vars.depth = config.depth;

@@ -1,21 +1,37 @@
 import Konva from "konva";
 import type { Question, Vec } from "../../model/types";
-import type { QuestionService } from "../../model/questions/QuestionService";
+import type { PickedQuestion, QuestionService } from "../../model/questions/QuestionService";
 import { BUTTON_HEIGHT, makeButton, makeClickable, setHoverCursor } from "../button";
 
 const PANEL_W = 320;
 const PAD = 16; // space around the edges of the panel
 const SECTION_GAP = 12; // space between the question and the input box
+const TITLE_GAP = 6; // space between the title and the question
 const INPUT_H = 40;
 const MIN_FEEDBACK_H = 34; // room for two lines of feedback
-const SYMBOLS = ["π", "√", "⌫", "C"];
+const SYMBOLS = ["π", "√", "^", "⌫", "C"];
 const SYMBOL_W = 40;
 const SYMBOL_H = 30;
 const SYMBOL_GAP = 8;
+const CLOSE_SIZE = 28;
+const CLOSE_MARGIN = 8;
+const TITLE_SIDE = PAD + CLOSE_SIZE + CLOSE_MARGIN;
 const MAX_TYPED = 18; // what fits in the input box
 const GAP = 16; // space between the tower tile and the popup
 const DIM_OPACITY = 0.3; // set to 0 if you don't want the screen dimmed
 const MAX_ATTEMPTS = 2; // total tries per question
+
+// How the correct answer is shown: "9π (≈ 28.27)" for a neat multiple of π, otherwise "28.27"
+function formatAnswer(answer: number): string {
+  const rounded = String(Math.round(answer * 100) / 100);
+  const overPi = answer / Math.PI;
+  const neat = Math.round(overPi * 100) / 100;
+  if (answer !== 0 && Math.abs(overPi - neat) < 1e-6) {
+    const coefficient = neat === 1 ? "" : String(neat); // "π", not "1π"
+    return `${coefficient}π (≈ ${rounded})`;
+  }
+  return rounded;
+}
 
 export class QuestionPrompt {
   group = new Konva.Group({ visible: false });
@@ -28,10 +44,17 @@ export class QuestionPrompt {
     strokeWidth: 2,
     cornerRadius: 8,
   });
+  private titleText = new Konva.Text({
+    x: TITLE_SIDE,
+    width: PANEL_W - 2 * TITLE_SIDE, // same width as the question, clear of the 'X'
+    fontSize: 14,
+    fontStyle: "bold",
+    fill: "#ffd166",
+    align: "center",
+  });
   private promptText = new Konva.Text({
-    x: 16,
-    y: 16,
-    width: PANEL_W - 32,
+    x: PAD,
+    width: PANEL_W - 2 * PAD, // full width: it starts below the 'X'
     fontSize: 18,
     fill: "white",
     align: "center",
@@ -60,6 +83,16 @@ export class QuestionPrompt {
     x: (PANEL_W - (SYMBOLS.length * SYMBOL_W + (SYMBOLS.length - 1) * SYMBOL_GAP)) / 2,
     y: 138,
   });
+  private answerLabel = new Konva.Text({
+    x: PAD,
+    width: PANEL_W - 2 * PAD,
+    text: "↑ Correct answer",
+    fontSize: 14,
+    fontStyle: "bold",
+    fill: "#4ade80",
+    align: "center",
+    visible: false,
+  });
   private feedback = new Konva.Text({
     x: 16,
     y: 174,
@@ -70,12 +103,16 @@ export class QuestionPrompt {
   });
   private submitButton: Konva.Group;
   private continueButton: Konva.Group;
+  private closeButton = new Konva.Group({
+    x: PANEL_W - CLOSE_SIZE - CLOSE_MARGIN,
+    y: CLOSE_MARGIN,
+  });
 
   private service: QuestionService;
   private question: Question | null = null;
   private typed = "";
   private cursor = 0;
-  private phase: "typing" | "wrong" = "typing";
+  private phase: "typing" | "wrong" | "correct" = "typing";
   private resolve: ((correct: boolean) => void) | null = null;
   private attemptsLeft = 0;
   private width = 0;
@@ -122,16 +159,41 @@ export class QuestionPrompt {
     setHoverCursor(this.inputBox, "text", () => this.phase === "typing");
     setHoverCursor(this.inputText, "text", () => this.phase === "typing");
 
+    this.closeButton.add(
+      new Konva.Rect({
+        width: CLOSE_SIZE,
+        height: CLOSE_SIZE,
+        fill: "#3a3a52",
+        stroke: "white",
+        cornerRadius: 4,
+      }),
+      new Konva.Text({
+        text: "✕",
+        width: CLOSE_SIZE,
+        height: CLOSE_SIZE,
+        fontSize: 16,
+        fontStyle: "bold",
+        fill: "white",
+        align: "center",
+        verticalAlign: "middle",
+        listening: false,
+      }),
+    );
+    makeClickable(this.closeButton, () => this.finish(false));
+
     this.panelGroup.add(
       this.panel,
+      this.titleText,
       this.promptText,
       this.inputBox,
       this.inputText,
       this.symbolRow,
+      this.answerLabel,
       this.cursorBar,
       this.feedback,
       this.submitButton,
       this.continueButton,
+      this.closeButton,
     );
     this.group.add(this.dim, this.panelGroup);
 
@@ -141,21 +203,30 @@ export class QuestionPrompt {
   // Stacks everything from the top down, so the panel is as tall as this question needs:
   // question, input box, symbol row, a reserved feedback area, then the buttons.
   private layout(hint: string): void {
-    this.promptText.y(PAD);
-    const inputY = PAD + this.promptText.height() + SECTION_GAP;
+    this.titleText.y(PAD);
+    const closeBottom = CLOSE_MARGIN + CLOSE_SIZE;
+    this.promptText.y(Math.max(PAD + this.titleText.height() + TITLE_GAP, closeBottom + TITLE_GAP));
+    const inputY = this.promptText.y() + this.promptText.height() + SECTION_GAP;
     this.inputBox.y(inputY);
     this.inputText.y(inputY);
     this.cursorBar.y(inputY + (INPUT_H - this.cursorBar.height()) / 2);
 
     const symbolsY = inputY + INPUT_H + 8;
+    this.answerLabel.y(symbolsY + 6);
     this.symbolRow.y(symbolsY);
 
     // Reserve room for the longest feedback this question can show, so the panel
     // doesn't change size when a hint appears.
     const feedbackY = symbolsY + SYMBOL_H + 8;
     this.feedback.y(feedbackY);
-    this.feedback.text(`Not quite. ${hint} (${MAX_ATTEMPTS} tries left)`);
-    const feedbackH = Math.max(this.feedback.height(), MIN_FEEDBACK_H);
+    let feedbackH = MIN_FEEDBACK_H;
+    for (const text of [
+      `Not quite. ${hint}\n(${MAX_ATTEMPTS} tries left)`,
+      `Not quite.\nYou answered ${"8".repeat(MAX_TYPED)}.\n${hint}`, // the longest answer the box allows
+    ]) {
+      this.feedback.text(text);
+      feedbackH = Math.max(feedbackH, this.feedback.height());
+    }
     this.feedback.text("");
 
     const buttonsY = feedbackY + feedbackH + 10;
@@ -168,7 +239,7 @@ export class QuestionPrompt {
 
   // Shows the popup next to `anchor` (screen pixels, not map pixels).
   // Resolves true if the player answers correctly, false otherwise.
-  ask(question: Question, anchor: Vec): Promise<boolean> {
+  ask(question: PickedQuestion, anchor: Vec): Promise<boolean> {
     this.cancel(); // in case a previous question is somehow still open
 
     this.question = question;
@@ -179,7 +250,12 @@ export class QuestionPrompt {
     this.submitButton.visible(true);
     this.continueButton.visible(false);
     this.symbolRow.visible(true);
+    this.answerLabel.visible(false);
+    this.inputText.fill("black");
+    this.feedback.fill("#ff6b6b");
+    this.inputBox.strokeWidth(0);
     this.cursorBar.visible(true);
+    this.titleText.text(question.title);
     this.promptText.text(question.prompt);
     this.layout(question.hint); // must come before placeNear, which needs panelH
     this.refreshInput();
@@ -197,7 +273,7 @@ export class QuestionPrompt {
 
   // Closes the popup and resolves false. Call this from the controller's hide().
   cancel(): void {
-    if (this.resolve !== null) {
+    if (this.resolve !== null || this.group.visible()) {
       this.finish(false);
     }
   }
@@ -223,6 +299,7 @@ export class QuestionPrompt {
 
   // Adds text at the cursor, unless the box is full
   private insert(text: string): void {
+    this.inputText.fill("black"); // editing a wrong answer clears the red
     if (this.typed.length + text.length > MAX_TYPED) return;
     this.typed = this.typed.slice(0, this.cursor) + text + this.typed.slice(this.cursor);
     this.cursor += text.length;
@@ -230,6 +307,7 @@ export class QuestionPrompt {
 
   // Removes the character before the cursor
   private deleteBefore(): void {
+    this.inputText.fill("black"); // editing a wrong answer clears the red
     if (this.cursor === 0) return;
     this.typed = this.typed.slice(0, this.cursor - 1) + this.typed.slice(this.cursor);
     this.cursor -= 1;
@@ -239,6 +317,7 @@ export class QuestionPrompt {
   private pressSymbol(symbol: string): void {
     if (this.question === null || this.phase !== "typing") return;
     if (symbol === "C") {
+      this.inputText.fill("black"); // editing a wrong answer clears the red
       this.typed = "";
       this.cursor = 0;
     } else if (symbol === "⌫") {
@@ -318,24 +397,49 @@ export class QuestionPrompt {
     this.attemptsLeft -= 1;
 
     if (this.service.check(this.question, this.typed)) {
-      this.finish(true);
+      // Keep the popup open to show it was right, but send the result now,
+      // so the tower is placed (and its sound plays) right away, not when the popup closes
+      this.phase = "correct";
+      this.symbolRow.visible(false);
+      this.cursorBar.visible(false);
+      this.inputText.fill("#15803d");
+      this.inputBox.stroke("#4ade80");
+      this.inputBox.strokeWidth(3);
+      this.feedback.fill("#4ade80");
+      this.feedback.text("Correct!");
+      this.submitButton.visible(false);
+      this.continueButton.visible(true);
+      this.redraw();
+      this.settle(true);
     } else if (this.attemptsLeft > 0) {
-      // wrong, but the player gets another try: show the hint and clear the input
+      // wrong, but the player gets another try: keep their answer in red so they can fix it
       const left = this.attemptsLeft === 1 ? "1 try left" : `${this.attemptsLeft} tries left`;
-      this.feedback.text(`Not quite. ${this.question.hint} (${left})`);
-      this.typed = "";
-      this.cursor = 0;
+      this.feedback.text(`Not quite. ${this.question.hint}\n(${left})`);
+      this.inputText.fill("#dc2626");
+      this.cursor = this.typed.length; // ready to edit at the end
       this.refreshInput(); // also redraws
     } else {
       // out of tries: the player can only dismiss the popup
       this.phase = "wrong";
       this.symbolRow.visible(false);
       this.cursorBar.visible(false);
-      this.feedback.text(`Not quite. ${this.question.hint}`);
+      this.answerLabel.visible(true);
+      this.feedback.text(`Not quite.\nYou answered ${this.typed}.\n${this.question.hint}`);
+      this.inputText.text(formatAnswer(this.question.answer));
+      this.inputText.fill("#15803d");
+      this.inputBox.stroke("#4ade80");
+      this.inputBox.strokeWidth(3);
       this.submitButton.visible(false);
       this.continueButton.visible(true);
       this.redraw();
     }
+  }
+
+  // Hands the result to whoever asked, once. The popup may stay open after this.
+  private settle(correct: boolean): void {
+    const resolve = this.resolve;
+    this.resolve = null;
+    resolve?.(correct);
   }
 
   private finish(correct: boolean): void {
@@ -343,10 +447,8 @@ export class QuestionPrompt {
     document.body.style.cursor = "default"; // the mouse may still be over a button
     this.group.visible(false);
     this.redraw();
-    const resolve = this.resolve;
-    this.resolve = null;
     this.question = null;
-    resolve?.(correct);
+    this.settle(correct); // does nothing if the result was already sent
   }
 
   private refreshInput(): void {

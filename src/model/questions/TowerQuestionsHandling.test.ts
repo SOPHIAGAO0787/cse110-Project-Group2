@@ -81,6 +81,13 @@ describe("towerVariables", () => {
       expect(vars.area).toBe(19.63); // π × 2.5² = 19.6349…
     });
 
+    // For prompts like "an area of 9π": the number that goes in front of π
+    it("works out the circumference and area divided by π", () => {
+      const vars = towerVariables(circleWithRadius(3));
+      expect(vars.circumferenceOverPi).toBe(6); // 6π
+      expect(vars.areaOverPi).toBe(9); // 9π
+    });
+
     // The player only sees 1.24, so the other numbers must come from 1.24, not 1.236
     it("rounds the radius first and works from the rounded value", () => {
       const vars = towerVariables(circleWithRadius(1.236));
@@ -88,6 +95,8 @@ describe("towerVariables", () => {
       expect(vars.diameter).toBe(2.48); // 2 × 1.236 would give 2.47
       expect(vars.circumference).toBe(7.79); // from 1.236: 7.77
       expect(vars.area).toBe(4.83); // from 1.236: 4.80
+      expect(vars.circumferenceOverPi).toBe(2.48); // from 1.236: 2.47
+      expect(vars.areaOverPi).toBe(1.54); // 1.24² = 1.5376; from 1.236: 1.53
     });
   });
 
@@ -127,6 +136,22 @@ describe("towerVariables", () => {
         expect(vars.arc).toBe(round(vars.fraction * 2 * Math.PI * vars.radius));
       },
     );
+
+    it.each([Math.PI / 6, Math.PI / 4, Math.PI / 2, 1])(
+      "works out the area and arc divided by π from the same numbers (spread %f)",
+      (spread) => {
+        const vars = towerVariables(sector, sectorConfig(sector, spread));
+        expect(vars.areaOverPi).toBe(round(vars.fraction * vars.radius ** 2));
+        expect(vars.arcOverPi).toBe(round(vars.fraction * 2 * vars.radius));
+      },
+    );
+
+    it("treats a 90° cone as a quarter circle in the numbers divided by π", () => {
+      const vars = towerVariables(sector, sectorConfig(sector, Math.PI / 2));
+      // a quarter circle: area = ¼ × r² × π, arc = ¼ × 2r × π
+      expect(vars.areaOverPi).toBe(round(0.25 * vars.radius ** 2));
+      expect(vars.arcOverPi).toBe(round(0.5 * vars.radius));
+    });
   });
 
   describe("block (rect) towers", () => {
@@ -153,7 +178,6 @@ describe("towerVariables", () => {
 describe("questions.json templates", () => {
   it.each(towerCases)("can all be asked for %s with its default settings", (_id, tower) => {
     const pool = QUESTION_POOLS[tower.id] ?? [];
-    const service = new QuestionService();
     const random = vi.spyOn(Math, "random");
     const asked = new Set<string>();
 
@@ -163,7 +187,9 @@ describe("questions.json templates", () => {
       if (GENERAL_QUESTIONS.length > 0) random.mockReturnValueOnce(0.99);
       random.mockReturnValueOnce((i + 0.5) / pool.length);
 
-      const question = service.questionFor(tower);
+      // A new service each time: one service skips the questions it just asked,
+      // which would shift the pool and break the i-th pick
+      const question = new QuestionService().questionFor(tower);
       asked.add(question.id);
 
       expect(Number.isFinite(question.answer), question.id).toBe(true);

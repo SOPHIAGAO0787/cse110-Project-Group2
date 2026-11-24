@@ -3,8 +3,7 @@ import Konva from "konva";
 import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuestionPrompt } from "./QuestionPrompt";
-import { QuestionService } from "../../model/questions/QuestionService";
-import type { Question } from "../../model/types";
+import { QuestionService, type PickedQuestion } from "../../model/questions/QuestionService";
 
 // Capture the button callbacks so tests can "click" Submit and Continue.
 // makeClickable and setHoverCursor are replaced with copies of the real behavior.
@@ -39,17 +38,26 @@ vi.mock("../button", async (importOriginal) => {
   };
 });
 
-const question: Question = {
+const question: PickedQuestion = {
   id: "test",
   prompt: "What is 2 + 3?",
   answer: 5,
   tolerance: 0,
   hint: "Add them.",
+  title: "Test Question",
 };
 const anchor = { x: 100, y: 100 };
 
 // Long prompt to test adjustable question panel height
 const LONG_PROMPT = "What is the area of this shape? ".repeat(30);
+
+// Colors QuestionPrompt.ts uses
+const WRONG_RED = "#dc2626"; // a wrong answer kept in the box
+const ANSWER_GREEN = "#15803d"; // the right answer in the box
+const FEEDBACK_RED = "#ff6b6b";
+const FEEDBACK_GREEN = "#4ade80";
+
+const PANEL_W = 320;
 
 const press = (key: string) => {
   window.dispatchEvent(new KeyboardEvent("keydown", { key }));
@@ -58,24 +66,40 @@ const type = (text: string) => {
   for (const ch of text) press(ch);
 };
 
-const inputShown = () => (prompt.group.find("Text")[1] as Konva.Text).text();
-const feedbackShown = () =>
-  prompt.group
-    .find<Konva.Text>("Text")
-    .find((t) => t.fill() === "#ff6b6b")!
-    .text();
+// Uses up both tries with wrong answers. The first answer stays in the box,
+// so the second one is "43". Afterwards the box shows the right answer.
+const useAllTries = () => {
+  type("4");
+  press("Enter");
+  type("3");
+  press("Enter");
+};
+
+// The prompt's own parts, reached directly so the tests don't depend on the order
+// they were added to the panel in
+interface Parts {
+  panel: Konva.Rect;
+  titleText: Konva.Text;
+  promptText: Konva.Text;
+  inputBox: Konva.Rect;
+  inputText: Konva.Text;
+  answerLabel: Konva.Text;
+  feedback: Konva.Text;
+  closeButton: Konva.Group;
+}
+const parts = () => prompt as unknown as Parts;
+
+const inputShown = () => parts().inputText.text();
+const feedbackShown = () => parts().feedback.text();
+const inputBox = () => parts().inputBox;
+const panelHeight = () => parts().panel.height();
 const clickSymbol = (symbol: string) =>
   prompt.group
     .find<Konva.Text>("Text")
     .find((t) => t.text() === symbol)!
     .getParent()!
     .fire("click");
-const inputBox = () => prompt.group.find<Konva.Rect>("Rect").find((r) => r.width() === 200)!;
-const panelHeight = () =>
-  prompt.group
-    .find<Konva.Rect>("Rect")
-    .find((r) => r.width() === 320)!
-    .height();
+const centerOf = (node: Konva.Text) => node.x() + node.width() / 2;
 
 // Lets us check "has the promise settled yet?" without awaiting forever
 function track(promise: Promise<boolean>) {
@@ -102,7 +126,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  prompt.cancel(); // make sure no key listener leaks between tests
+  prompt.cancel(); // make sure no popup or key listener leaks between tests
   vi.restoreAllMocks();
   document.body.style.cursor = "";
 });
@@ -115,12 +139,21 @@ describe("QuestionPrompt functionality", () => {
       expect(prompt.group.visible()).toBe(true);
     });
 
-    it("removes its key listener once finished", async () => {
+    it("shows the question's title and prompt", () => {
+      void prompt.ask(question, anchor);
+      expect(parts().titleText.text()).toBe("Test Question");
+      expect(parts().promptText.text()).toBe("What is 2 + 3?");
+    });
+
+    it("keeps its key listener while showing Correct!, and removes it once closed", async () => {
       const remove = vi.spyOn(window, "removeEventListener");
       const result = prompt.ask(question, anchor);
       type("5");
       press("Enter");
       await result;
+      expect(remove).not.toHaveBeenCalledWith("keydown", expect.any(Function)); // still open
+
+      press("Enter");
       expect(remove).toHaveBeenCalledWith("keydown", expect.any(Function));
     });
   });
@@ -177,12 +210,17 @@ describe("QuestionPrompt functionality", () => {
 
     it("does not accept more typing after the last wrong answer", () => {
       void prompt.ask(question, anchor);
-      type("4");
+      useAllTries();
+      type("7"); // ignored: the prompt is in the "wrong" phase
+      expect(inputShown()).toBe("5"); // the right answer, shown in the box
+    });
+
+    it("does not accept more typing while showing Correct!", () => {
+      void prompt.ask(question, anchor);
+      type("5");
       press("Enter");
-      type("3");
-      press("Enter"); // out of tries
-      type("5"); // ignored: the prompt is in the "wrong" phase
-      expect(inputShown()).toBe("3");
+      type("7");
+      expect(inputShown()).toBe("5");
     });
   });
 
@@ -225,13 +263,19 @@ describe("QuestionPrompt functionality", () => {
 
     it("symbol buttons do nothing after the last wrong answer", () => {
       void prompt.ask(question, anchor);
-      type("4");
-      press("Enter");
-      type("3");
-      press("Enter"); // out of tries
+      useAllTries();
       clickSymbol("π");
       clickSymbol("C");
-      expect(inputShown()).toBe("3");
+      expect(inputShown()).toBe("5");
+    });
+
+    it("symbol buttons do nothing while showing Correct!", () => {
+      void prompt.ask(question, anchor);
+      type("5");
+      press("Enter");
+      clickSymbol("π");
+      clickSymbol("C");
+      expect(inputShown()).toBe("5");
     });
   });
 
@@ -276,13 +320,13 @@ describe("QuestionPrompt functionality", () => {
       expect(inputShown()).toBe("13");
     });
 
-    it("resets the cursor after a wrong answer and for a new question", () => {
+    it("moves the cursor to the end after a wrong answer, and resets it for a new question", () => {
       void prompt.ask(question, anchor);
       type("45");
       press("ArrowLeft");
-      press("Enter"); // wrong, input clears
-      type("5");
-      expect(inputShown()).toBe("5");
+      press("Enter"); // wrong: "45" stays, with the cursor after it
+      type("6");
+      expect(inputShown()).toBe("456");
 
       void prompt.ask(question, anchor);
       type("1");
@@ -291,12 +335,9 @@ describe("QuestionPrompt functionality", () => {
 
     it("arrow keys are ignored after the last wrong answer", () => {
       void prompt.ask(question, anchor);
-      type("4");
-      press("Enter");
-      type("3");
-      press("Enter");
+      useAllTries();
       expect(() => press("ArrowLeft")).not.toThrow();
-      expect(inputShown()).toBe("3");
+      expect(inputShown()).toBe("5");
     });
   });
 
@@ -335,12 +376,9 @@ describe("QuestionPrompt functionality", () => {
 
     it("clicking the input box does nothing after the last wrong answer", () => {
       void prompt.ask(question, anchor);
-      type("4");
-      press("Enter");
-      type("3");
-      press("Enter");
+      useAllTries();
       expect(() => inputBox().fire("click")).not.toThrow();
-      expect(inputShown()).toBe("3");
+      expect(inputShown()).toBe("5");
     });
   });
 
@@ -355,9 +393,14 @@ describe("QuestionPrompt functionality", () => {
 
     it("does not show the text cursor after the last wrong answer", () => {
       void prompt.ask(question, anchor);
-      type("4");
-      press("Enter");
-      type("3");
+      useAllTries();
+      inputBox().fire("mouseenter");
+      expect(document.body.style.cursor).not.toBe("text");
+    });
+
+    it("does not show the text cursor while showing Correct!", () => {
+      void prompt.ask(question, anchor);
+      type("5");
       press("Enter");
       inputBox().fire("mouseenter");
       expect(document.body.style.cursor).not.toBe("text");
@@ -391,13 +434,42 @@ describe("QuestionPrompt functionality", () => {
       expect(panelHeight()).toBe(before);
     });
 
-    it("stacks the input box below the question and the symbols below the input box", () => {
+    it("keeps the same panel height after the last wrong answer", () => {
       void prompt.ask(question, anchor);
-      const promptText = prompt.group.find<Konva.Text>("Text")[0];
+      const before = panelHeight();
+      useAllTries();
+      expect(panelHeight()).toBe(before);
+    });
+
+    it("keeps the same panel height when showing Correct!", () => {
+      void prompt.ask(question, anchor);
+      const before = panelHeight();
+      type("5");
+      press("Enter");
+      expect(panelHeight()).toBe(before);
+    });
+
+    it("stacks the title, the question, the input box and the symbols from the top down", () => {
+      void prompt.ask(question, anchor);
+      const { titleText, promptText } = parts();
       const symbol = prompt.group.find<Konva.Text>("Text").find((t) => t.text() === "π")!;
       const symbolRow = symbol.getParent()!.getParent()!;
+      expect(promptText.y()).toBeGreaterThanOrEqual(titleText.y() + titleText.height());
       expect(inputBox().y()).toBeGreaterThanOrEqual(promptText.y() + promptText.height());
       expect(symbolRow.y()).toBeGreaterThan(inputBox().y() + 40);
+    });
+
+    it("centers the title and the question in the panel", () => {
+      void prompt.ask(question, anchor);
+      expect(centerOf(parts().titleText)).toBe(PANEL_W / 2);
+      expect(centerOf(parts().promptText)).toBe(PANEL_W / 2);
+    });
+
+    it("keeps the title clear of the close button, and starts the question below it", () => {
+      void prompt.ask(question, anchor);
+      const { titleText, promptText, closeButton } = parts();
+      expect(titleText.x() + titleText.width()).toBeLessThanOrEqual(closeButton.x());
+      expect(promptText.y()).toBeGreaterThanOrEqual(closeButton.y() + 30); // CLOSE_SIZE
     });
 
     it("makes the panel taller for a longer question", () => {
@@ -439,13 +511,14 @@ describe("QuestionPrompt functionality", () => {
 });
 
 describe("QuestionPrompt answer output", () => {
+  // A correct answer resolves true at once, so the tower is placed straight away,
+  // but the popup stays open showing "Correct!" until the player closes it
   describe("correct answers resolve true", () => {
     it("resolves true when the typed answer is correct and Enter is pressed", async () => {
       const result = prompt.ask(question, anchor);
       type("5");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("resolves true when Submit is clicked with a correct answer", async () => {
@@ -453,7 +526,6 @@ describe("QuestionPrompt answer output", () => {
       type("5");
       handlers["Submit"]();
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("ignores letters and other keys while typing, then accepts the answer", async () => {
@@ -463,7 +535,6 @@ describe("QuestionPrompt answer output", () => {
       press("Shift");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer typed as a fraction", async () => {
@@ -471,7 +542,6 @@ describe("QuestionPrompt answer output", () => {
       type("3/4");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer entered with π symbol", async () => {
@@ -479,7 +549,6 @@ describe("QuestionPrompt answer output", () => {
       clickSymbol("π");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer with √ symbol", async () => {
@@ -488,7 +557,6 @@ describe("QuestionPrompt answer output", () => {
       type("25.0");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer with number next to √ symbol", async () => {
@@ -498,7 +566,6 @@ describe("QuestionPrompt answer output", () => {
       type("25.0");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer with decimal next to √ symbol", async () => {
@@ -508,7 +575,6 @@ describe("QuestionPrompt answer output", () => {
       type("25.0");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer with fraction next to √ symbol", async () => {
@@ -518,7 +584,6 @@ describe("QuestionPrompt answer output", () => {
       type("9.0");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer entered with ^ symbol", async () => {
@@ -526,7 +591,6 @@ describe("QuestionPrompt answer output", () => {
       type("2^2");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer entered with + symbol", async () => {
@@ -534,7 +598,6 @@ describe("QuestionPrompt answer output", () => {
       type("4+1");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer entered with - symbol", async () => {
@@ -542,7 +605,6 @@ describe("QuestionPrompt answer output", () => {
       type("6-1");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("accepts an answer entered with * symbol", async () => {
@@ -550,7 +612,6 @@ describe("QuestionPrompt answer output", () => {
       type("2.5*2");
       press("Enter");
       expect(await result).toBe(true);
-      expect(prompt.group.visible()).toBe(false);
     });
 
     it("submits the whole text wherever the cursor is", async () => {
@@ -559,7 +620,63 @@ describe("QuestionPrompt answer output", () => {
       press("ArrowLeft");
       press("Enter");
       expect(await result).toBe(true);
+    });
+  });
+
+  describe("after a correct answer", () => {
+    it("resolves true straight away, before the popup is closed", async () => {
+      const state = track(prompt.ask(question, anchor));
+      type("5");
+      press("Enter");
+      await flush();
+      expect(state.value).toBe(true);
+      expect(prompt.group.visible()).toBe(true);
+    });
+
+    it("shows Correct! in green, with the answer in green in the box", () => {
+      void prompt.ask(question, anchor);
+      type("5");
+      press("Enter");
+      expect(feedbackShown()).toBe("Correct!");
+      expect(parts().feedback.fill()).toBe(FEEDBACK_GREEN);
+      expect(inputShown()).toBe("5");
+      expect(parts().inputText.fill()).toBe(ANSWER_GREEN);
+    });
+
+    it.each([
+      ["Enter", () => press("Enter")],
+      ["Escape", () => press("Escape")],
+      ["Continue", () => handlers["Continue"]()],
+      ["the close button", () => parts().closeButton.fire("click")],
+    ])("closes with %s, and the result stays true", async (_label, close) => {
+      const result = prompt.ask(question, anchor);
+      type("5");
+      press("Enter");
+      close();
       expect(prompt.group.visible()).toBe(false);
+      expect(await result).toBe(true);
+    });
+
+    it("cancel() closes it, and the result stays true", async () => {
+      const result = prompt.ask(question, anchor);
+      type("5");
+      press("Enter");
+      prompt.cancel();
+      expect(prompt.group.visible()).toBe(false);
+      expect(await result).toBe(true);
+    });
+
+    it("a new question can be asked while it is showing", async () => {
+      void prompt.ask(question, anchor);
+      type("5");
+      press("Enter");
+
+      const second = prompt.ask(question, anchor);
+      expect(feedbackShown()).toBe("");
+      expect(inputShown()).toBe("");
+      type("5");
+      press("Enter");
+      expect(await second).toBe(true);
     });
   });
 
@@ -570,10 +687,50 @@ describe("QuestionPrompt answer output", () => {
       press("Enter"); // wrong, but one try left
 
       expect(prompt.group.visible()).toBe(true);
-      expect(inputShown()).toBe(""); // input cleared
       expect(feedbackShown()).toContain("1 try left");
 
+      press("Backspace");
       type("5");
+      press("Enter");
+      expect(await result).toBe(true);
+    });
+
+    it("keeps the wrong answer in the box in red", () => {
+      void prompt.ask(question, anchor);
+      type("4");
+      press("Enter");
+      expect(inputShown()).toBe("4");
+      expect(parts().inputText.fill()).toBe(WRONG_RED);
+    });
+
+    it.each([
+      ["typing", () => type("1")],
+      ["Backspace", () => press("Backspace")],
+      ["a symbol button", () => clickSymbol("π")],
+      ["C", () => clickSymbol("C")],
+    ])("turns the kept answer black again after %s", (_label, edit) => {
+      void prompt.ask(question, anchor);
+      type("4");
+      press("Enter");
+      edit();
+      expect(parts().inputText.fill()).toBe("black");
+    });
+
+    it("keeps the answer red when only the cursor moves", () => {
+      void prompt.ask(question, anchor);
+      type("4");
+      press("Enter");
+      press("ArrowLeft");
+      expect(parts().inputText.fill()).toBe(WRONG_RED);
+    });
+
+    it("lets the player fix the kept answer instead of retyping it", async () => {
+      const result = prompt.ask(question, anchor);
+      type("15");
+      press("Enter"); // wrong: "15" stays, cursor at the end
+      press("ArrowLeft");
+      press("Backspace"); // removes the 1
+      expect(inputShown()).toBe("5");
       press("Enter");
       expect(await result).toBe(true);
     });
@@ -587,10 +744,7 @@ describe("QuestionPrompt answer output", () => {
 
     it("does not resolve until dismissed after the last wrong answer", async () => {
       const state = track(prompt.ask(question, anchor));
-      type("4");
-      press("Enter"); // wrong, one try left
-      type("3");
-      press("Enter"); // wrong again, out of tries
+      useAllTries();
       await flush();
 
       expect(state.done).toBe(false);
@@ -616,10 +770,7 @@ describe("QuestionPrompt answer output", () => {
 
     it("resolves false when dismissed after typing more following the last wrong answer", async () => {
       const state = track(prompt.ask(question, anchor));
-      type("4");
-      press("Enter");
-      type("3");
-      press("Enter"); // out of tries
+      useAllTries();
       type("5"); // ignored
       press("Enter"); // dismisses
       await flush();
@@ -639,6 +790,63 @@ describe("QuestionPrompt answer output", () => {
       await flush();
       expect(state.done).toBe(false);
       expect(feedbackShown()).toContain("1 try left");
+    });
+  });
+
+  describe("after the last wrong answer", () => {
+    it("shows the right answer in green in the box, labeled", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      expect(inputShown()).toBe("5");
+      expect(parts().inputText.fill()).toBe(ANSWER_GREEN);
+      expect(parts().answerLabel.visible()).toBe(true);
+      expect(parts().answerLabel.getParent()).not.toBeNull();
+    });
+
+    it("says what the player answered, and gives the hint", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      expect(feedbackShown()).toContain("Not quite.");
+      expect(feedbackShown()).toContain("You answered 43.");
+      expect(feedbackShown()).toContain("Add them.");
+    });
+
+    it.each([
+      ["a whole number", 180, "180"],
+      ["a decimal, rounded to 2 places", 2 / 3, "0.67"],
+      ["a multiple of π, both ways", 9 * Math.PI, "9π (≈ 28.27)"],
+      ["π itself, without a 1", Math.PI, "π (≈ 3.14)"],
+      ["a decimal multiple of π", 6.25 * Math.PI, "6.25π (≈ 19.63)"],
+    ])("shows %s", (_label, answer, shown) => {
+      void prompt.ask({ ...question, answer, tolerance: 0.001 }, anchor);
+      useAllTries();
+      expect(inputShown()).toBe(shown);
+    });
+  });
+
+  describe("a new question starts clean", () => {
+    it("after the last wrong answer", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      void prompt.ask(question, anchor);
+      expect(inputShown()).toBe("");
+      expect(parts().inputText.fill()).toBe("black");
+      expect(parts().answerLabel.visible()).toBe(false);
+      expect(inputBox().strokeWidth()).toBe(0);
+    });
+
+    it("after a correct answer", () => {
+      void prompt.ask(question, anchor);
+      type("5");
+      press("Enter");
+      void prompt.ask(question, anchor);
+      expect(parts().inputText.fill()).toBe("black");
+      expect(parts().feedback.fill()).toBe(FEEDBACK_RED);
+      expect(inputBox().strokeWidth()).toBe(0);
+
+      type("4");
+      press("Enter"); // the wrong-answer message is red again
+      expect(parts().feedback.fill()).toBe(FEEDBACK_RED);
     });
   });
 
@@ -704,11 +912,15 @@ describe("QuestionPrompt answer output", () => {
 
     it("Escape closes the popup after the last wrong answer", async () => {
       const result = prompt.ask(question, anchor);
-      type("4");
-      press("Enter");
-      type("3");
-      press("Enter"); // out of tries, Continue is showing
+      useAllTries(); // Continue is showing
       press("Escape");
+      expect(await result).toBe(false);
+      expect(prompt.group.visible()).toBe(false);
+    });
+
+    it("the close button closes the popup and resolves false", async () => {
+      const result = prompt.ask(question, anchor);
+      parts().closeButton.fire("click");
       expect(await result).toBe(false);
       expect(prompt.group.visible()).toBe(false);
     });
