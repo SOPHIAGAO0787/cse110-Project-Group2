@@ -131,7 +131,6 @@ export class PlacementController {
       const question = this.questions.questionFor(def, config, this.mapNumber);
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
       if (!canCommit()) return false;
-      if (correct) model.recordQuestionSolved();
       return correct;
     };
 
@@ -248,7 +247,9 @@ export class PlacementController {
       pv.hide();
       const result = this.model.tryPlaceTower(def.id, tile, config);
       // TowersView draws successful placements through the towerPlaced event.
+      // The answer counts as solved only now, once the tower is really on the map.
       if (result === "ok") {
+        this.model.recordQuestionSolved();
         return;
       }
 
