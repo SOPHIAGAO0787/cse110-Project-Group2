@@ -3,6 +3,7 @@ import type { Screen } from "../../app/types";
 import { GameLoop } from "../../core/GameLoop";
 import {
   GeometryMiniGame,
+  QUESTIONS_PER_ROUND,
   type GeometryMiniGameResult,
 } from "../../model/minigame/GeometryMiniGame";
 import { makeBackButton, makeButton } from "../button";
@@ -179,11 +180,11 @@ export class GeometryMiniGameScreen implements Screen {
     this.status.text(
       finished
         ? "Round complete"
-        : `Question ${this.model.questionIndex + 1}/5   ·   Time: ${Math.ceil(this.model.remainingSeconds)}s   ·   Correct: ${this.model.correctAnswers}`,
+        : `Question ${this.model.questionIndex + 1}/${QUESTIONS_PER_ROUND}   ·   Time: ${Math.ceil(this.model.remainingSeconds)}s   ·   Correct: ${this.model.correctAnswers}`,
     );
     this.question.text(
       finished
-        ? `You answered ${this.model.correctAnswers} of 5 correctly.`
+        ? `You answered ${this.model.correctAnswers} of ${QUESTIONS_PER_ROUND} correctly.`
         : this.model.currentQuestion.prompt,
     );
     this.input.text(answering ? `${this.typed}|` : "");

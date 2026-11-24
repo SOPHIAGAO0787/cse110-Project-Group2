@@ -7,23 +7,38 @@ export interface GeometryMiniGameResult {
   totalQuestions: number;
 }
 
-// Each round practices all five topics, with new dimensions on restart.
+// How many questions one round asks
+export const QUESTIONS_PER_ROUND = 5;
+
+// Makes one question from each template with new dimensions, shuffles them,
+// and keeps the first QUESTIONS_PER_ROUND, so each round asks a different mix.
 export function generateGeometryQuestions(random = Math.random): Question[] {
   const dimension = () => 2 + Math.floor(random() * 9);
   const radius = dimension();
+  const circumferenceRadius = dimension();
   const diameter = dimension() * 2;
   const width = dimension();
   const height = dimension();
+  const perimeterWidth = dimension();
+  const perimeterHeight = dimension();
   const base = dimension();
   const triangleHeight = dimension();
+  const side = dimension();
   const angle = dimension() * 10;
-  return [
+  const questions: Question[] = [
     {
       id: "circle-area",
       prompt: `What is the area of a circle with radius ${radius}? Use pi or round to 2 decimal places.`,
       answer: Math.PI * radius ** 2,
       tolerance: 0.01,
       hint: "Area = pi × radius².",
+    },
+    {
+      id: "circle-circumference",
+      prompt: `What is the circumference of a circle with radius ${circumferenceRadius}? Use pi or round to 2 decimal places.`,
+      answer: 2 * Math.PI * circumferenceRadius,
+      tolerance: 0.01,
+      hint: "Circumference = 2 × pi × radius.",
     },
     {
       id: "radius-diameter",
@@ -40,11 +55,25 @@ export function generateGeometryQuestions(random = Math.random): Question[] {
       hint: "Area = width × height.",
     },
     {
+      id: "rectangle-perimeter",
+      prompt: `What is the perimeter of a rectangle with width ${perimeterWidth} and height ${perimeterHeight}?`,
+      answer: 2 * (perimeterWidth + perimeterHeight),
+      tolerance: 0,
+      hint: "Perimeter = 2 × (width + height).",
+    },
+    {
       id: "triangle-area",
       prompt: `What is the area of a triangle with base ${base} and perpendicular height ${triangleHeight}?`,
       answer: (base * triangleHeight) / 2,
       tolerance: 0,
       hint: "Area = base × height / 2.",
+    },
+    {
+      id: "square-diagonal",
+      prompt: `How long is the diagonal of a square with side ${side}? Use √ or round to 2 decimal places.`,
+      answer: side * Math.SQRT2,
+      tolerance: 0.01,
+      hint: "Diagonal = side × √2.",
     },
     {
       id: "angles",
@@ -54,6 +83,14 @@ export function generateGeometryQuestions(random = Math.random): Question[] {
       hint: "Angles on a straight line add to 180 degrees.",
     },
   ];
+  // Shuffle: go from the last spot to the first and swap each with a random spot at or before it
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const swap = questions[i];
+    questions[i] = questions[j];
+    questions[j] = swap;
+  }
+  return questions.slice(0, QUESTIONS_PER_ROUND);
 }
 
 export class GeometryMiniGame {

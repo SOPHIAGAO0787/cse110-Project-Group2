@@ -74,7 +74,7 @@ describe("GeometryMiniGameScreen", () => {
 
   it("shows final results, calls completion once, and supports restart", () => {
     const stop = vi.spyOn(GameLoop.prototype, "stop");
-    for (const answer of ["4*pi", "2", "4", "2", "160"]) {
+    for (const answer of ["4*pi", "2", "4", "8", "2"]) {
       for (const key of answer) press(key);
       press("Enter");
       click("Next Question");
