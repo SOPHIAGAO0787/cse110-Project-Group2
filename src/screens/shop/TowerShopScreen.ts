@@ -6,6 +6,8 @@ import { TowerProgress } from "../../model/TowerProgress";
 export class TowerShopScreen implements Screen {
   private view: TowerShopView;
 
+  private onBuy: () => void; // called after each unlock or upgrade, so the App can save
+
   private selectedId = SHOP_TOWERS[0]?.def.id ?? "";
 
   group: TowerShopView["group"];
@@ -13,7 +15,9 @@ export class TowerShopScreen implements Screen {
   constructor(
     app: ScreenSwitcher,
     private progress: TowerProgress,
+    onBuy: () => void,
   ) {
+    this.onBuy = onBuy;
     this.view = new TowerShopView({
       onSelect: (id) => {
         this.selectedId = id;
@@ -75,6 +79,7 @@ export class TowerShopScreen implements Screen {
     // Temporary successful interaction for the UI demonstration.
     this.progress.shopCoins -= cost;
     this.progress.maxLevels.set(tower.def.id, locked ? 0 : levelIndex + 1);
+    this.onBuy();
     this.refresh();
   }
 }
