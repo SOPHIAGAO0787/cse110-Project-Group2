@@ -8,6 +8,7 @@ const PAD = 16; // space around the edges of the panel
 const SECTION_GAP = 12; // space between the question and the input box
 const TITLE_GAP = 6; // space between the title and the question
 const INPUT_H = 40;
+const FORMAT_H = 16; // the grey line under the input box
 const MIN_FEEDBACK_H = 34; // room for two lines of feedback
 const SYMBOLS = ["π", "√", "^", "⌫", "C"];
 const SYMBOL_W = 40;
@@ -77,6 +78,16 @@ export class QuestionPrompt {
     align: "center",
     verticalAlign: "middle",
     wrap: "none",
+  });
+  // Tells the player which kinds of answers the box understands
+  private formatText = new Konva.Text({
+    x: PAD,
+    width: PANEL_W - 2 * PAD,
+    height: FORMAT_H,
+    text: "You can type π, fractions or decimals",
+    fontSize: 12,
+    fill: "#aaa",
+    align: "center",
   });
   private cursorBar = new Konva.Rect({ y: 98, width: 2, height: 24, fill: "black" });
   private symbolRow = new Konva.Group({
@@ -187,6 +198,7 @@ export class QuestionPrompt {
       this.promptText,
       this.inputBox,
       this.inputText,
+      this.formatText,
       this.symbolRow,
       this.answerLabel,
       this.cursorBar,
@@ -201,7 +213,7 @@ export class QuestionPrompt {
   }
 
   // Stacks everything from the top down, so the panel is as tall as this question needs:
-  // question, input box, symbol row, a reserved feedback area, then the buttons.
+  // question, input box, the grey format line, symbol row, a reserved feedback area, then the buttons.
   private layout(hint: string): void {
     this.titleText.y(PAD);
     const closeBottom = CLOSE_MARGIN + CLOSE_SIZE;
@@ -211,8 +223,11 @@ export class QuestionPrompt {
     this.inputText.y(inputY);
     this.cursorBar.y(inputY + (INPUT_H - this.cursorBar.height()) / 2);
 
-    const symbolsY = inputY + INPUT_H + 8;
-    this.answerLabel.y(symbolsY + 6);
+    const formatY = inputY + INPUT_H + 4;
+    this.formatText.y(formatY);
+    this.answerLabel.y(formatY); // shown in place of the format line once the tries are used up
+
+    const symbolsY = formatY + FORMAT_H + 4;
     this.symbolRow.y(symbolsY);
 
     // Reserve room for the longest feedback this question can show, so the panel
@@ -250,6 +265,7 @@ export class QuestionPrompt {
     this.submitButton.visible(true);
     this.continueButton.visible(false);
     this.symbolRow.visible(true);
+    this.formatText.visible(true);
     this.answerLabel.visible(false);
     this.inputText.fill("black");
     this.feedback.fill("#ff6b6b");
@@ -402,6 +418,7 @@ export class QuestionPrompt {
       this.phase = "correct";
       this.symbolRow.visible(false);
       this.cursorBar.visible(false);
+      this.formatText.visible(false);
       this.inputText.fill("#15803d");
       this.inputBox.stroke("#4ade80");
       this.inputBox.strokeWidth(3);
@@ -423,6 +440,7 @@ export class QuestionPrompt {
       this.phase = "wrong";
       this.symbolRow.visible(false);
       this.cursorBar.visible(false);
+      this.formatText.visible(false);
       this.answerLabel.visible(true);
       this.feedback.text(`Not quite.\nYou answered ${this.typed}.\n${this.question.hint}`);
       this.inputText.text(formatAnswer(this.question.answer));
