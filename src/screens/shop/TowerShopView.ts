@@ -1,6 +1,15 @@
 import Konva from "konva";
-import { makeButton } from "../button";
-import type { ShopTower } from "../../model/shop/types";
+import { makeClickable } from "../button";
+import {
+  FONT,
+  HEADER_BACKGROUND,
+  SQUARE_TOWER_COLOR,
+  TRIANGLE_TOWER_COLOR,
+  CIRCLE_TOWER_COLOR,
+} from "../theme";
+import type { ShopLevel, ShopTower } from "../../model/shop/types";
+import { rectSizes } from "../../model/geometry/rect";
+import { fireRateFor } from "../../model/towerConfig";
 
 interface ShopViewState {
   towers: ShopTower[];
@@ -15,246 +24,452 @@ interface ShopCallbacks {
   onBack: () => void;
 }
 
-//place holder : could be changed on our team's size
-const WIDTH = 900;
-const HEIGHT = 640;
+const WIDTH = 1120;
+const HEIGHT = 800;
+const CARD_WIDTH = 330;
+const CARD_HEIGHT = 554;
+const INK = "#20283d";
+const MUTED = "#65738b";
+const PAGE = "#f0f3fa";
+
+function towerStyle(tower: ShopTower): { color: string; tint: string } {
+  switch (tower.def.range.kind) {
+    case "rect":
+      return { color: SQUARE_TOWER_COLOR, tint: "#edf2ff" };
+    case "sector":
+      return { color: TRIANGLE_TOWER_COLOR, tint: "#fff5e8" };
+    case "circle":
+      return { color: CIRCLE_TOWER_COLOR, tint: "#edfbf3" };
+  }
+}
 
 export class TowerShopView {
   group = new Konva.Group();
 
+  private backdrop = new Konva.Rect({ fill: PAGE, listening: false });
   private scene = new Konva.Group();
   private content = new Konva.Group();
   private popup = new Konva.Group({ visible: false });
 
-  // Add content and popup to one scene.
   constructor(private callbacks: ShopCallbacks) {
     this.scene.add(this.content, this.popup);
-    this.group.add(this.scene);
+    this.group.add(this.backdrop, this.scene);
   }
 
   render(state: ShopViewState): void {
     this.content.destroyChildren();
-
+    this.content.add(new Konva.Rect({ width: WIDTH, height: HEIGHT, fill: PAGE }));
+    this.content.add(new Konva.Rect({ width: WIDTH, height: 88, fill: HEADER_BACKGROUND }));
+    this.text(this.content, "Geometry game", 40, 27, 28, 250, "white", true);
     this.content.add(
-      new Konva.Rect({
-        width: WIDTH,
-        height: HEIGHT,
-        fill: "#1e1e2e",
+      new Konva.Line({
+        points: [305, 31, 305, 57],
+        stroke: "#ffffff66",
+        listening: false,
       }),
     );
+    this.text(this.content, "Tower Shop", 329, 34, 15, 170, "white", true);
+    this.button(this.content, "←  Main menu", 926, 25, 154, 38, this.callbacks.onBack, "#638ce4");
 
-    //put text about basic shop info
-    this.text(this.content, "Tower Shop", 28, 24, 34);
-    this.text(this.content, `Coins: ${state.coins}`, 650, 30, 24);
-    this.text(this.content, "Select a tower to view its abilities and upgrades.", 28, 75, 18);
+    this.text(this.content, "Choose a tower", 40, 117, 29, 650, INK, true);
+    this.text(
+      this.content,
+      "Unlock new shapes. Build a stronger defense.",
+      40,
+      155,
+      15,
+      650,
+      MUTED,
+    );
+    this.content.add(
+      new Konva.Rect({ x: 911, y: 121, width: 169, height: 44, fill: "white", cornerRadius: 22 }),
+      new Konva.Circle({
+        x: 935,
+        y: 143,
+        radius: 10,
+        fill: "#ffc547",
+        stroke: "#e9aa29",
+        strokeWidth: 1.5,
+      }),
+    );
+    this.text(this.content, `${state.coins} coins`, 954, 132, 17, 115, INK, true);
 
-    //for each towers get the level and upgrade price
-    state.towers.forEach((tower, index) => {
-      const level = state.levels.get(tower.def.id) ?? -1;
-      const status = level < 0 ? "Locked" : `Level ${level + 1}`;
-      const selected = tower.def.id === state.selectedId;
-
-      this.text(
-        this.content,
-        `${selected ? "► " : ""}${tower.def.name} · ${status}`,
-        28,
-        120 + index * 100,
-        18,
-        260,
-      );
-
-      this.button(
-        this.content,
-        selected ? "Selected" : level < 0 ? `View · ${tower.unlockCost} coins to unlock` : "View",
-        28,
-        150 + index * 100,
-        () => this.callbacks.onSelect(tower.def.id),
-        !selected,
-      );
-    });
-
-    // Render the currently selected tower details.
-    const tower = state.towers.find((item) => item.def.id === state.selectedId);
-
-    if (tower) {
-      this.renderDetails(tower, state.levels.get(tower.def.id) ?? -1);
-    }
-
-    //back to menu button
-    this.button(this.content, "Back to Menu", 28, 550, this.callbacks.onBack);
+    const order = ["circle", "sector", "rect"];
+    const towers = [...state.towers].sort(
+      (a, b) => order.indexOf(a.def.range.kind) - order.indexOf(b.def.range.kind),
+    );
+    towers.forEach((tower, index) => this.renderCard(tower, index, state));
 
     this.text(
       this.content,
-      "UI demo: sample coins and upgrades. Progress resets on refresh.",
-      28,
-      610,
-      15,
-      840,
+      "Shop purchases unlock levels. Upgrade placed towers separately during a game.",
+      40,
+      763,
+      13,
+      850,
+      MUTED,
     );
+    this.text(this.content, "Progress resets on refresh", 863, 763, 12, 217, MUTED);
   }
 
-  private renderDetails(tower: ShopTower, levelIndex: number): void {
+  private renderCard(tower: ShopTower, index: number, state: ShopViewState): void {
+    const { color, tint } = towerStyle(tower);
+    const levelIndex = state.levels.get(tower.def.id) ?? -1;
     const locked = levelIndex < 0;
     const current = tower.levels[Math.max(0, levelIndex)];
     const next = tower.levels[Math.max(0, levelIndex) + 1];
-
-    this.content.add(
+    const selected = tower.def.id === state.selectedId;
+    const card = new Konva.Group({ x: 40 + index * 355, y: 190, name: `tower-${tower.def.id}` });
+    card.add(
       new Konva.Rect({
-        x: 310,
-        y: 115,
-        width: 562,
-        height: 470,
-        fill: "#262637",
-        stroke: "#52526b",
-        cornerRadius: 12,
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
+        fill: "white",
+        stroke: selected ? color : "#e4e9f2",
+        strokeWidth: selected ? 2 : 1,
+        cornerRadius: 16,
+        shadowColor: "#26395f",
+        shadowBlur: 18,
+        shadowOpacity: 0.08,
+        shadowOffsetY: 6,
+      }),
+      new Konva.Rect({
+        width: CARD_WIDTH,
+        height: 132,
+        fill: tint,
+        cornerRadius: [16, 16, 0, 0],
+        listening: false,
+      }),
+      new Konva.Rect({
+        x: 16,
+        y: 15,
+        width: 115,
+        height: 22,
+        fill: color,
+        cornerRadius: 11,
+        listening: false,
       }),
     );
-
-    //show current level
-    this.text(this.content, tower.def.name, 334, 135, 28);
+    this.text(card, tower.def.name.toUpperCase(), 25, 20, 9, 103, "white", true);
+    this.drawIcon(card, tower, color);
+    if (locked) {
+      card.add(
+        new Konva.Rect({
+          width: CARD_WIDTH,
+          height: 132,
+          fill: "#111827",
+          opacity: 0.65,
+          cornerRadius: [16, 16, 0, 0],
+          listening: false,
+          name: "locked-overlay",
+        }),
+        new Konva.Arc({
+          x: 165,
+          y: 65,
+          innerRadius: 10,
+          outerRadius: 13,
+          angle: 180,
+          rotation: 180,
+          fill: "white",
+          listening: false,
+        }),
+        new Konva.Rect({
+          x: 148,
+          y: 65,
+          width: 34,
+          height: 27,
+          fill: "white",
+          cornerRadius: 5,
+          listening: false,
+        }),
+        new Konva.Circle({ x: 165, y: 76, radius: 3, fill: "#3f485b", listening: false }),
+      );
+      this.text(card, "LOCKED", 115, 104, 12, 100, "white", true).align("center");
+    }
+    this.text(card, tower.def.name, 20, 150, 24, 290, INK, true);
     this.text(
-      this.content,
-      locked ? "Locked · Base abilities" : `Level ${levelIndex + 1}`,
-      334,
-      175,
-      18,
-    );
-
-    //tower description
-    this.text(this.content, tower.def.description, 334, 211, 18);
-
-    // Show current tower details.
-    this.text(
-      this.content,
-      [
-        `Damage: ${current.damage}`,
-        `Attack speed: ${current.attackSpeed} shots/sec`,
-        `Range radius: ${current.radius} tiles`,
-      ].join("\n"),
-      334,
-      275,
+      card,
+      locked
+        ? "Locked · unlock to place"
+        : `Level ${levelIndex + 1} of ${tower.levels.length} unlocked`,
       20,
+      183,
+      13,
+      290,
+      MUTED,
     );
 
-    //show upgrade cost for each abilities
+    const range = tower.def.range;
+    const rangeLabel = range.kind === "circle" ? "Radius" : "Range area";
+    const rangeValue =
+      range.kind === "circle"
+        ? `${current.radius} tiles`
+        : range.kind === "sector"
+          ? `${range.area} tiles²`
+          : `up to ${range.maxArea} tiles²`;
+    const stats = [
+      ["Damage", `${current.damage}`],
+      [rangeLabel, rangeValue],
+      ["Attack speed", `${this.describeAttackSpeed(tower, current)} / sec`],
+    ];
+    stats.forEach(([label, value], row) => {
+      const y = 215 + row * 36;
+      card.add(
+        new Konva.Line({ points: [20, y - 7, 310, y - 7], stroke: "#edf0f5", listening: false }),
+      );
+      this.text(card, label, 20, y + 1, 13, 160, INK);
+      card.add(
+        new Konva.Rect({
+          x: 188,
+          y: y - 1,
+          width: 122,
+          height: 25,
+          fill: tint,
+          cornerRadius: 7,
+          listening: false,
+        }),
+      );
+      const valueText = this.text(card, value, 192, y + 3, 12, 114, INK, true);
+      valueText.align("center");
+    });
+
+    const note =
+      range.kind === "sector"
+        ? "Wider cones reach less far; narrower cones reach farther."
+        : range.kind === "rect"
+          ? "Smaller blocks fire faster; aim to choose the size."
+          : tower.def.description;
+    this.text(card, note, 20, 329, 13, 290, MUTED);
+
+    card.add(
+      new Konva.Rect({
+        x: 16,
+        y: 378,
+        width: 298,
+        height: 98,
+        fill: "#f7f9fc",
+        cornerRadius: 10,
+        listening: false,
+      }),
+    );
     if (next) {
       this.text(
-        this.content,
-        [
-          locked ? "Next upgrade after unlocking:" : "Next upgrade:",
-          `Damage: ${current.damage} → ${next.damage}`,
-          `Attack speed: ${current.attackSpeed} → ${next.attackSpeed} shots/sec`,
-          `Range radius: ${current.radius} → ${next.radius} tiles`,
-          `Upgrade cost: ${current.upgradeCost} coins`,
-        ].join("\n"),
-        334,
-        375,
-        18,
+        card,
+        locked ? "After unlocking · Level 2" : `Next upgrade · Level ${levelIndex + 2}`,
+        28,
+        388,
+        12,
+        274,
+        INK,
+        true,
       );
+      this.text(
+        card,
+        `Damage: ${current.damage} → ${next.damage}   ·   ${current.upgradeCost} coins`,
+        28,
+        411,
+        12,
+        274,
+        MUTED,
+      );
+      this.text(
+        card,
+        `Attack speed: ${this.describeAttackSpeed(tower, current)} → ${this.describeAttackSpeed(tower, next)} / sec`,
+        28,
+        432,
+        12,
+        274,
+        MUTED,
+      );
+      if (range.kind === "circle") {
+        this.text(
+          card,
+          `Radius: ${current.radius} → ${next.radius} tiles`,
+          28,
+          453,
+          12,
+          274,
+          MUTED,
+        );
+      }
     } else {
-      this.text(this.content, "Maximum level reached", 334, 390, 22);
+      this.text(card, "All levels unlocked", 28, 396, 15, 274, INK, true);
+      this.text(card, "No further upgrades available", 28, 423, 12, 274, MUTED);
     }
 
-    if (locked || next) {
-      const cost = locked ? tower.unlockCost : current.upgradeCost;
+    const canAct = locked || !!next;
+    const cost = locked ? tower.unlockCost : current.upgradeCost;
+    this.button(
+      card,
+      canAct
+        ? `${locked ? "Unlock tower" : "Upgrade tower"} · ${cost} coins`
+        : "Maximum level reached",
+      20,
+      492,
+      290,
+      44,
+      () => {
+        // Select first so each card's purchase acts on its own tower.
+        this.callbacks.onSelect(tower.def.id);
+        this.callbacks.onAction();
+      },
+      color,
+      canAct,
+    );
+    makeClickable(card, () => this.callbacks.onSelect(tower.def.id));
+    this.content.add(card);
+  }
 
-      this.button(
-        this.content,
-        `${locked ? "Unlock" : "Upgrade"} · ${cost} coins`,
-        334,
-        520,
-        this.callbacks.onAction,
-      );
+  private drawIcon(card: Konva.Group, tower: ShopTower, color: string): void {
+    switch (tower.def.range.kind) {
+      case "rect":
+        card.add(
+          new Konva.Rect({
+            x: 130,
+            y: 49,
+            width: 70,
+            height: 65,
+            fill: color,
+            cornerRadius: 9,
+            listening: false,
+          }),
+        );
+        break;
+      case "sector":
+        card.add(
+          new Konva.Line({
+            points: [165, 47, 204, 113, 126, 113],
+            fill: color,
+            closed: true,
+            listening: false,
+          }),
+        );
+        break;
+      case "circle":
+        card.add(new Konva.Circle({ x: 165, y: 81, radius: 35, fill: color, listening: false }));
+        break;
     }
   }
 
-  //pop up message for not enough money
+  private describeAttackSpeed(tower: ShopTower, level: ShopLevel): string {
+    if (tower.def.range.kind !== "rect") return `${level.attackSpeed}`;
+    const def = { ...tower.def, fireRatePerSec: level.attackSpeed };
+    const rates = rectSizes(tower.def.range.maxArea).map(({ width, depth }) =>
+      fireRateFor(def, { kind: "rect", facing: "up", width, depth, side: 1 }),
+    );
+    const slowest = Number(Math.min(...rates).toFixed(2));
+    const fastest = Number(Math.max(...rates).toFixed(2));
+    return slowest === fastest ? `${slowest}` : `${slowest}–${fastest}`;
+  }
+
   showPopup(message: string): void {
     this.popup.destroyChildren();
-
-    // This overlay blocks clicks on the shop behind the popup.
     this.popup.add(
+      new Konva.Rect({ width: WIDTH, height: HEIGHT, fill: "#20283d88" }),
       new Konva.Rect({
-        width: WIDTH,
-        height: HEIGHT,
-        fill: "rgba(0, 0, 0, 0.7)",
-      }),
-      new Konva.Rect({
-        x: 220,
-        y: 205,
+        x: 330,
+        y: 260,
         width: 460,
-        height: 230,
-        fill: "#303044",
-        stroke: "#f38ba8",
-        cornerRadius: 12,
+        height: 250,
+        fill: "white",
+        cornerRadius: 18,
+        shadowColor: "#20283d",
+        shadowBlur: 30,
+        shadowOpacity: 0.15,
       }),
     );
-
-    this.text(this.popup, "Not enough coins", 244, 230, 28, 410);
-    this.text(this.popup, message, 244, 280, 20, 410);
-    this.button(this.popup, "OK", 350, 365, () => this.closePopup());
-
+    this.text(this.popup, "A few more coins to go", 362, 292, 25, 396, INK, true);
+    this.text(this.popup, message, 362, 342, 17, 396, MUTED);
+    this.button(
+      this.popup,
+      "Got it",
+      362,
+      434,
+      396,
+      44,
+      () => this.closePopup(),
+      HEADER_BACKGROUND,
+    );
     this.popup.visible(true);
     this.popup.moveToTop();
   }
 
-  //close pop up
   closePopup(): void {
     this.popup.visible(false);
     this.popup.destroyChildren();
   }
 
-  //helper functions
-  //resize : resize the scene width and height
   resize(width: number, height: number): void {
+    this.backdrop.size({ width, height });
     const scale = Math.max(0.01, Math.min(width / WIDTH, height / HEIGHT));
-
     this.scene.scale({ x: scale, y: scale });
-    this.scene.position({
-      x: (width - WIDTH * scale) / 2,
-      y: (height - HEIGHT * scale) / 2,
-    });
+    this.scene.position({ x: (width - WIDTH * scale) / 2, y: (height - HEIGHT * scale) / 2 });
   }
 
-  //create text with text details
   private text(
     parent: Konva.Group,
     value: string,
     x: number,
     y: number,
     fontSize: number,
-    width = 510,
-  ): void {
-    parent.add(
-      new Konva.Text({
-        x,
-        y,
-        width,
-        text: value,
-        fontSize,
-        fill: "white",
-        lineHeight: 1.35,
-        listening: false,
-      }),
-    );
+    width: number,
+    fill: string,
+    bold = false,
+  ): Konva.Text {
+    const text = new Konva.Text({
+      x,
+      y,
+      width,
+      text: value,
+      fontSize,
+      fill,
+      fontFamily: FONT,
+      fontStyle: bold ? "bold" : "normal",
+      lineHeight: 1.3,
+      listening: false,
+    });
+    parent.add(text);
+    return text;
   }
 
-  //make button
   private button(
     parent: Konva.Group,
     label: string,
     x: number,
     y: number,
+    width: number,
+    height: number,
     onClick: () => void,
+    color: string,
     enabled = true,
   ): void {
-    const button = makeButton(label, onClick);
-    button.listening(enabled);
-    button.opacity(enabled ? 1 : 0.6);
-
-    // Fit longer shop labels inside the existing shared button.
-    button.findOne<Konva.Text>("Text")?.fontSize(14);
-    button.position({ x, y });
+    const button = new Konva.Group({ x, y, listening: enabled });
+    const background = new Konva.Rect({
+      width,
+      height,
+      fill: enabled ? color : "#e8edf4",
+      cornerRadius: height / 2,
+    });
+    const text = new Konva.Text({
+      width,
+      height,
+      text: label,
+      fontFamily: FONT,
+      fontSize: 16,
+      fontStyle: "bold",
+      fill: enabled ? "white" : MUTED,
+      align: "center",
+      verticalAlign: "middle",
+      listening: false,
+    });
+    button.add(background, text);
+    // Stop bubbling before the callback redraws and replaces this card.
+    button.on("click tap", (event) => {
+      event.cancelBubble = true;
+    });
+    makeClickable(button, onClick);
+    button.on("mouseenter", () => background.opacity(0.88));
+    button.on("mouseleave", () => background.opacity(1));
     parent.add(button);
   }
 }

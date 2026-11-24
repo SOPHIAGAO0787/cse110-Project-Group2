@@ -27,6 +27,11 @@ export interface MapConfig {
   startingCoins: number;
   startingLives: number;
   waves: WaveConfig[];
+  // Optional textured look (see model/TileArt.ts). tileset names the picture sheet to draw with.
+  // art is one character per tile naming the picture on that sheet; leave it out to have it
+  // worked out from tiles and path. A map without a tileset keeps the plain colored look.
+  tileset?: string;
+  art?: string[];
 }
 
 export interface WaveConfig {

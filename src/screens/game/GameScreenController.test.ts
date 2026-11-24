@@ -68,14 +68,15 @@ let playSound: Mock<(name: EffectName) => void>; // counts the effects instead o
 function hud(): string {
   const text = controller.group
     .getChildren()
-    .find((node) => node instanceof Konva.Text && node.text().startsWith("Coins:"));
+    .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
   if (!(text instanceof Konva.Text)) throw new Error("HUD text is missing from the screen");
   return text.text();
 }
 
 function expectHud(coins: number, lives: number, wave: number, enemies: number): void {
+  expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(`Coins: ${coins}`);
   expect(hud()).toBe(
-    `Coins: ${coins}   ·   Lives: ${lives}   ·   Wave: ${wave}/${map.waves.length}   ·   Enemies Remaining: ${enemies}`,
+    `Lives: ${lives}   ·   Wave: ${wave}/${map.waves.length}   ·   Enemies Remaining: ${enemies}`,
   );
 }
 
@@ -257,7 +258,9 @@ describe("GameScreenController HUD event wiring", () => {
     expect(model.enemies).toHaveLength(5);
     const first = model.enemies[0];
     model.events.emit("enemyKilled", { enemyId: first.id, reward: first.def.reward });
-    expect(hud()).toContain(`Coins: ${map.startingCoins + first.def.reward}`);
+    expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
+      `Coins: ${map.startingCoins + first.def.reward}`,
+    );
     expect(hud()).toContain("Enemies Remaining: 4");
     for (let i = 1; i < 5; i++) {
       model.events.emit("enemyLeaked", { enemyId: model.enemies[i].id });
@@ -741,6 +744,52 @@ describe("GameScreenController tower upgrades", () => {
     vi.spyOn(grid, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
     return grid;
   }
+
+  it("shows upgrade information on hover and refreshes it after clicking", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    const hintText = () =>
+      hint
+        .find<Konva.Text>("Text")
+        .map((node) => node.text())
+        .join("\n");
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    expect(hintText()).toContain("Upgrade to Level 2 · 75 coins");
+    expect(hintText()).toContain("Click this tower to upgrade.");
+    grid.group.fire("click");
+    expect(hintText()).toContain("Circle Tower · Level 2");
+    expect(hintText()).toContain("Unlock Level 3 in the Tower Shop first.");
+    grid.group.fire("pointerleave");
+    expect(hint.visible()).toBe(false);
+  });
+
+  it("refreshes hover affordability when the wallet changes", () => {
+    const grid = prepareTower();
+    grid.group.fire("pointermove");
+    model.wallet.spend(model.wallet.coins);
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    expect(
+      hint.find<Konva.Text>("Text").some((node) => node.text().startsWith("Need 75 more coins.")),
+    ).toBe(true);
+  });
+
+  it("hides the upgrade hint on empty tiles, in settings, and when leaving the game", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 0, y: 2 });
+    grid.group.fire("pointermove");
+    clickIcon("settings");
+    expect(hint.visible()).toBe(false);
+    controller.hide();
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+  });
 
   it.each(["click", "tap"])("upgrades the clicked tower on %s and shows the result", (event) => {
     const grid = prepareTower();
