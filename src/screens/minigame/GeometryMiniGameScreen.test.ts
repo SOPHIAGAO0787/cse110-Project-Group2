@@ -20,8 +20,8 @@ let screen: GeometryMiniGameScreen;
 let complete: ReturnType<typeof vi.fn<(result: GeometryMiniGameResult) => void>>;
 let frame: (dt: number) => void;
 const press = (key: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key }));
-// The feedback shows for 1.2 seconds before the next question
-const waitForNext = () => vi.advanceTimersByTime(1200);
+// Waits long enough for any feedback to end: 1.2 seconds after a right answer, 3 after a wrong one
+const waitForNext = () => vi.advanceTimersByTime(3000);
 const texts = () => screen.group.find<Konva.Text>("Text").map((text) => text.text());
 function click(label: string) {
   const text = screen.group.find<Konva.Text>("Text").find((text) => text.text() === label)!;
@@ -81,6 +81,15 @@ describe("GeometryMiniGameScreen", () => {
     expect(texts()).toContain("Question 2/5   ·   Time: 0s   ·   Correct: 0");
     waitForNext();
     expect(texts()).toContain("Question 3/5   ·   Time: 25s   ·   Correct: 0");
+  });
+
+  it("keeps a wrong answer on screen longer than a right one, so the answer can be read", () => {
+    press("0");
+    press("Enter");
+    vi.advanceTimersByTime(2999);
+    expect(texts().some((text) => text.startsWith("Incorrect."))).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(texts()).toContain("Question 2/5   ·   Time: 25s   ·   Correct: 0");
   });
 
   it("shows final results, calls completion once, and supports restart", () => {
