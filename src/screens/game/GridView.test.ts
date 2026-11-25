@@ -126,8 +126,8 @@ describe("GridView with textured ground", () => {
     const order = view.group.getChildren();
     const terrainAt = order.indexOf(terrain);
     expect(terrainAt).toBeGreaterThan(0); // above the scenery rectangle
-    // everything after it is the grid lines and the hover tint
-    expect(order).toHaveLength(terrainAt + 3);
+    // everything after it is the arrow, the flag, the grid lines and the hover tint
+    expect(order).toHaveLength(terrainAt + 5);
   });
 
   it("still shows the grid lines only while a tower is being placed", () => {
@@ -143,5 +143,66 @@ describe("GridView with textured ground", () => {
     const view = new GridView(map, () => true, null);
     expect(view.group.find(".decoration").length).toBeGreaterThan(0);
     expect(lines(view).some((line) => line.stroke() === map.colors.path)).toBe(true);
+  });
+});
+
+describe("GridView path markers", () => {
+  // The center of the tile at a path point, in pixels
+  function center(p: { x: number; y: number }): { x: number; y: number } {
+    return { x: (p.x + 0.5) * TILE, y: (p.y + 0.5) * TILE };
+  }
+
+  it("puts an arrow on the first path tile and a flag on the last, on every map", () => {
+    for (const map of MAPS) {
+      // Once with the plain colors and once with textured ground
+      const views = [
+        new GridView(map, () => true),
+        new GridView(map, () => true, new Konva.Group()),
+      ];
+      for (const view of views) {
+        const arrows = view.group.find<Konva.Arrow>(".spawn-arrow");
+        expect(arrows).toHaveLength(1);
+        const points = arrows[0].points();
+        // The arrow's middle is the first tile's center
+        const start = center(map.path[0]);
+        expect((points[0] + points[2]) / 2).toBe(start.x);
+        expect((points[1] + points[3]) / 2).toBe(start.y);
+
+        const flags = view.group.find(".exit-flag");
+        expect(flags).toHaveLength(1);
+        const end = center(map.path[map.path.length - 1]);
+        expect(flags[0].x()).toBe(end.x);
+        expect(flags[0].y()).toBe(end.y);
+      }
+    }
+  });
+
+  it("points the arrow toward the second path point", () => {
+    for (const map of MAPS) {
+      const view = new GridView(map, () => true);
+      const points = view.group.find<Konva.Arrow>(".spawn-arrow")[0].points();
+      // The arrow goes from (points[0], points[1]) to its tip at (points[2], points[3])
+      const arrowX = points[2] - points[0];
+      const arrowY = points[3] - points[1];
+      const roadX = map.path[1].x - map.path[0].x;
+      const roadY = map.path[1].y - map.path[0].y;
+      expect(Math.sign(arrowX)).toBe(Math.sign(roadX));
+      expect(Math.sign(arrowY)).toBe(Math.sign(roadY));
+    }
+  });
+
+  it("points the arrow down when the road starts going down", () => {
+    const map = {
+      ...MAPS[0],
+      path: [
+        { x: 2, y: 0 },
+        { x: 2, y: 5 },
+        { x: 8, y: 5 },
+      ],
+    };
+    const view = new GridView(map, () => true);
+    const points = view.group.find<Konva.Arrow>(".spawn-arrow")[0].points();
+    expect(points[2]).toBe(points[0]); // no sideways part
+    expect(points[3]).toBeGreaterThan(points[1]); // the tip is lower on the screen
   });
 });

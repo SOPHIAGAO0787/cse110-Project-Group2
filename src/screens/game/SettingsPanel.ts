@@ -23,17 +23,21 @@ export class SettingsPanel {
   private sound: Sound;
   private musicButton: Konva.Group;
   private effectsButton: Konva.Group;
+  private panelHeight: number;
 
   constructor(
     onResume: () => void,
     onBackToMaps: () => void,
     onMainMenu: () => void,
     sound: Sound,
+    mode: "game" | "shop" = "game",
   ) {
     this.sound = sound;
+    this.panelHeight = mode === "shop" ? 232 : PANEL_HEIGHT;
+    if (mode === "shop") this.dim.on("click tap", () => this.close());
     const panel = new Konva.Rect({
       width: PANEL_WIDTH,
-      height: PANEL_HEIGHT,
+      height: this.panelHeight,
       fill: "#222",
       stroke: "white",
       strokeWidth: 2,
@@ -61,7 +65,7 @@ export class SettingsPanel {
     });
     this.refreshSoundLabels();
     const mapsButton = makeButton("Back to maps", onBackToMaps);
-    const menuButton = makeButton("Main menu", onMainMenu);
+    const menuButton = makeButton(mode === "shop" ? "Back to main menu" : "Main menu", onMainMenu);
     // Center the buttons in the box
     const buttonX = (PANEL_WIDTH - DEFAULT_BUTTON_WIDTH) / 2;
     resumeButton.position({ x: buttonX, y: 84 });
@@ -70,15 +74,14 @@ export class SettingsPanel {
     mapsButton.position({ x: buttonX, y: 288 });
     menuButton.position({ x: buttonX, y: 356 });
 
-    this.box.add(
-      panel,
-      title,
-      resumeButton,
-      this.musicButton,
-      this.effectsButton,
-      mapsButton,
-      menuButton,
-    );
+    this.box.add(panel, title);
+    if (mode === "shop") {
+      this.musicButton.y(84);
+      menuButton.y(152);
+      this.box.add(this.musicButton, menuButton);
+    } else {
+      this.box.add(resumeButton, this.musicButton, this.effectsButton, mapsButton, menuButton);
+    }
     this.group.add(this.dim, this.box);
   }
 
@@ -101,6 +104,7 @@ export class SettingsPanel {
   }
 
   open(): void {
+    this.refreshSoundLabels();
     this.group.visible(true);
   }
 
@@ -111,6 +115,6 @@ export class SettingsPanel {
   // Covers the whole screen and keeps the box in the middle
   resize(width: number, height: number): void {
     this.dim.size({ width, height });
-    this.box.position({ x: (width - PANEL_WIDTH) / 2, y: (height - PANEL_HEIGHT) / 2 });
+    this.box.position({ x: (width - PANEL_WIDTH) / 2, y: (height - this.panelHeight) / 2 });
   }
 }

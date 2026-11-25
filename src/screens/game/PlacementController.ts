@@ -1,5 +1,5 @@
 import type { GameModel } from "../../model/GameModel";
-import { TOWERS } from "../../model/loadContent";
+import { MAPS, TOWERS } from "../../model/loadContent";
 import type { MapConfig, TowerConfig, Vec } from "../../model/types";
 import type { GameScreenView } from "./GameScreenView";
 import type { GridView } from "./GridView";
@@ -18,6 +18,7 @@ export class PlacementController {
   private view: GameScreenView;
   private model: GameModel;
   private map: MapConfig;
+  private mapNumber: number; // this map's place in the map list, starting at 1
   private towerProgress: TowerProgress;
   private questions: QuestionService;
   private isActive: () => boolean; // false while the game screen is hidden
@@ -39,6 +40,13 @@ export class PlacementController {
     this.view = view;
     this.model = model;
     this.map = map;
+    // Later maps ask harder questions. A map that isn't in the list counts as the first.
+    this.mapNumber = 1;
+    for (let i = 0; i < MAPS.length; i++) {
+      if (MAPS[i].id === map.id) {
+        this.mapNumber = i + 1;
+      }
+    }
     this.towerProgress = towerProgress;
     this.questions = questions;
     this.isActive = isActive;
@@ -120,10 +128,9 @@ export class PlacementController {
 
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec, config?: TowerConfig): Promise<boolean> => {
-      const question = this.questions.questionFor(def, config);
+      const question = this.questions.questionFor(def, config, this.mapNumber);
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
       if (!canCommit()) return false;
-      if (correct) model.recordQuestionSolved();
       return correct;
     };
 
@@ -240,7 +247,9 @@ export class PlacementController {
       pv.hide();
       const result = this.model.tryPlaceTower(def.id, tile, config);
       // TowersView draws successful placements through the towerPlaced event.
+      // The answer counts as solved only now, once the tower is really on the map.
       if (result === "ok") {
+        this.model.recordQuestionSolved();
         return;
       }
 

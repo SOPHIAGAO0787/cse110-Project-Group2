@@ -3,10 +3,19 @@ import type { Screen } from "../../app/types";
 import { GameLoop } from "../../core/GameLoop";
 import {
   GeometryMiniGame,
+  QUESTIONS_PER_ROUND,
   type GeometryMiniGameResult,
 } from "../../model/minigame/GeometryMiniGame";
+import { COINS_PER_CORRECT_ANSWER, MAX_BONUS_COINS } from "../../model/Progress";
 import { makeBackButton, makeButton } from "../button";
 import { CARD_FILL, FONT, PAGE_BACKGROUND, TITLE_TEXT } from "../theme";
+
+// How long "Correct!" or the right answer stays on screen before the next question shows
+const FEEDBACK_MS = 1200;
+// The most characters the answer can have, so it fits on one line
+const MAX_TYPED = 28;
+// The π and √ buttons are narrow, so both fit under the answer
+const SYMBOL_BUTTON_WIDTH = 60;
 
 export class GeometryMiniGameScreen implements Screen {
   group = new Konva.Group({ visible: false });
@@ -48,33 +57,50 @@ export class GeometryMiniGameScreen implements Screen {
     fill: TITLE_TEXT,
     align: "center",
   });
+  // Fills the space where the answer and buttons were, so the feedback sits in the middle of it
   private feedback = new Konva.Text({
     x: 20,
-    y: 285,
+    y: 230,
     width: 480,
-    fontSize: 18,
+    height: 160,
+    verticalAlign: "middle",
+    fontSize: 22,
+    fontStyle: "bold",
     fontFamily: FONT,
     fill: TITLE_TEXT,
     align: "center",
   });
   private instructions = new Konva.Text({
     x: 20,
-    y: 405,
+    y: 395,
     width: 480,
-    text: "Type a number, fraction, or expression (e.g. 4*pi).\nPress Enter to submit or continue. Backspace deletes.",
+    text: "Type a number, fraction, or expression (e.g. 4*pi).\nPress Enter to submit. Backspace deletes.",
     fontSize: 15,
     fontFamily: FONT,
     fill: TITLE_TEXT,
     align: "center",
   });
+  // What the round is worth: the coins per answer during it, and the coins earned after it
+  private reward = new Konva.Text({
+    x: 20,
+    y: 440,
+    width: 480,
+    fontSize: 16,
+    fontStyle: "bold",
+    fontFamily: FONT,
+    fill: TITLE_TEXT,
+    align: "center",
+  });
   private submitButton = makeButton("Submit", () => this.submit());
-  private nextButton = makeButton("Next Question", () => this.next());
   private restartButton = makeButton("Restart", () => this.restart());
+  private piButton = makeButton("π", () => this.typeSymbol("π"), SYMBOL_BUTTON_WIDTH);
+  private rootButton = makeButton("√", () => this.typeSymbol("√"), SYMBOL_BUTTON_WIDTH);
   private model = new GeometryMiniGame();
   private loop: GameLoop;
   private active = false;
   private notified = false;
   private typed = "";
+  private nextTimer: number | null = null; // waits to show the next question; null when not waiting
 
   constructor(
     private onComplete: (result: GeometryMiniGameResult) => void = () => {},
@@ -88,11 +114,16 @@ export class GeometryMiniGameScreen implements Screen {
       this.input,
       this.feedback,
       this.instructions,
+      this.reward,
     );
-    for (const button of [this.submitButton, this.nextButton, this.restartButton]) {
+    for (const button of [this.submitButton, this.restartButton]) {
       button.position({ x: 160, y: 345 });
       this.panel.add(button);
     }
+    // The symbol buttons sit side by side, centered under the answer
+    this.piButton.position({ x: 195, y: 285 });
+    this.rootButton.position({ x: 265, y: 285 });
+    this.panel.add(this.piButton, this.rootButton);
     // The back arrow goes in the panel's top-left corner. It works at any point in a round.
     const backButton = makeBackButton(onBack);
     backButton.position({ x: 20, y: 16 });
@@ -101,6 +132,7 @@ export class GeometryMiniGameScreen implements Screen {
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
       this.model.tick(dt);
+      this.waitForNext(); // the time may have just run out
       this.render();
     });
   }
@@ -116,6 +148,7 @@ export class GeometryMiniGameScreen implements Screen {
   hide(): void {
     this.active = false;
     this.loop.stop();
+    this.stopWaitingForNext();
     window.removeEventListener("keydown", this.onKey);
     this.group.visible(false);
   }
@@ -129,6 +162,7 @@ export class GeometryMiniGameScreen implements Screen {
 
   private restart(): void {
     if (!this.active) return;
+    this.stopWaitingForNext();
     this.model.restart();
     this.typed = "";
     this.notified = false;
@@ -139,7 +173,27 @@ export class GeometryMiniGameScreen implements Screen {
   private submit(): void {
     if (!this.active) return;
     this.model.submit(this.typed);
+    this.waitForNext();
     this.render();
+  }
+
+  // While the feedback shows, starts a timer that moves on to the next question by itself
+  private waitForNext(): void {
+    if (this.model.phase !== "feedback" || this.nextTimer !== null) {
+      return;
+    }
+    this.nextTimer = window.setTimeout(() => {
+      this.nextTimer = null;
+      this.next();
+    }, FEEDBACK_MS);
+  }
+
+  // Cancels the timer, so a closed or restarted screen doesn't move on by itself
+  private stopWaitingForNext(): void {
+    if (this.nextTimer !== null) {
+      window.clearTimeout(this.nextTimer);
+      this.nextTimer = null;
+    }
   }
 
   private next(): void {
@@ -154,19 +208,27 @@ export class GeometryMiniGameScreen implements Screen {
     }
   }
 
+  // The π and √ buttons add their symbol to the answer, the same as typing it
+  private typeSymbol(symbol: string): void {
+    if (!this.active || this.model.phase !== "answering" || this.typed.length >= MAX_TYPED) {
+      return;
+    }
+    this.typed += symbol;
+    this.render();
+  }
+
   private onKey = (event: KeyboardEvent): void => {
     if (!this.active || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.key === "Enter") {
       event.preventDefault();
       if (this.model.phase === "answering") this.submit();
-      else if (this.model.phase === "feedback") this.next();
       return;
     }
     if (this.model.phase !== "answering") return;
     if (event.key === "Backspace") {
       event.preventDefault();
       this.typed = this.typed.slice(0, -1);
-    } else if (/^[0-9.piπsqrt√^*+\-/() ]$/i.test(event.key) && this.typed.length < 28) {
+    } else if (/^[0-9.piπsqrt√^*+\-/() ]$/i.test(event.key) && this.typed.length < MAX_TYPED) {
       event.preventDefault();
       this.typed += event.key;
     } else return;
@@ -179,14 +241,25 @@ export class GeometryMiniGameScreen implements Screen {
     this.status.text(
       finished
         ? "Round complete"
-        : `Question ${this.model.questionIndex + 1}/5   ·   Time: ${Math.ceil(this.model.remainingSeconds)}s   ·   Correct: ${this.model.correctAnswers}`,
+        : `Question ${this.model.questionIndex + 1}/${QUESTIONS_PER_ROUND}   ·   Time: ${Math.ceil(this.model.remainingSeconds)}s   ·   Correct: ${this.model.correctAnswers}`,
     );
     this.question.text(
       finished
-        ? `You answered ${this.model.correctAnswers} of 5 correctly.`
+        ? `You answered ${this.model.correctAnswers} of ${QUESTIONS_PER_ROUND} correctly.`
         : this.model.currentQuestion.prompt,
     );
     this.input.text(answering ? `${this.typed}|` : "");
+    if (finished) {
+      const coins = this.model.correctAnswers * COINS_PER_CORRECT_ANSWER;
+      // Bonus coins stop adding up at MAX_BONUS_COINS, so say so instead of promising more
+      this.reward.text(
+        `+${coins} coins for your next game (you can save up to ${MAX_BONUS_COINS})`,
+      );
+    } else {
+      this.reward.text(
+        `${COINS_PER_CORRECT_ANSWER} coins per correct answer, added to your next game`,
+      );
+    }
     this.feedback.text(
       finished || answering
         ? ""
@@ -195,8 +268,9 @@ export class GeometryMiniGameScreen implements Screen {
           : `${this.model.feedback === "timeout" ? "Time's up!" : "Incorrect."} Answer: ${this.model.currentQuestion.answer.toFixed(2)}`,
     );
     this.submitButton.visible(answering);
-    this.nextButton.visible(this.model.phase === "feedback");
     this.restartButton.visible(finished);
+    this.piButton.visible(answering);
+    this.rootButton.visible(answering);
     this.instructions.visible(answering);
     this.group.getLayer()?.batchDraw();
   }

@@ -39,7 +39,7 @@ export class App implements ScreenSwitcher {
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress, this.towerProgress, this.sound);
     this.result = new ResultScreen(this);
-    this.shop = new TowerShopScreen(this, this.towerProgress, () => this.save());
+    this.shop = new TowerShopScreen(this, this.towerProgress, () => this.save(), this.sound);
     // A finished mini-game round turns its correct answers into bonus coins for the next game
     this.miniGame = new GeometryMiniGameScreen(
       (result) => {

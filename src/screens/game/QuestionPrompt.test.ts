@@ -83,6 +83,7 @@ interface Parts {
   promptText: Konva.Text;
   inputBox: Konva.Rect;
   inputText: Konva.Text;
+  formatText: Konva.Text;
   answerLabel: Konva.Text;
   feedback: Konva.Text;
   closeButton: Konva.Group;
@@ -457,6 +458,20 @@ describe("QuestionPrompt functionality", () => {
       expect(promptText.y()).toBeGreaterThanOrEqual(titleText.y() + titleText.height());
       expect(inputBox().y()).toBeGreaterThanOrEqual(promptText.y() + promptText.height());
       expect(symbolRow.y()).toBeGreaterThan(inputBox().y() + 40);
+    });
+
+    it("shows a grey line under the input box saying what can be typed", () => {
+      void prompt.ask(question, anchor);
+      const { formatText } = parts();
+      expect(formatText.visible()).toBe(true);
+      expect(formatText.text()).toBe("You can type π, fractions or decimals");
+      expect(formatText.y()).toBeGreaterThanOrEqual(inputBox().y() + inputBox().height());
+    });
+
+    it("hides the format line once the tries are used up", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      expect(parts().formatText.visible()).toBe(false);
     });
 
     it("centers the title and the question in the panel", () => {
