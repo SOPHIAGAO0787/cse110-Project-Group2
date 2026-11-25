@@ -109,7 +109,8 @@ export class GameScreenView {
     fill: WARNING_TEXT,
     visible: false,
   });
-  // The speed button shows a fast-forward sign (two triangles pointing right) and "1x" or "2x"
+  // The speed button shows a fast-forward sign (two triangles pointing right) and "1x", "2x"
+  // or "0.5x"
   private speedArrowOne = new Konva.RegularPolygon({
     x: 15,
     y: ICON_BUTTON_SIZE / 2,
@@ -129,7 +130,8 @@ export class GameScreenView {
   private speedLabel = new Konva.Text({
     x: 34,
     text: "1x",
-    width: 32,
+    width: 36, // room for "0.5x"
+    wrap: "none",
     height: ICON_BUTTON_SIZE,
     align: "center",
     verticalAlign: "middle",
@@ -160,8 +162,8 @@ export class GameScreenView {
   });
 
   // onStartWave runs on Start Wave, onBack on the back arrow and on "Back to maps" in the
-  // settings, onOpenSettings on the gear, onResume / onMainMenu on those settings buttons,
-  // and onToggleSpeed on the speed button. The settings switch the sound on and off.
+  // settings, onOpenSettings on the gear, onResume / onRestart / onMainMenu on those settings
+  // buttons, and onChangeSpeed on the speed button. The settings switch the sound on and off.
   constructor(
     mapCols: number,
     mapRows: number,
@@ -169,8 +171,9 @@ export class GameScreenView {
     onBack: () => void,
     onOpenSettings: () => void,
     onResume: () => void,
+    onRestart: () => void,
     onMainMenu: () => void,
-    onToggleSpeed: () => void,
+    onChangeSpeed: () => void,
     questions: QuestionService,
     sound: Sound,
   ) {
@@ -182,9 +185,9 @@ export class GameScreenView {
     this.settingsButton = makeSettingsButton(onOpenSettings);
     const speedIcon = new Konva.Group();
     speedIcon.add(this.speedArrowOne, this.speedArrowTwo, this.speedLabel);
-    this.speedButton = makeIconButton("speed", speedIcon, onToggleSpeed, SPEED_BUTTON_WIDTH);
+    this.speedButton = makeIconButton("speed", speedIcon, onChangeSpeed, SPEED_BUTTON_WIDTH);
     this.prompt = new QuestionPrompt(questions);
-    this.settings = new SettingsPanel(onResume, onBack, onMainMenu, sound);
+    this.settings = new SettingsPanel(onResume, onRestart, onBack, onMainMenu, sound);
     this.shopGroup.add(
       this.shopBackground,
       this.shopTitle,

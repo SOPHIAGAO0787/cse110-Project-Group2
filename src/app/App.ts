@@ -32,7 +32,7 @@ export class App implements ScreenSwitcher {
     this.stage = new Konva.Stage({ container: containerId });
     this.stage.add(this.layer);
 
-    this.menu = new MenuScreen(this, this.progress);
+    this.menu = new MenuScreen(this, this.progress, this.sound);
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress, this.towerProgress, this.sound);
     this.result = new ResultScreen(this);

@@ -30,7 +30,7 @@ export class GameScreenController implements Screen {
   private questions = new QuestionService();
   private active = false; // false while the screen is hidden
   private screenHeight = 0; // last size given to resize(), used to fit the shop cards
-  private speed = 1; // model steps per frame: 1 is normal speed, 2 is double. Kept between games.
+  private speed = 1; // 1 is normal speed, 2 is double, 0.5 is half. Kept between games.
   private onSpeedKey: (e: KeyboardEvent) => void; // the Space key listener, added in show()
 
   // Map progress tracks stars; tower progress tracks shop purchases.
@@ -52,8 +52,10 @@ export class GameScreenController implements Screen {
       () => this.app.switchTo("maps"),
       () => this.openSettings(),
       () => this.closeSettings(),
+      // Restart starts a new game on the same map, the way the map screen starts one
+      () => this.app.switchTo("game"),
       () => this.app.switchTo("menu"),
-      () => this.toggleSpeed(),
+      () => this.changeSpeed(),
       this.questions,
       this.sound,
     );
@@ -69,7 +71,7 @@ export class GameScreenController implements Screen {
         return;
       }
       e.preventDefault(); // Space would also scroll the page
-      this.toggleSpeed();
+      this.changeSpeed();
     };
 
     // A real game is created in show(). These are only here so the fields are never empty.
@@ -90,21 +92,29 @@ export class GameScreenController implements Screen {
     const effectsView = new EffectsView();
     this.loop = new GameLoop((dt) => {
       if (!this.active) return;
-      // The game keeps running while a question is open, so it drops to normal speed
+      // The game keeps running while a question is open, so double speed drops to normal speed
       // to leave time for reading.
-      let steps = this.speed;
-      if (this.view.prompt.group.visible()) {
-        steps = 1;
+      let speed = this.speed;
+      if (this.view.prompt.group.visible() && speed > 1) {
+        speed = 1;
       }
       // Double speed runs the same step twice. One step of 2 * dt would be faster to compute,
       // but an enemy could then jump over a narrow tower range between two steps.
+      // Half speed runs one step of half the time.
+      let steps = 1;
+      let stepTime = dt;
+      if (speed === 2) {
+        steps = 2;
+      } else {
+        stepTime = dt * speed;
+      }
       for (let i = 0; i < steps; i++) {
-        this.model.tick(dt);
+        this.model.tick(stepTime);
       }
       if (this.active) this.refreshWaveTimers();
       enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
       // towers turn towards their targets, and turn faster when the game runs faster
-      towersView.update(this.model.towers, this.model.enemies, dt * steps);
+      towersView.update(this.model.towers, this.model.enemies, stepTime * steps);
       effectsView.syncHealthBars(this.model.enemies);
     });
     this.view.mapGroup.destroyChildren();
@@ -215,6 +225,7 @@ export class GameScreenController implements Screen {
     this.active = false;
     window.removeEventListener("keydown", this.onSpeedKey);
     this.view.prompt.cancel(); // closes the popup and removes its key listener
+    this.view.settings.close(); // also removes its Escape listener
     this.disposePlacement();
     this.loop.stop();
     this.model.events.clear();
@@ -243,6 +254,10 @@ export class GameScreenController implements Screen {
 
   // The game is paused while the settings are open
   private openSettings(): void {
+    // Escape closes both the settings and an open question, so the gear waits until it is answered
+    if (this.view.prompt.group.visible()) {
+      return;
+    }
     this.view.settings.open();
     this.refreshUpgradeHint();
     this.loop.stop();
@@ -267,10 +282,12 @@ export class GameScreenController implements Screen {
     }
   }
 
-  // Switches between normal and double speed
-  private toggleSpeed(): void {
+  // Goes from normal to double to half speed, then back to normal
+  private changeSpeed(): void {
     if (this.speed === 1) {
       this.speed = 2;
+    } else if (this.speed === 2) {
+      this.speed = 0.5;
     } else {
       this.speed = 1;
     }
