@@ -1,3 +1,5 @@
+import { SHOP_TOWERS } from "./shop/loadShopContent";
+
 // The part of TowerProgress that is saved in the browser
 export interface TowerProgressSave {
   shopCoins: number;
@@ -49,10 +51,11 @@ export class TowerProgress {
     }
     const savedLevels = data.levels;
     if (typeof savedLevels === "object" && savedLevels !== null) {
-      for (const towerId in savedLevels) {
-        const level = savedLevels[towerId];
-        if (Number.isInteger(level) && level >= 0) {
-          this.maxLevels.set(towerId, level);
+      // Read known towers only, and keep levels inside the current upgrade list.
+      for (const tower of SHOP_TOWERS) {
+        const level = savedLevels[tower.def.id];
+        if (Number.isInteger(level) && level >= 0 && level < tower.levels.length) {
+          this.maxLevels.set(tower.def.id, level);
         }
       }
     }
