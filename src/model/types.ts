@@ -87,6 +87,9 @@ export interface RangeShape {
 
 export interface Question {
   id: string;
+  // 1 = easiest, 3 = hardest. Every question in questions.json has one;
+  // the mini-game's own generated questions don't.
+  level?: number;
   prompt: string;
   answer: number;
   tolerance: number; // accept answers within ± tolerance
@@ -97,6 +100,7 @@ export interface Question {
 // {name} placeholders in template and hint, and names in answer, are filled from the tower.
 export interface QuestionTemplate {
   id: string;
+  level?: number; // 1 = easiest, 3 = hardest, like Question.level
   template: string;
   answer: string; // a formula the answer parser understands, e.g. "pi * radius^2"
   tolerance?: number; // absolute
