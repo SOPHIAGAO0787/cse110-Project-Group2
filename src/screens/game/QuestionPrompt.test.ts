@@ -818,6 +818,32 @@ describe("QuestionPrompt answer output", () => {
       expect(parts().answerLabel.getParent()).not.toBeNull();
     });
 
+    it("says how many coins the wrong answer costs", () => {
+      void prompt.ask(question, anchor, 13);
+      useAllTries();
+      expect(feedbackShown()).toContain("Not quite. −13 coins");
+    });
+
+    it("says before answering that skipping the question costs coins", () => {
+      void prompt.ask(question, anchor, 13);
+      expect(parts().formatText.text()).toContain("Skipping costs 13 coins");
+      void prompt.ask(question, anchor);
+      expect(parts().formatText.text()).not.toContain("coins");
+    });
+
+    it("doesn't mention coins when the answer costs nothing", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      expect(feedbackShown()).not.toContain("coins");
+    });
+
+    it("keeps the same panel height when showing the coins lost", () => {
+      void prompt.ask(question, anchor, 13);
+      const before = panelHeight();
+      useAllTries();
+      expect(panelHeight()).toBe(before);
+    });
+
     it("says what the player answered, and gives the hint", () => {
       void prompt.ask(question, anchor);
       useAllTries();
