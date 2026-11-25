@@ -10,7 +10,7 @@ describe("GameModel", () => {
   it("starts with the map's coins and lives", () => {
     const game = new GameModel(loadMap(map1));
     expect(game.wallet.coins).toBe(100);
-    expect(game.lives.remaining).toBe(20);
+    expect(game.lives.remaining).toBe(map1.startingLives);
   });
 
   it("spawnEnemy adds an enemy at the start of the path and announces it", () => {
@@ -249,6 +249,8 @@ describe("GameModel tower firing (B2)", () => {
   const tile = { x: 0, y: 2 };
   // The first shot comes after one full firing interval.
   const circleInterval = 1 / TOWERS.find((d) => d.id === "circle")!.fireRatePerSec;
+  // A tank walks slowly enough to still be inside the circle when the first shot comes.
+  const slowEnemy = "tank";
 
   it("emits towerFired when a tower shoots an enemy in range", () => {
     const game = new GameModel(loadMap(map1));
@@ -256,7 +258,7 @@ describe("GameModel tower firing (B2)", () => {
     game.events.on("towerFired", (e) => fired.push(e.towerId));
 
     game.tryPlaceTower("circle", tile);
-    game.spawnEnemy("basic");
+    game.spawnEnemy(slowEnemy);
     game.tick(0.016);
     expect(fired).toEqual([]); // still waiting for the first interval
 
@@ -278,7 +280,7 @@ describe("GameModel tower firing (B2)", () => {
   it("awards coins when a tower kills an enemy", () => {
     const game = new GameModel(loadMap(map1));
     game.tryPlaceTower("circle", tile);
-    game.spawnEnemy("basic");
+    game.spawnEnemy(slowEnemy);
     const enemy = game.enemies[0];
     enemy.takeDamage(enemy.hp - 1); // one hit from dead
     const coinsBefore = game.wallet.coins;
@@ -406,8 +408,13 @@ describe("GameModel with the square tower", () => {
 });
 
 // So1: the game ends in victory or defeat and records its stats for the result screen.
-// map1 has two waves with 13 enemies in total, so with no towers every enemy leaks:
-// 14 lives survive with 1 left, 13 or fewer lose.
+// With no towers every enemy of every wave leaks, so one more life than map1 has enemies
+// survives with 1 left, and that many or fewer lose.
+const MAP1_ENEMIES = map1.waves.reduce(
+  (total, wave) => total + wave.groups.reduce((sum, group) => sum + group.count, 0),
+  0,
+);
+
 describe("GameModel game result (So1)", () => {
   function gameWithLives(startingLives: number): GameModel {
     return new GameModel(loadMap({ ...map1, startingLives }));
@@ -425,7 +432,7 @@ describe("GameModel game result (So1)", () => {
   }
 
   it("ends in victory when the last wave is cleared with lives left", () => {
-    const game = gameWithLives(14);
+    const game = gameWithLives(MAP1_ENEMIES + 1);
     game.spawnEnemy("fast");
     const defeated = game.enemies[0];
     defeated.takeDamage(defeated.hp);
@@ -459,7 +466,7 @@ describe("GameModel game result (So1)", () => {
   });
 
   it("counts losing the last life on the step the last wave clears as a defeat", () => {
-    const game = gameWithLives(13);
+    const game = gameWithLives(MAP1_ENEMIES);
 
     expect(playUntilOver(game)).toEqual([false]);
     expect(game.waves.isRunning).toBe(false); // the last wave did clear
@@ -589,7 +596,7 @@ describe("GameModel enemy difficulty scaling", () => {
     game.tick(0);
 
     expect(game.waves.currentWave).toBe(2);
-    expect(game.enemies[0].hp).toBe(23);
+    expect(game.enemies[0].hp).toBe(22); // 20 HP + 10% for wave 2
     expect(game.enemies[0].def.speed).toBeCloseTo(1.575);
   });
 });

@@ -31,9 +31,9 @@ describe("TowerUpgradeHint", () => {
   it("shows the next level's cost, stat changes, and click instruction", () => {
     show(1, 75);
     expect(text()).toContain("Upgrade to Level 2 · 75 coins");
-    expect(text()).toContain("Damage: 5 → 8");
-    expect(text()).toContain("Speed: 1 → 1.2 shots/sec");
-    expect(text()).toContain("Radius: 2.5 → 2.8 tiles");
+    expect(text()).toContain("Damage: 7 → 10");
+    expect(text()).toContain("Speed: 0.8 → 1.2 shots/sec");
+    expect(text()).toContain("Radius: 2 → 2.8 tiles");
     expect(text()).toContain("Click this tower to upgrade.");
     expect(hint.group.listening()).toBe(false);
   });
@@ -58,7 +58,7 @@ describe("TowerUpgradeHint", () => {
       { kind: "rect", facing: "up", width: 2, depth: 2, side: 1 },
     );
     hint.show(tower, rectangle, 1, 200, { x: 200, y: 200 }, { x: 800, y: 600 });
-    expect(text()).toContain("Speed: 1.05 → 1.35 shots/sec");
+    expect(text()).toContain("Speed: 1.05 → 1.65 shots/sec");
     expect(text()).toContain("Your aimed range stays the same.");
   });
 

@@ -15,7 +15,7 @@
     "description": "Hits the front-most enemy in an aimed cone.",
     "cost": 70,
     "damage": 24,
-    "fireRatePerSec": 0.75,
+    "fireRatePerSec": 0.85,
     "attack": "first",
     "range": { "kind": "sector", "area": 7.5 }
   },

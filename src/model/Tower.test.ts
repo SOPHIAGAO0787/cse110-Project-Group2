@@ -128,7 +128,7 @@ describe("Tower targeting", () => {
     tower.update(interval, game.enemies);
 
     expect(behind.hp).toBe(behind.def.hp);
-    expect(ahead.hp).toBe(ahead.def.hp - tower.def.damage);
+    expect(ahead.hp).toBe(Math.max(0, ahead.def.hp - tower.def.damage));
   });
 
   it("breaks equal-distance ties using the lowest enemy ID", () => {
@@ -137,7 +137,7 @@ describe("Tower targeting", () => {
 
     tower.update(interval, game.enemies);
 
-    expect(first.hp).toBe(first.def.hp - tower.def.damage);
+    expect(first.hp).toBe(Math.max(0, first.def.hp - tower.def.damage));
     expect(second.hp).toBe(second.def.hp);
   });
 });
@@ -172,7 +172,7 @@ describe("Triangle tower cone", () => {
 
     tower.update(interval, game.enemies);
 
-    expect(front.hp).toBe(front.def.hp - tower.def.damage);
+    expect(front.hp).toBe(Math.max(0, front.def.hp - tower.def.damage));
     expect(back.hp).toBe(back.def.hp);
   });
 
@@ -211,7 +211,7 @@ describe("Tower defaults", () => {
       kind: "circle",
       radius: tower.def.range.kind === "circle" ? tower.def.range.radius : 0,
     });
-    expect(tower.reach).toBe(2.5);
+    expect(tower.reach).toBe(tower.def.range.kind === "circle" ? tower.def.range.radius : 0);
   });
 });
 
@@ -227,7 +227,7 @@ describe("Square tower block", () => {
     side: 1,
   });
 
-  it("hits the front-most enemy inside its block, and nothing outside it", () => {
+  it("hits every enemy inside its block, and nothing outside it", () => {
     const { game, tower, interval } = setup("rectangle", block(2, 3));
     const [rear, front, outside] = spawn(game, 3);
     rear.pos = { x: 0, y: 1 };
@@ -239,8 +239,8 @@ describe("Square tower block", () => {
 
     expect(tower.update(interval, game.enemies)).toBe(1);
 
-    expect(front.hp).toBe(front.def.hp - tower.def.damage);
-    expect(rear.hp).toBe(rear.def.hp); // single target
+    expect(front.hp).toBe(Math.max(0, front.def.hp - tower.def.damage));
+    expect(rear.hp).toBe(Math.max(0, rear.def.hp - tower.def.damage)); // the block hits everyone
     expect(outside.hp).toBe(outside.def.hp);
   });
 

@@ -81,6 +81,17 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
 }
 
 // Clicks the real button with this label on the screen, e.g. "Start Wave".
+// How many enemies wave n (1-based) of map1 sends, and how long its last enemy takes to spawn.
+function waveSize(n: number): number {
+  return map.waves[n - 1].groups.reduce((total, group) => total + group.count, 0);
+}
+function lastSpawnSeconds(n: number): number {
+  const { groups } = map.waves[n - 1];
+  // Every enemy waits its group's interval before the next spawns; the last one has no wait after it.
+  const total = groups.reduce((sum, group) => sum + group.count * group.intervalSec, 0);
+  return total - groups[groups.length - 1].intervalSec;
+}
+
 function clickButton(text: string): void {
   const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === text);
   if (label === undefined) {
@@ -249,23 +260,24 @@ describe("GameScreenController HUD event wiring", () => {
     expectHud(25, map.startingLives, 0, 0);
   });
 
-  it("Start Wave updates the HUD through both waves", () => {
+  it("Start Wave updates the HUD through the first two waves", () => {
+    const total = map.waves.length;
     clickButton("Start Wave");
-    expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 5");
+    expect(hud()).toContain(`Wave: 1/${total}   ·   Enemies Remaining: ${waveSize(1)}`);
 
     // Spawn all of wave 1, then kill one enemy and let the rest leak.
-    model.tick(5);
-    expect(model.enemies).toHaveLength(5);
+    model.tick(lastSpawnSeconds(1) + 0.1);
+    expect(model.enemies).toHaveLength(waveSize(1));
     const first = model.enemies[0];
     model.events.emit("enemyKilled", { enemyId: first.id, reward: first.def.reward });
     expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
       `Coins: ${map.startingCoins + first.def.reward}`,
     );
-    expect(hud()).toContain("Enemies Remaining: 4");
-    for (let i = 1; i < 5; i++) {
+    expect(hud()).toContain(`Enemies Remaining: ${waveSize(1) - 1}`);
+    for (let i = 1; i < waveSize(1); i++) {
       model.events.emit("enemyLeaked", { enemyId: model.enemies[i].id });
     }
-    expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
+    expect(hud()).toContain(`Wave: 1/${total}   ·   Enemies Remaining: 0`);
 
     // A click skips preparation and starts wave 2 immediately.
     clickStartWave();
@@ -273,15 +285,17 @@ describe("GameScreenController HUD event wiring", () => {
     // These enemies were removed through events above; remove their stale model objects.
     model.enemies = [];
     model.tick(0);
-    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
-    model.tick(7);
+    expect(hud()).toContain(`Wave: 2/${total}   ·   Enemies Remaining: ${waveSize(2)}`);
+    model.tick(lastSpawnSeconds(2) + 0.1);
     const wave2 = [...model.enemies];
     for (const enemy of wave2) {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
-    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
-    clickButton("Start Wave");
-    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
+    expect(hud()).toContain(`Wave: 2/${total}   ·   Enemies Remaining: 0`);
+    // Wave 2 is not the last one, so the button now starts wave 3.
+    clickStartWave();
+    expect(model.waves.currentWave).toBe(3);
+    expect(hud()).toContain(`Wave: 3/${total}`);
   });
 });
 
@@ -390,7 +404,7 @@ describe("GameScreenController questions during gameplay", () => {
       controller.group.find<Konva.Circle>("Circle").filter((circle) => circle.fill() === "#2a5d99"),
     ).toHaveLength(1);
 
-    model.spawnEnemy("basic");
+    model.spawnEnemy("tank"); // slow enough to still be in range when the first shot comes
     model.tick(1 / tower.fireRate);
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
 
@@ -744,7 +758,7 @@ describe("GameScreenController tower upgrades", () => {
     const tower = model.towers[0];
 
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
-    model.spawnEnemy("basic");
+    model.spawnEnemy("tank"); // slow enough to still be in range when the first shot comes
     model.tick(1 / tower.fireRate);
 
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
@@ -898,8 +912,8 @@ it("refreshes timers through simulated frames and resets them on re-entry", () =
       .find((text) => /^(Next Wave In|Last Enemy Spawns In):/.test(text.text()));
   expect(timer()).toBeUndefined();
   clickStartWave();
-  expect(timer()?.text()).toBe("Last Enemy Spawns In: 5s");
-  frame(5);
+  expect(timer()?.text()).toBe(`Last Enemy Spawns In: ${Math.ceil(lastSpawnSeconds(1))}s`);
+  frame(Math.ceil(lastSpawnSeconds(1)));
   expect(timer()).toBeUndefined();
   for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
   frame(0);
@@ -907,8 +921,8 @@ it("refreshes timers through simulated frames and resets them on re-entry", () =
   frame(1);
   expect(timer()?.text()).toBe(`Next Wave In: ${WAVE_PREPARATION_SECONDS - 1}s`);
   frame(WAVE_PREPARATION_SECONDS - 1);
-  expect(hud()).toContain("Wave: 2/2");
-  expect(timer()?.text()).toBe("Last Enemy Spawns In: 7s");
+  expect(hud()).toContain(`Wave: 2/${map.waves.length}`);
+  expect(timer()?.text()).toBe(`Last Enemy Spawns In: ${Math.ceil(lastSpawnSeconds(2))}s`);
   const stop = vi.spyOn(GameLoop.prototype, "stop");
   controller.hide();
   expect(stop).toHaveBeenCalled();
@@ -931,7 +945,7 @@ it("shows an early-start button only during preparation and clears it after the 
   expect(button().getParent()!.visible()).toBe(true);
   clickStartWave();
   expect(button().getParent()!.visible()).toBe(false);
-  model.tick(4.8);
+  model.tick(lastSpawnSeconds(1) + 0.01);
   for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
   model.tick(0);
   expect(button().text()).toBe("Start Next Wave");
@@ -941,10 +955,19 @@ it("shows an early-start button only during preparation and clears it after the 
   expect(model.waves.currentWave).toBe(2);
   expect(model.waves.preparationRemaining).toBeNull();
   expect(button().getParent()!.visible()).toBe(false);
-  expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
-  model.tick(6.3);
-  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
-  model.tick(0);
+  expect(hud()).toContain(
+    `Wave: 2/${map.waves.length}   ·   Enemies Remaining: ${waveSize(2)}`,
+  );
+  // Play out every remaining wave, killing each enemy as it spawns so none leak.
+  for (let wave = 2; wave <= map.waves.length; wave++) {
+    while (model.waves.lastSpawnRemaining !== null) {
+      model.tick(0.1);
+      for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+    }
+    for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+    model.tick(0);
+    if (wave < map.waves.length) clickStartWave();
+  }
   expect(model.result?.won).toBe(true);
   expect(button().getParent()!.visible()).toBe(false);
   expect(
@@ -953,7 +976,7 @@ it("shows an early-start button only during preparation and clears it after the 
       .some((text) => text.text().startsWith("Next Wave In:")),
   ).toBe(false);
   clickStartWave();
-  expect(model.waves.currentWave).toBe(2);
+  expect(model.waves.currentWave).toBe(map.waves.length); // the game is over, so nothing starts
   controller.hide();
   controller.show();
   expect(button().text()).toBe("Start Wave");

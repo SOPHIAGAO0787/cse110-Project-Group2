@@ -30,7 +30,7 @@ function displayedText(card: Konva.Group): string {
 describe("tower shop cards", () => {
   it("shows the triangle's fixed area and the tradeoff between cone width and reach", () => {
     const text = displayedText(renderTower("triangle"));
-    expect(text).toContain("0.8 / sec");
+    expect(text).toContain("0.85 / sec");
     expect(text).toContain("7.5 tiles²");
     expect(text).toContain("Wider cones reach less far; narrower cones reach farther.");
     expect(text).not.toContain("Radius:");
@@ -49,8 +49,8 @@ describe("tower shop cards", () => {
     expect(text).toContain("Level 2 of 3 unlocked");
     expect(text).toContain("1.2 / sec");
     expect(text).toContain("2.8 tiles");
-    expect(text).toContain("Damage: 8 → 10");
-    expect(text).toContain("Radius: 2.8 → 3 tiles");
+    expect(text).toContain("Damage: 10 → 12");
+    expect(text).toContain("Radius: 2.8 → 3.2 tiles");
     expect(text).toContain("Upgrade tower · 125 coins");
   });
 
@@ -74,8 +74,8 @@ describe("tower shop cards", () => {
 
   it("previews the rectangle's faster firing rates at the next level", () => {
     const text = displayedText(renderTower("rectangle", 1));
-    expect(text).toContain("Attack speed: 0.9–1.35 → 1.1–1.65 / sec");
-    expect(text).toContain("Upgrade tower · 175 coins");
+    expect(text).toContain("Attack speed: 1.1–1.65 → 1.4–2.1 / sec");
+    expect(text).toContain("Upgrade tower · 120 coins");
   });
 
   it.each(["triangle", "rectangle"])("disables the %s purchase button at Level 3", (id) => {

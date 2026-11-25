@@ -9,15 +9,15 @@
   {
     "towerId": "triangle",
     "upgrades": [
-      { "cost": 100, "damage": 26, "attackSpeed": 1 },
-      { "cost": 150, "damage": 30, "attackSpeed": 1.25 }
+      { "cost": 90, "damage": 30, "attackSpeed": 1.1 },
+      { "cost": 130, "damage": 34, "attackSpeed": 1.4 }
     ]
   },
   {
     "towerId": "rectangle",
     "upgrades": [
-      { "cost": 90, "damage": 30, "attackSpeed": 1.1 },
-      { "cost": 130, "damage": 34, "attackSpeed": 1.4 }
+      { "cost": 90, "damage": 25, "attackSpeed": 1.1 },
+      { "cost": 120, "damage": 30, "attackSpeed": 1.4 }
     ]
   }
 ]
