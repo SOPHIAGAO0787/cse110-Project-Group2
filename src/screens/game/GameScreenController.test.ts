@@ -955,9 +955,7 @@ it("shows an early-start button only during preparation and clears it after the 
   expect(model.waves.currentWave).toBe(2);
   expect(model.waves.preparationRemaining).toBeNull();
   expect(button().getParent()!.visible()).toBe(false);
-  expect(hud()).toContain(
-    `Wave: 2/${map.waves.length}   ·   Enemies Remaining: ${waveSize(2)}`,
-  );
+  expect(hud()).toContain(`Wave: 2/${map.waves.length}   ·   Enemies Remaining: ${waveSize(2)}`);
   // Play out every remaining wave, killing each enemy as it spawns so none leak.
   for (let wave = 2; wave <= map.waves.length; wave++) {
     while (model.waves.lastSpawnRemaining !== null) {
