@@ -11,14 +11,16 @@ export const MAX_BONUS_COINS = 50;
 export interface ProgressSave {
   stars: { [mapId: string]: number }; // best stars on each map, by map id
   bonusCoins: number;
+  tutorialDone: boolean;
 }
 
 // What the player has done across games: which map they picked, the best stars on each map,
-// and the bonus coins earned in the mini-game. The App keeps a copy in the browser (see saveGame.ts),
-// so refreshing the page keeps the stars and bonus coins.
+// the bonus coins earned in the mini-game, and whether they have seen the tutorial. The App keeps a
+// copy in the browser (see saveGame.ts), so refreshing the page keeps all of them.
 export class Progress {
   currentMapId: string; // the map the player picked to play
   bonusCoins: number; // mini-game coins waiting to be added to the next game
+  tutorialDone: boolean; // true once the player finished or skipped the tutorial on map 1
   private mapIds: string[]; // in unlock order
   private bestStars: number[]; // one per map, same order as mapIds. 0 = not won yet
 
@@ -31,6 +33,7 @@ export class Progress {
     }
     this.currentMapId = this.mapIds[0];
     this.bonusCoins = 0;
+    this.tutorialDone = false;
   }
 
   // The first map is always open. Every other map opens once the map before it is won.
@@ -73,16 +76,16 @@ export class Progress {
     this.bonusCoins = 0;
   }
 
-  // A plain copy of the stars and bonus coins, ready to be turned into JSON
+  // A plain copy of the stars, bonus coins and tutorial flag, ready to be turned into JSON
   toSave(): ProgressSave {
     const stars: { [mapId: string]: number } = {};
     for (let i = 0; i < this.mapIds.length; i++) {
       stars[this.mapIds[i]] = this.bestStars[i];
     }
-    return { stars: stars, bonusCoins: this.bonusCoins };
+    return { stars: stars, bonusCoins: this.bonusCoins, tutorialDone: this.tutorialDone };
   }
 
-  // Copies the stars and bonus coins back from a save. The save comes from the browser and could
+  // Copies the stars, bonus coins and tutorial flag back from a save. The save comes from the browser and could
   // be old or edited by hand, so each value is checked and a bad one is skipped.
   loadSave(data: ProgressSave): void {
     if (typeof data !== "object" || data === null) {
@@ -100,6 +103,9 @@ export class Progress {
     const coins = data.bonusCoins;
     if (Number.isInteger(coins) && coins >= 0 && coins <= MAX_BONUS_COINS) {
       this.bonusCoins = coins;
+    }
+    if (typeof data.tutorialDone === "boolean") {
+      this.tutorialDone = data.tutorialDone;
     }
   }
 

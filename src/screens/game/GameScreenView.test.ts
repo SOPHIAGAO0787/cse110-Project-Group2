@@ -18,6 +18,7 @@ beforeEach(() => {
     () => {},
     () => {},
     () => {},
+    () => {},
     new QuestionService(),
     new Sound(),
   );
@@ -121,6 +122,10 @@ it("puts the speed button left of the gear and shows the speed on it", () => {
   view.setSpeed(2);
   expect(label.text()).toBe("2x");
   expect(label.fill()).toBe("#ffd53d");
+
+  view.setSpeed(0.5);
+  expect(label.text()).toBe("0.5x");
+  expect(label.fill()).toBe("white");
 
   view.setSpeed(1);
   expect(label.text()).toBe("1x");

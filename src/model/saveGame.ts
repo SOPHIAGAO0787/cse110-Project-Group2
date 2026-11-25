@@ -10,7 +10,7 @@ interface SaveData {
   towers: TowerProgressSave;
 }
 
-// Writes the stars, bonus coins, shop coins and tower levels to the browser.
+// Writes the stars, bonus coins, tutorial flag, shop coins and tower levels to the browser.
 // If the browser refuses (storage full or turned off), the game keeps going without saving.
 export function saveGame(progress: Progress, towerProgress: TowerProgress): void {
   const data: SaveData = {

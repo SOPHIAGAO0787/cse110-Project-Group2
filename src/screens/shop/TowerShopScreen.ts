@@ -24,6 +24,7 @@ export class TowerShopScreen implements Screen {
     this.onBuy = onBuy;
     this.settings = new SettingsPanel(
       () => this.settings.close(),
+      () => {}, // the shop's settings have no Restart button
       () => app.switchTo("maps"),
       () => app.switchTo("menu"),
       sound,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { towerVariables } from "./TowerQuestionsHandling";
+import { towerVariables, wrongAnswerCost } from "./TowerQuestionsHandling";
 import { QuestionService } from "./QuestionService";
 import { defaultConfig, fireRateFor, rangeReach } from "../towerConfig";
 import {
@@ -224,5 +224,18 @@ describe("questions.json templates", () => {
 
     // A template that didn't build shifts the pool, so some id would be missing here
     expect([...asked].sort()).toEqual(expected.sort());
+  });
+});
+
+describe("wrongAnswerCost", () => {
+  const circle = towerOfKind("circle");
+
+  it.each([
+    [100, 25],
+    [50, 13], // 12.5 rounds up
+    [75, 19], // 18.75 rounds up
+    [0, 0],
+  ])("costs a quarter of a %i coin tower, rounded: %i coins", (cost, lost) => {
+    expect(wrongAnswerCost({ ...circle, cost })).toBe(lost);
   });
 });

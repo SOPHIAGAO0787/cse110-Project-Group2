@@ -23,6 +23,7 @@ function expectFreshStart(): void {
   }
   expect(progress.isUnlocked("map2")).toBe(false);
   expect(progress.bonusCoins).toBe(0);
+  expect(progress.tutorialDone).toBe(false);
   expect(towerProgress.shopCoins).toBe(new TowerProgress().shopCoins);
   expect(towerProgress.getMaxLevel("circle")).toBe(0);
   expect(towerProgress.getMaxLevel("triangle")).toBe(-1);
@@ -35,11 +36,12 @@ describe("saveGame and loadGame", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  it("gives back the same stars, unlocks, coins and tower levels", () => {
+  it("gives back the same stars, unlocks, coins, tutorial flag and tower levels", () => {
     const played = new Progress(MAPS);
     played.recordResult("map1", 3);
     played.recordResult("map2", 1);
     played.addMiniGameReward(2);
+    played.tutorialDone = true;
     const shop = new TowerProgress();
     shop.shopCoins = 35;
     shop.maxLevels.set("circle", 2);
@@ -53,6 +55,7 @@ describe("saveGame and loadGame", () => {
     expect(progress.isUnlocked("map3")).toBe(true);
     expect(progress.isUnlocked("map4")).toBe(false);
     expect(progress.bonusCoins).toBe(played.bonusCoins);
+    expect(progress.tutorialDone).toBe(true);
     expect(towerProgress.shopCoins).toBe(35);
     expect(towerProgress.getMaxLevel("circle")).toBe(2);
     expect(towerProgress.getMaxLevel("triangle")).toBe(0);
@@ -88,7 +91,11 @@ describe("saveGame and loadGame", () => {
 
   it("skips values with the wrong type", () => {
     const save = {
-      progress: { stars: { map1: "3", map2: 2.5, map3: -1 }, bonusCoins: "10" },
+      progress: {
+        stars: { map1: "3", map2: 2.5, map3: -1 },
+        bonusCoins: "10",
+        tutorialDone: "yes",
+      },
       towers: { shopCoins: null, levels: { triangle: "1", circle: true } },
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(save));

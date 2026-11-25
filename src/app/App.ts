@@ -35,7 +35,7 @@ export class App implements ScreenSwitcher {
     // Pick up where the player left off, before the screens read the progress
     loadGame(this.progress, this.towerProgress);
 
-    this.menu = new MenuScreen(this, this.progress);
+    this.menu = new MenuScreen(this, this.progress, this.sound);
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress, this.towerProgress, this.sound);
     this.result = new ResultScreen(this);
