@@ -31,6 +31,7 @@ function startGame(map: MapConfig): void {
     noop,
     noop,
     noop,
+    noop,
     questions,
     new Sound(),
   );
