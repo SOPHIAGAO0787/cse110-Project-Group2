@@ -40,8 +40,7 @@ export class TowerProgress {
   }
 
   // Copies the coins and tower levels back from a save. The save comes from the browser and could
-  // be old or edited by hand, so each value is checked and a bad one is skipped. A level must be
-  // one the tower has in the shop, which also skips towers the game does not know.
+  // be old or edited by hand, so each value is checked and a bad one is skipped.
   loadSave(data: TowerProgressSave): void {
     if (typeof data !== "object" || data === null) {
       return;
@@ -52,22 +51,13 @@ export class TowerProgress {
     }
     const savedLevels = data.levels;
     if (typeof savedLevels === "object" && savedLevels !== null) {
-      for (const towerId in savedLevels) {
-        const level = savedLevels[towerId];
-        if (Number.isInteger(level) && level >= 0 && level < levelCount(towerId)) {
-          this.maxLevels.set(towerId, level);
+      // Read known towers only, and keep levels inside the current upgrade list.
+      for (const tower of SHOP_TOWERS) {
+        const level = savedLevels[tower.def.id];
+        if (Number.isInteger(level) && level >= 0 && level < tower.levels.length) {
+          this.maxLevels.set(tower.def.id, level);
         }
       }
     }
   }
-}
-
-// How many levels a tower has in the shop, or 0 for a tower id the game does not know
-function levelCount(towerId: string): number {
-  for (const tower of SHOP_TOWERS) {
-    if (tower.def.id === towerId) {
-      return tower.levels.length;
-    }
-  }
-  return 0;
 }

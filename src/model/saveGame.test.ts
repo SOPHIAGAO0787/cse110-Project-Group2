@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MAPS } from "./loadContent";
 import { Progress } from "./Progress";
 import { loadGame, SAVE_KEY, saveGame } from "./saveGame";
+import { SHOP_TOWERS } from "./shop/loadShopContent";
 import { TowerProgress } from "./TowerProgress";
 
 let progress: Progress;
@@ -113,12 +114,36 @@ describe("saveGame and loadGame", () => {
     expectFreshStart();
   });
 
-  it("skips tower levels the tower does not have, and towers the game does not know", () => {
-    const save = { progress: {}, towers: { levels: { circle: 999, hexagon: 0 } } };
+  it.each(SHOP_TOWERS)("ignores an out-of-range saved level for $def.id", (tower) => {
+    const save = {
+      towers: { shopCoins: 80, levels: { [tower.def.id]: tower.levels.length } },
+    };
     localStorage.setItem(SAVE_KEY, JSON.stringify(save));
     loadFresh();
-    expectFreshStart();
-    expect(towerProgress.getMaxLevel("hexagon")).toBe(-1);
+    expect(towerProgress.getMaxLevel(tower.def.id)).toBe(
+      new TowerProgress().getMaxLevel(tower.def.id),
+    );
+    expect(towerProgress.shopCoins).toBe(80);
+  });
+
+  it("ignores tower IDs that no longer exist", () => {
+    localStorage.setItem(
+      SAVE_KEY,
+      JSON.stringify({ towers: { levels: { removedTower: 0, triangle: 1 } } }),
+    );
+    loadFresh();
+    expect(towerProgress.getMaxLevel("removedTower")).toBe(-1);
+    expect(towerProgress.getMaxLevel("triangle")).toBe(1);
+  });
+
+  it.each(SHOP_TOWERS)("restores the highest available level for $def.id", (tower) => {
+    const level = tower.levels.length - 1;
+    localStorage.setItem(
+      SAVE_KEY,
+      JSON.stringify({ towers: { levels: { [tower.def.id]: level } } }),
+    );
+    loadFresh();
+    expect(towerProgress.getMaxLevel(tower.def.id)).toBe(level);
   });
 
   it("keeps the good values from a partly broken save", () => {
