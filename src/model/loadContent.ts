@@ -78,6 +78,10 @@ export function checkQuestions(pools: Record<string, QuestionEntry[]>): void {
       if (seen.has(entry.id)) throw new Error(`questions.json: duplicate id "${entry.id}"`);
       seen.add(entry.id);
 
+      // QuestionService picks easier or harder questions depending on the map
+      if (entry.level !== 1 && entry.level !== 2 && entry.level !== 3) {
+        throw new Error(`questions.json: "${entry.id}" needs a level of 1, 2 or 3`);
+      }
       if (typeof entry.hint !== "string" || entry.hint === "") {
         throw new Error(`questions.json: "${entry.id}" needs a hint`);
       }

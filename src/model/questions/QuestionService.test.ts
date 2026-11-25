@@ -191,6 +191,56 @@ describe("QuestionService functionality", () => {
     });
   });
 
+  describe("questionFor: levels by map", () => {
+    const withLevel = (id: string, level: number): Question => ({ ...fixed(id), level });
+    const easy = withLevel("easy", 1);
+    const mid = withLevel("mid", 2);
+    const hard = withLevel("hard", 3);
+
+    // Asks many times with every random draw and returns the ids that came up
+    function idsAsked(mapNumber: number, own: QuestionEntry[], general: Question[] = []): string[] {
+      setPools(general, own);
+      const ids: string[] = [];
+      for (let i = 0; i < 20; i++) {
+        random(i / 20);
+        const id = new QuestionService().questionFor(circle, undefined, mapNumber).id;
+        if (!ids.includes(id)) {
+          ids.push(id);
+        }
+      }
+      return ids.sort();
+    }
+
+    it("asks only level 1 questions on map 1", () => {
+      expect(
+        idsAsked(1, [easy, mid, hard], [withLevel("g-easy", 1), withLevel("g-hard", 3)]),
+      ).toEqual(["easy", "g-easy"]);
+    });
+
+    it("asks levels 1 and 2 on map 2", () => {
+      expect(idsAsked(2, [easy, mid, hard])).toEqual(["easy", "mid"]);
+    });
+
+    it.each([3, 4])("asks levels 2 and 3 on map %i", (mapNumber) => {
+      expect(idsAsked(mapNumber, [easy, mid, hard])).toEqual(["hard", "mid"]);
+    });
+
+    it("asks a level 1 question when no map is given", () => {
+      setPools([], [easy, hard]);
+      random(0.99);
+      expect(service.questionFor(circle).id).toBe("easy");
+    });
+
+    it("keeps a template's level", () => {
+      setPools([], [template("t", { level: 3 })]);
+      expect(service.questionFor(circle, undefined, 3).level).toBe(3);
+    });
+
+    it("falls back to the whole group when none of its questions match the map", () => {
+      expect(idsAsked(1, [mid, hard])).toEqual(["hard", "mid"]);
+    });
+  });
+
   describe("questionFor: titles", () => {
     const [g1, o1] = [fixed("g1"), fixed("o1")];
 

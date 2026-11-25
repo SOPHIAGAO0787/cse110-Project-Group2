@@ -1,28 +1,81 @@
 import { describe, expect, it } from "vitest";
-import { generateGeometryQuestions, GeometryMiniGame, QUESTION_SECONDS } from "./GeometryMiniGame";
+import type { Question } from "../types";
+import {
+  generateGeometryQuestions,
+  GeometryMiniGame,
+  QUESTION_SECONDS,
+  QUESTIONS_PER_ROUND,
+} from "./GeometryMiniGame";
+
+// A small seeded random number generator, so the test gets the same numbers every run
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
+function idsOf(questions: Question[]): string[] {
+  const ids: string[] = [];
+  for (const question of questions) {
+    ids.push(question.id);
+  }
+  return ids;
+}
 
 describe("GeometryMiniGame", () => {
-  it("generates exactly five valid topics with correct geometry answers", () => {
-    for (const random of [() => 0, () => 0.5, () => 0.999]) {
-      const questions = generateGeometryQuestions(random);
+  it("generates a round of questions with correct geometry answers for every template", () => {
+    const seen: string[] = [];
+    // A constant random gives every dimension the same size, and each value shuffles differently
+    for (let step = 0; step < 10; step++) {
+      const random = () => step / 10;
       const size = 2 + Math.floor(random() * 9);
-      expect(questions.map((question) => question.id)).toEqual([
-        "circle-area",
-        "radius-diameter",
-        "rectangle-area",
-        "triangle-area",
-        "angles",
-      ]);
-      expect(questions.map((question) => question.answer)).toEqual([
-        Math.PI * size ** 2,
-        size,
-        size ** 2,
-        size ** 2 / 2,
-        180 - size * 10,
-      ]);
-      for (const question of questions) expect(question.prompt.length).toBeGreaterThan(20);
+      const expected: Record<string, number> = {
+        "circle-area": Math.PI * size ** 2,
+        "circle-circumference": 2 * Math.PI * size,
+        "radius-diameter": size,
+        "rectangle-area": size ** 2,
+        "rectangle-perimeter": 4 * size,
+        "triangle-area": size ** 2 / 2,
+        "square-diagonal": size * Math.SQRT2,
+        angles: 180 - size * 10,
+      };
+      const questions = generateGeometryQuestions(random);
+      expect(questions).toHaveLength(QUESTIONS_PER_ROUND);
+      for (const question of questions) {
+        expect(question.answer).toBe(expected[question.id]);
+        expect(question.prompt.length).toBeGreaterThan(20);
+        if (!seen.includes(question.id)) {
+          seen.push(question.id);
+        }
+      }
     }
+    expect(seen).toHaveLength(8);
     expect(generateGeometryQuestions(() => 0)).not.toEqual(generateGeometryQuestions(() => 0.5));
+  });
+
+  it("asks a different mix of templates each round, without repeats in a round", () => {
+    const game = new GeometryMiniGame(seededRandom(42));
+    const firstRound = idsOf(game.questions);
+    const seen: string[] = [];
+    let changed = false;
+    for (let round = 0; round < 10; round++) {
+      game.restart();
+      const ids = idsOf(game.questions);
+      for (const id of ids) {
+        // Each template is asked at most once per round
+        expect(ids.indexOf(id)).toBe(ids.lastIndexOf(id));
+        if (!seen.includes(id)) {
+          seen.push(id);
+        }
+      }
+      if (ids.join() !== firstRound.join()) {
+        changed = true;
+      }
+    }
+    expect(seen).toHaveLength(8);
+    expect(changed).toBe(true);
   });
 
   it("uses the shared checker for expressions and accepts only one answer", () => {
@@ -39,7 +92,7 @@ describe("GeometryMiniGame", () => {
     expect(game.correctAnswers).toBe(1);
   });
 
-  it("accepts rounded circle areas and fractions", () => {
+  it("accepts rounded circle answers and fractions", () => {
     const game = new GeometryMiniGame(() => 0);
     game.submit("12.57");
     expect(game.feedback).toBe("correct");
