@@ -116,7 +116,6 @@ export class TowerShopView {
       900,
       MUTED,
     );
-    this.text(this.content, "Progress resets on refresh", PAGE_WIDTH - 273, 747, 12, 217, MUTED);
   }
 
   private renderCard(tower: ShopTower, index: number, state: ShopViewState): void {
