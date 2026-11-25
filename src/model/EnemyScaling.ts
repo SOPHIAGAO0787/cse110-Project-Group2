@@ -14,7 +14,7 @@ export function scaleEnemyDef(base: EnemyDef, waveNumber: number): EnemyDef {
 
   const waveLevel = waveNumber - 1;
 
-  const healthMultiplier = 1 + 0.10 * waveLevel; // 15% increase per wave
+  const healthMultiplier = 1 + 0.1 * waveLevel; // 15% increase per wave
   const speedMultiplier = 1 + 0.05 * waveLevel; // 5% increase per wave
 
   return {
