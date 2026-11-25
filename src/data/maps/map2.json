@@ -46,20 +46,46 @@
   "waves": [
     {
       "clearBonus": 10,
-      "groups": [{ "enemy": "basic", "count": 6, "intervalSec": 1.1 }]
+      "groups": [
+        {
+          "enemy": "basic",
+          "count": 8,
+          "intervalSec": 0.8
+        }
+      ]
     },
     {
       "clearBonus": 15,
       "groups": [
-        { "enemy": "basic", "count": 6, "intervalSec": 0.9 },
-        { "enemy": "fast", "count": 3, "intervalSec": 0.9 }
+        {
+          "enemy": "basic",
+          "count": 8,
+          "intervalSec": 0.7
+        },
+        {
+          "enemy": "fast",
+          "count": 4,
+          "intervalSec": 0.7
+        }
       ]
     },
     {
       "groups": [
-        { "enemy": "basic", "count": 6, "intervalSec": 0.8 },
-        { "enemy": "fast", "count": 4, "intervalSec": 0.8 },
-        { "enemy": "tank", "count": 2, "intervalSec": 0.8 }
+        {
+          "enemy": "basic",
+          "count": 8,
+          "intervalSec": 0.6
+        },
+        {
+          "enemy": "fast",
+          "count": 5,
+          "intervalSec": 0.6
+        },
+        {
+          "enemy": "tank",
+          "count": 2,
+          "intervalSec": 0.9
+        }
       ]
     }
   ]

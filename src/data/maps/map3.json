@@ -8,26 +8,26 @@
   "tiles": [
     "................",
     "..........PPPPPP",
-    "..........P..##.",
     ".###......P####.",
+    "..........P####.",
     "PPPPPP....P##...",
-    ".....P....P.....",
-    "..##.P###.P.....",
-    "..##.P###.P.....",
+    "...##P....P.....",
+    "..##.P.##.P.....",
+    "..##.P.###P.....",
     ".....PPPPPP.....",
     "................"
   ],
   "tileset": "archipelago",
   "art": [
     "................",
-    "............1223",
-    "12223.....12J##5",
+    "12223.....122223",
     "4f##5.....4####5",
-    "68889.....4##r89",
-    ".1223122236889..",
-    ".4##54###5......",
-    ".4##54###5......",
-    ".688968889......",
+    "68889.....4####5",
+    "..1223....4##r89",
+    ".1J##512236889..",
+    ".4##r94##L3.....",
+    ".4##5.4###5.....",
+    ".6889.68889.....",
     "................"
   ],
   "path": [
@@ -44,20 +44,46 @@
   "waves": [
     {
       "clearBonus": 10,
-      "groups": [{ "enemy": "basic", "count": 8, "intervalSec": 1.0 }]
+      "groups": [
+        {
+          "enemy": "basic",
+          "count": 10,
+          "intervalSec": 0.7
+        }
+      ]
     },
     {
       "clearBonus": 15,
       "groups": [
-        { "enemy": "basic", "count": 6, "intervalSec": 0.8 },
-        { "enemy": "fast", "count": 4, "intervalSec": 0.8 }
+        {
+          "enemy": "basic",
+          "count": 10,
+          "intervalSec": 0.6
+        },
+        {
+          "enemy": "fast",
+          "count": 6,
+          "intervalSec": 0.6
+        }
       ]
     },
     {
       "groups": [
-        { "enemy": "basic", "count": 6, "intervalSec": 0.7 },
-        { "enemy": "fast", "count": 5, "intervalSec": 0.7 },
-        { "enemy": "tank", "count": 3, "intervalSec": 0.7 }
+        {
+          "enemy": "basic",
+          "count": 12,
+          "intervalSec": 0.5
+        },
+        {
+          "enemy": "fast",
+          "count": 8,
+          "intervalSec": 0.5
+        },
+        {
+          "enemy": "tank",
+          "count": 2,
+          "intervalSec": 0.8
+        }
       ]
     }
   ]

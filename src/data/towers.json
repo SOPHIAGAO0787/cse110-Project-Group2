@@ -7,15 +7,15 @@
     "damage": 7,
     "fireRatePerSec": 0.8,
     "attack": "all",
-    "range": { "kind": "circle", "radius": 2.5 }
+    "range": { "kind": "circle", "radius": 2 }
   },
   {
     "id": "triangle",
     "name": "Triangle Tower",
     "description": "Hits the front-most enemy in an aimed cone.",
-    "cost": 75,
-    "damage": 22,
-    "fireRatePerSec": 0.5,
+    "cost": 70,
+    "damage": 24,
+    "fireRatePerSec": 0.75,
     "attack": "first",
     "range": { "kind": "sector", "area": 7.5 }
   },
@@ -23,9 +23,9 @@
     "id": "rectangle",
     "name": "Square Tower",
     "description": "Hits the front-most enemy in an aimed block of tiles. Smaller blocks fire faster.",
-    "cost": 80,
-    "damage": 15,
-    "fireRatePerSec": 0.9,
+    "cost": 75,
+    "damage": 20,
+    "fireRatePerSec": 0.7,
     "attack": "all",
     "range": { "kind": "rect", "maxArea": 6, "rateArea": 6 }
   }
