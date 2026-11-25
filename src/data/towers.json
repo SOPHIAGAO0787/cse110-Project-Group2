@@ -22,7 +22,7 @@
   {
     "id": "rectangle",
     "name": "Square Tower",
-    "description": "Hits the front-most enemy in an aimed block of tiles. Smaller blocks fire faster.",
+    "description": "Hits every enemy in an aimed block of tiles. Smaller blocks fire faster.",
     "cost": 75,
     "damage": 20,
     "fireRatePerSec": 0.7,
