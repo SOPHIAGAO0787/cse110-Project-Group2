@@ -106,6 +106,14 @@ describe("saveGame and loadGame", () => {
     expectFreshStart();
   });
 
+  it("skips tower levels the tower does not have, and towers the game does not know", () => {
+    const save = { progress: {}, towers: { levels: { circle: 999, hexagon: 0 } } };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    loadFresh();
+    expectFreshStart();
+    expect(towerProgress.getMaxLevel("hexagon")).toBe(-1);
+  });
+
   it("keeps the good values from a partly broken save", () => {
     const save = {
       progress: { stars: { map1: 2, map2: "x" }, bonusCoins: "x" },
