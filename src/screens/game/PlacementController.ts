@@ -6,6 +6,7 @@ import type { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "./PlacementView";
 import type { QuestionService } from "../../model/questions/QuestionService";
+import { wrongAnswerCost } from "../../model/questions/TowerQuestionsHandling";
 import { InGameTowerCard } from "./InGameTowerCard";
 import type { TowerProgress } from "../../model/TowerProgress";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
@@ -132,7 +133,8 @@ export class PlacementController {
     const beforeCommit = async (tile: Vec, config?: TowerConfig): Promise<boolean> => {
       const question = this.questions.questionFor(def, config, this.mapNumber);
       this.onQuestionOpened();
-      const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
+      const anchor = this.view.tileToScreen(tile);
+      const correct = await this.view.prompt.ask(question, anchor, wrongAnswerCost(def));
       if (!canCommit()) return false;
       return correct;
     };
@@ -232,6 +234,18 @@ export class PlacementController {
       }
 
       if (!ok || !canCommit()) {
+        // A wrong answer, or closing the question with Esc or ✕, costs part of the tower's price.
+        // Nothing is taken if the game ended or the screen closed while the question was open.
+        if (canCommit()) {
+          let lost = wrongAnswerCost(def);
+          if (lost > this.model.wallet.coins) {
+            lost = this.model.wallet.coins; // coins never go below 0
+          }
+          if (lost > 0) {
+            this.model.wallet.spend(lost);
+            this.view.showMessage(`−${lost} coins for the missed question`);
+          }
+        }
         placement.cancel();
         pv.hide();
         return;

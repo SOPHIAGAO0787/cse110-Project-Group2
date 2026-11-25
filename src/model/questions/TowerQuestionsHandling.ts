@@ -51,3 +51,11 @@ export function towerVariables(
   }
   return vars;
 }
+
+// A wrong answer, or closing the question without answering, costs this share of the tower's price
+const WRONG_ANSWER_SHARE = 0.25;
+
+// The coins a wrong or skipped answer costs for this tower, rounded to whole coins
+export function wrongAnswerCost(def: TowerDef): number {
+  return Math.round(def.cost * WRONG_ANSWER_SHARE);
+}

@@ -1,3 +1,4 @@
+import { MAX_STARS } from "./GameResult";
 import type { MapConfig } from "./types";
 
 // Coins the mini-game gives for each correct answer
@@ -5,9 +6,16 @@ export const COINS_PER_CORRECT_ANSWER = 5;
 // The most bonus coins the player can save up, so replaying the mini-game can't give endless coins
 export const MAX_BONUS_COINS = 50;
 
+// The part of Progress that is saved in the browser. Map unlocks are not saved because they
+// follow from the stars.
+export interface ProgressSave {
+  stars: { [mapId: string]: number }; // best stars on each map, by map id
+  bonusCoins: number;
+}
+
 // What the player has done across games: which map they picked, the best stars on each map,
-// the bonus coins earned in the mini-game, and whether they have seen the tutorial. It lives in
-// memory only, so refreshing the page starts over.
+// the bonus coins earned in the mini-game, and whether they have seen the tutorial. The App keeps a
+// copy in the browser (see saveGame.ts), so refreshing the page keeps the stars and bonus coins.
 export class Progress {
   currentMapId: string; // the map the player picked to play
   bonusCoins: number; // mini-game coins waiting to be added to the next game
@@ -65,6 +73,36 @@ export class Progress {
   // Called when a game ends: that game got the bonus coins, so they are gone now.
   useBonusCoins(): void {
     this.bonusCoins = 0;
+  }
+
+  // A plain copy of the stars and bonus coins, ready to be turned into JSON
+  toSave(): ProgressSave {
+    const stars: { [mapId: string]: number } = {};
+    for (let i = 0; i < this.mapIds.length; i++) {
+      stars[this.mapIds[i]] = this.bestStars[i];
+    }
+    return { stars: stars, bonusCoins: this.bonusCoins };
+  }
+
+  // Copies the stars and bonus coins back from a save. The save comes from the browser and could
+  // be old or edited by hand, so each value is checked and a bad one is skipped.
+  loadSave(data: ProgressSave): void {
+    if (typeof data !== "object" || data === null) {
+      return;
+    }
+    const savedStars = data.stars;
+    if (typeof savedStars === "object" && savedStars !== null) {
+      for (let i = 0; i < this.mapIds.length; i++) {
+        const stars = savedStars[this.mapIds[i]];
+        if (Number.isInteger(stars) && stars >= 0 && stars <= MAX_STARS) {
+          this.bestStars[i] = stars;
+        }
+      }
+    }
+    const coins = data.bonusCoins;
+    if (Number.isInteger(coins) && coins >= 0 && coins <= MAX_BONUS_COINS) {
+      this.bonusCoins = coins;
+    }
   }
 
   private indexOf(mapId: string): number {

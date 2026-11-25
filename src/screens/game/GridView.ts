@@ -1,6 +1,7 @@
 import Konva from "konva";
 import type { Decoration, MapConfig, Vec } from "../../model/types";
 import { TILE } from "./GameScreenView";
+import { tileToPixel } from "./coords";
 
 const PATCH_EDGE = 3; // how far the dark edge around a patch of build tiles sticks out, in pixels
 
@@ -125,10 +126,11 @@ export class GridView {
       }
     }
 
-    // The road follows the enemy route. Path points are tile centers, so add half a tile.
+    // The road follows the enemy route, through the center of each path tile
     const points: number[] = [];
     for (const p of map.path) {
-      points.push((p.x + 0.5) * TILE, (p.y + 0.5) * TILE);
+      const center = tileToPixel(p, TILE);
+      points.push(center.x, center.y);
     }
     // A dark line one tile wide, then the road color on top, a little narrower,
     // so a dark edge shows on both sides of the road
@@ -165,8 +167,9 @@ export class GridView {
     // -1, 0 or 1 on each axis: which way the first stretch of road goes
     const dx = Math.sign(next.x - start.x);
     const dy = Math.sign(next.y - start.y);
-    const startX = (start.x + 0.5) * TILE;
-    const startY = (start.y + 0.5) * TILE;
+    const startCenter = tileToPixel(start, TILE);
+    const startX = startCenter.x;
+    const startY = startCenter.y;
     this.group.add(
       new Konva.Arrow({
         name: "spawn-arrow",
@@ -185,9 +188,13 @@ export class GridView {
     );
 
     // A pole with a red triangle at the top
-    const endX = (end.x + 0.5) * TILE;
-    const endY = (end.y + 0.5) * TILE;
-    const flag = new Konva.Group({ name: "exit-flag", x: endX, y: endY, listening: false });
+    const endCenter = tileToPixel(end, TILE);
+    const flag = new Konva.Group({
+      name: "exit-flag",
+      x: endCenter.x,
+      y: endCenter.y,
+      listening: false,
+    });
     flag.add(new Konva.Line({ points: [-6, 14, -6, -14], stroke: "#333333", strokeWidth: 3 }));
     flag.add(new Konva.Line({ points: [-6, -14, 12, -8, -6, -2], closed: true, fill: "#e53935" }));
     this.group.add(flag);
