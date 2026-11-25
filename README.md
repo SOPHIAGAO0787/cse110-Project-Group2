@@ -27,8 +27,8 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 1. Click **Play** on the main menu and pick a map. Winning a map unlocks the next one.
 2. Drag a tower from the shop on the right onto a green tile. For a triangle or square tower, move the mouse to aim its cone or block. Then press **Enter**.
-3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. A correct answer places the tower and spends its coins.
-4. Click **Start Wave** to send enemies down the path. Defeating an enemy earns coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
+3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. Questions get harder on later maps. A correct answer places the tower and spends its coins.
+4. Click **Start Wave** to send enemies down the path. A white arrow shows where they come in, and a red flag shows where they leave. Defeating an enemy earns coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
 5. Click a placed tower to upgrade it, up to the level bought in the Tower Shop.
 6. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars, score, and stats.
 
@@ -56,7 +56,7 @@ The triangle and square towers are aimed after they are dropped: move the mouse 
 
 ![Aiming the square tower's block, answering its perimeter, and the tower firing during a wave](assets/square-tower.gif)
 
-Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols.
+Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols, and a line under the box reminds you which formats work.
 
 ## Tower Shop and mini-game
 
@@ -64,11 +64,11 @@ The **Tower Shop** unlocks the triangle and square towers and raises each tower'
 
 ![The Tower Shop showing the circle tower's stats and next upgrade](assets/tower-shop.png)
 
-The **mini-game** is a five-question geometry quiz with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50.
+The **mini-game** is a five-question geometry quiz with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50. After each answer, the next question shows by itself.
 
 ![Answering the five mini-game questions and returning to the menu with a coin bonus](assets/mini-game.gif)
 
-**Coming next (Sprint 3):** balancing the maps, saving progress, a leaderboard, and a second mini-game. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+**Coming next (Sprint 3):** balancing the maps, coins at the end of each wave, saving progress, a short tutorial, and wrong answers that cost coins. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 
