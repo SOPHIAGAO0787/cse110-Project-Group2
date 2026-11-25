@@ -51,13 +51,18 @@ export class Progress {
   // but never past MAX_BONUS_COINS.
   // Mini-game rewards only touch bonusCoins, never stars or unlocks.
   addMiniGameReward(correctAnswers: number): void {
-    if (correctAnswers <= 0) {
-      return;
-    }
-    this.bonusCoins = this.bonusCoins + correctAnswers * COINS_PER_CORRECT_ANSWER;
-    if (this.bonusCoins > MAX_BONUS_COINS) {
-      this.bonusCoins = MAX_BONUS_COINS;
-    }
+    this.addBonusCoins(correctAnswers * COINS_PER_CORRECT_ANSWER);
+  }
+
+  addRoomBuilderReward(areaUsed: number): number {
+    return this.addBonusCoins(Math.floor(areaUsed / 8) * 5);
+  }
+
+  private addBonusCoins(coins: number): number {
+    if (coins <= 0) return 0;
+    const awarded = Math.max(0, Math.min(coins, MAX_BONUS_COINS - this.bonusCoins));
+    this.bonusCoins += awarded;
+    return awarded;
   }
 
   // Called when a game ends: that game got the bonus coins, so they are gone now.
