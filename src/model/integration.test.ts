@@ -6,6 +6,17 @@ import { ENEMIES, loadMap, MAPS, TOWERS } from "./loadContent";
 import { Progress } from "./Progress";
 import type { Vec } from "./types";
 
+// The most ticks a test loop may run. A game that stops making progress then fails the test
+// instead of hanging it.
+const MAX_TICKS = 100000;
+
+// Throws once a test loop has run more than MAX_TICKS ticks
+function failIfTooManyTicks(ticks: number): void {
+  if (ticks > MAX_TICKS) {
+    throw new Error(`The game was still running after ${MAX_TICKS} ticks`);
+  }
+}
+
 // The stars a finished game earned
 function finalStars(game: GameModel): number {
   const result = game.result;
@@ -30,7 +41,10 @@ function towerCost(defId: string): number {
 // at once instead of waiting out the preparation time.
 function playUntilOver(game: GameModel, towerTiles: Vec[]): void {
   const step = 0.05; // seconds per tick, about 3 frames
+  let ticks = 0;
   while (!game.isOver) {
+    ticks++;
+    failIfTooManyTicks(ticks);
     if (game.waves.currentWave === 0 || game.waves.preparationRemaining !== null) {
       for (const tile of towerTiles) {
         if (game.wallet.canAfford(towerCost("circle"))) {
@@ -163,7 +177,10 @@ describe("Integration: a game on map1", () => {
     game.spawnEnemy("basic");
     const enemy = game.enemies[0];
 
+    let ticks = 0;
     while (game.enemies.length > 0) {
+      ticks++;
+      failIfTooManyTicks(ticks);
       game.tick(0.05);
     }
 
@@ -282,7 +299,10 @@ describe("Integration: every map", () => {
       const enemy = game.enemies[0];
       let last = enemy.pos;
 
+      let ticks = 0;
       while (game.enemies.length > 0) {
+        ticks++;
+        failIfTooManyTicks(ticks);
         game.tick(step);
         const tileX = Math.round(enemy.pos.x);
         const tileY = Math.round(enemy.pos.y);
