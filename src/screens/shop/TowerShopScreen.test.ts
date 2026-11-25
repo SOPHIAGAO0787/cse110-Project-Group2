@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import Konva from "konva";
+import "vitest-canvas-mock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TowerShopView } from "./TowerShopView";
 import { TowerShopScreen } from "./TowerShopScreen";
@@ -20,7 +23,7 @@ const view = vi.hoisted(() => ({
 // Replace drawing with simple functions for these tests.
 vi.mock("./TowerShopView", () => ({
   TowerShopView: class {
-    group = {};
+    group = new Konva.Group();
     render = view.render;
     showPopup = view.showPopup;
 

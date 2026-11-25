@@ -10,7 +10,12 @@ let view: TowerShopView;
 afterEach(() => view.group.destroy());
 
 function renderTower(id: string, level = 0) {
-  view = new TowerShopView({ onSelect: vi.fn(), onAction: vi.fn(), onBack: vi.fn() });
+  view = new TowerShopView({
+    onSelect: vi.fn(),
+    onAction: vi.fn(),
+    onBack: vi.fn(),
+    onSettings: vi.fn(),
+  });
   view.render({
     towers: SHOP_TOWERS,
     selectedId: id,
@@ -98,7 +103,7 @@ describe("tower shop cards", () => {
         selectedId = selected;
       });
       const onAction = vi.fn(() => expect(selectedId).toBe(id));
-      view = new TowerShopView({ onSelect, onAction, onBack: vi.fn() });
+      view = new TowerShopView({ onSelect, onAction, onBack: vi.fn(), onSettings: vi.fn() });
       view.render({ towers: SHOP_TOWERS, selectedId, levels: new Map(), coins: 200 });
       const card = view.group.findOne<Konva.Group>(`.tower-${id}`)!;
       const button = card
