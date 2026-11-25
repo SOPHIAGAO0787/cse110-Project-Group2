@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import Konva from "konva";
 import "vitest-canvas-mock";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { TowerShopView } from "./TowerShopView";
 import { TowerShopScreen } from "./TowerShopScreen";
 import { TowerProgress } from "../../model/TowerProgress";
@@ -40,13 +40,15 @@ function displayedState(): ShopState {
 
 describe("Tower shop UI interactions", () => {
   let progress: TowerProgress;
+  let onBuy: Mock<() => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     progress = new TowerProgress();
 
-    new TowerShopScreen({ switchTo: vi.fn() }, progress);
+    onBuy = vi.fn();
+    new TowerShopScreen({ switchTo: vi.fn() }, progress, onBuy);
   });
 
   it("provides the tower's cost and abilities to the view", () => {
@@ -83,6 +85,7 @@ describe("Tower shop UI interactions", () => {
     expect(progress.shopCoins).toBe(125);
     expect(progress.getMaxLevel("circle")).toBe(1);
     expect(view.showPopup).not.toHaveBeenCalled();
+    expect(onBuy).toHaveBeenCalledTimes(1);
   });
 
   it("requests a popup without changing coins or level when funds are insufficient", () => {
@@ -98,6 +101,7 @@ describe("Tower shop UI interactions", () => {
     expect(progress.shopCoins).toBe(50);
     expect(progress.getMaxLevel("circle")).toBe(0);
     expect(view.render).toHaveBeenCalledTimes(rendersBeforeAttempt);
+    expect(onBuy).not.toHaveBeenCalled();
   });
 
   it.each(["triangle", "rectangle"])(

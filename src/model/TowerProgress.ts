@@ -1,5 +1,13 @@
+import { SHOP_TOWERS } from "./shop/loadShopContent";
+
+// The part of TowerProgress that is saved in the browser
+export interface TowerProgressSave {
+  shopCoins: number;
+  levels: { [towerId: string]: number }; // level index of each unlocked tower, by tower id
+}
+
 export class TowerProgress {
-  shopCoins = 200; // FIX: needs to be connected to the database in sprint3
+  shopCoins = 200; // coins to spend in the tower shop, kept in the browser by saveGame.ts
 
   // Stored values are array indexes:
   // 0 means Level 1.
@@ -20,5 +28,36 @@ export class TowerProgress {
     }
 
     return level;
+  }
+
+  // A plain copy of the coins and tower levels, ready to be turned into JSON
+  toSave(): TowerProgressSave {
+    const levels: { [towerId: string]: number } = {};
+    for (const [towerId, level] of this.maxLevels) {
+      levels[towerId] = level;
+    }
+    return { shopCoins: this.shopCoins, levels: levels };
+  }
+
+  // Copies the coins and tower levels back from a save. The save comes from the browser and could
+  // be old or edited by hand, so each value is checked and a bad one is skipped.
+  loadSave(data: TowerProgressSave): void {
+    if (typeof data !== "object" || data === null) {
+      return;
+    }
+    const coins = data.shopCoins;
+    if (Number.isInteger(coins) && coins >= 0) {
+      this.shopCoins = coins;
+    }
+    const savedLevels = data.levels;
+    if (typeof savedLevels === "object" && savedLevels !== null) {
+      // Read known towers only, and keep levels inside the current upgrade list.
+      for (const tower of SHOP_TOWERS) {
+        const level = savedLevels[tower.def.id];
+        if (Number.isInteger(level) && level >= 0 && level < tower.levels.length) {
+          this.maxLevels.set(tower.def.id, level);
+        }
+      }
+    }
   }
 }

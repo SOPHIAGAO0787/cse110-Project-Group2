@@ -9,6 +9,8 @@ export class TowerShopScreen implements Screen {
   private view: TowerShopView;
   private settings: SettingsPanel;
 
+  private onBuy: () => void; // called after each unlock or upgrade, so the App can save
+
   private selectedId = SHOP_TOWERS[0]?.def.id ?? "";
 
   group: TowerShopView["group"];
@@ -16,10 +18,13 @@ export class TowerShopScreen implements Screen {
   constructor(
     app: ScreenSwitcher,
     private progress: TowerProgress,
+    onBuy: () => void,
     sound: Sound = new Sound(),
   ) {
+    this.onBuy = onBuy;
     this.settings = new SettingsPanel(
       () => this.settings.close(),
+      () => {}, // the shop's settings have no Restart button
       () => app.switchTo("maps"),
       () => app.switchTo("menu"),
       sound,
@@ -93,6 +98,7 @@ export class TowerShopScreen implements Screen {
     // Temporary successful interaction for the UI demonstration.
     this.progress.shopCoins -= cost;
     this.progress.maxLevels.set(tower.def.id, locked ? 0 : levelIndex + 1);
+    this.onBuy();
     this.refresh();
   }
 }

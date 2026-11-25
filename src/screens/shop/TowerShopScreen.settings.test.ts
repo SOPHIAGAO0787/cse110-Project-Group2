@@ -30,7 +30,7 @@ beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
   sound = new Sound();
   progress = new TowerProgress();
-  screen = new TowerShopScreen({ switchTo }, progress, sound);
+  screen = new TowerShopScreen({ switchTo }, progress, () => {}, sound);
   screen.resize(1200, 800);
   screen.show();
 });

@@ -18,6 +18,7 @@ import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
 import { TowerProgress } from "../../model/TowerProgress";
 import { TowersView } from "./TowersView";
+import { CIRCLE_TOWER_COLOR } from "../theme";
 import { Sound, type EffectName } from "../../core/Sound";
 
 // Capture real model instances without exposing the controller's private fields.
@@ -332,6 +333,15 @@ describe("GameScreenController feedback", () => {
   });
 });
 
+// The tutorial's current tip, read from the screen
+function tutorialText(): string {
+  const tip = controller.group.findOne<Konva.Text>(".tutorial-tip");
+  if (tip === undefined) {
+    throw new Error("The tutorial is missing from the screen");
+  }
+  return tip.text();
+}
+
 describe("GameScreenController questions during gameplay", () => {
   function openQuestion() {
     let answer!: (correct: boolean) => void;
@@ -361,6 +371,12 @@ describe("GameScreenController questions during gameplay", () => {
     const add = vi.spyOn(TowersView.prototype, "add");
     const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
     const { answer } = openQuestion();
+    // The shop card's icon has the same color, so count the circles before and after placing
+    const circleTowerCount = () =>
+      controller.group
+        .find<Konva.Circle>("Circle")
+        .filter((circle) => circle.fill() === CIRCLE_TOWER_COLOR).length;
+    const before = circleTowerCount();
 
     answer(true);
     await settleAnswer();
@@ -368,9 +384,7 @@ describe("GameScreenController questions during gameplay", () => {
     expect(model.towers).toHaveLength(1);
     const tower = model.towers[0];
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
-    expect(
-      controller.group.find<Konva.Circle>("Circle").filter((circle) => circle.fill() === "#2a5d99"),
-    ).toHaveLength(1);
+    expect(circleTowerCount()).toBe(before + 1);
 
     model.spawnEnemy("basic");
     model.tick(1 / tower.fireRate);
@@ -453,6 +467,28 @@ describe("GameScreenController questions during gameplay", () => {
 
     expect(message).toHaveBeenCalledWith(text);
     expect(model.towers).toHaveLength(0);
+  });
+
+  it("moves the tutorial on once the tower's question opens and once the tower is built", async () => {
+    clickButton("Show me");
+    const { answer } = openQuestion();
+    expect(tutorialText()).toContain("Answer the question");
+
+    answer(true);
+    await settleAnswer();
+    expect(tutorialText()).toContain("Press Start Wave");
+  });
+
+  it("passes the tutorial's wave and speed tips if the player did them before building", async () => {
+    clickButton("Show me");
+    clickButton("Start Wave");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    expect(tutorialText()).toContain("Drag a tower"); // still waiting for the first tower
+
+    const { answer } = openQuestion();
+    answer(true);
+    await settleAnswer();
+    expect(tutorialText()).toContain("Click a tower on the map to upgrade it");
   });
 });
 
@@ -547,6 +583,13 @@ describe("GameScreenController settings", () => {
     expect(switchTo).toHaveBeenCalledWith("maps");
   });
 
+  it("restarts the same map without recording a result", () => {
+    clickIcon("settings");
+    clickButton("Restart");
+    expect(switchTo).toHaveBeenCalledWith("game");
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
   it("goes to the main menu without recording a result", () => {
     clickIcon("settings");
     clickButton("Main menu");
@@ -559,6 +602,27 @@ describe("GameScreenController settings", () => {
     controller.hide();
     controller.show();
     expect(settingsOpen()).toBe(false);
+  });
+
+  it("closes with Escape and the game goes on", () => {
+    const start = vi.spyOn(GameLoop.prototype, "start");
+    clickIcon("settings");
+    start.mockClear(); // show() already started the loop once
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(settingsOpen()).toBe(false);
+    expect(start).toHaveBeenCalled();
+  });
+
+  it("ignores Escape after leaving the game from the settings", () => {
+    const start = vi.spyOn(GameLoop.prototype, "start");
+    clickIcon("settings");
+    clickButton("Back to maps");
+    controller.hide(); // the App hides the game screen on the switch
+    start.mockClear();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(start).not.toHaveBeenCalled();
   });
 });
 
@@ -996,6 +1060,18 @@ it("keeps simulation and automatic waves running while an unanswered prompt stay
   expect(start).not.toHaveBeenCalled();
 });
 
+it("keeps the settings closed while a question is open, so one Escape only closes the question", () => {
+  const { prompt } = openPlacementQuestion();
+  clickIcon("settings");
+
+  const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Settings");
+  if (title === undefined) {
+    throw new Error("Settings title is missing from the screen");
+  }
+  expect(title.isVisible()).toBe(false);
+  expect(prompt.group.visible()).toBe(true);
+});
+
 it("prevents duplicate prompts and placements while retaining retries", async () => {
   const { ask, card, prompt } = openPlacementQuestion();
   card.fire("pointerdown");
@@ -1128,7 +1204,7 @@ it("rechecks funds after a correct answer", async () => {
 });
 
 describe("GameScreenController game speed", () => {
-  // The text on the speed button: "1x" or "2x"
+  // The text on the speed button: "1x", "2x" or "0.5x"
   function speedLabel(): string {
     const button = controller.group.findOne<Konva.Group>(".speed");
     if (button === undefined) {
@@ -1161,7 +1237,17 @@ describe("GameScreenController game speed", () => {
     expect(model.elapsedSeconds).toBeCloseTo(0.2);
   });
 
-  it("goes back to normal speed on a second click", () => {
+  it("runs at half speed after a second click", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("0.5x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.05);
+  });
+
+  it("goes back to normal speed on a third click", () => {
+    clickIcon("speed");
     clickIcon("speed");
     clickIcon("speed");
     runFrame(0.1);
@@ -1173,6 +1259,9 @@ describe("GameScreenController game speed", () => {
   it("switches the speed with the Space key", () => {
     press(" ");
     expect(speedLabel()).toBe("2x");
+
+    press(" ");
+    expect(speedLabel()).toBe("0.5x");
 
     press(" ");
     expect(speedLabel()).toBe("1x");
@@ -1199,6 +1288,16 @@ describe("GameScreenController game speed", () => {
 
     expect(speedLabel()).toBe("2x");
     expect(model.elapsedSeconds).toBeCloseTo(0.1);
+  });
+
+  it("stays at half speed while a question is open", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    openPlacementQuestion();
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("0.5x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.05);
   });
 
   it("keeps the chosen speed for the next game", () => {
@@ -1422,5 +1521,51 @@ describe("GameScreenController confirm and cancel squares", () => {
     expect(
       controller.group.find<Konva.Text>("Text").filter((text) => text.text() === "Enter"),
     ).toHaveLength(0);
+  });
+});
+
+describe("GameScreenController tutorial", () => {
+  function tutorialShowing(): boolean {
+    const tutorial = controller.group.findOne(".tutorial");
+    if (tutorial === undefined) {
+      throw new Error("The tutorial is missing from the screen");
+    }
+    return tutorial.visible();
+  }
+
+  it("offers the tour in the first game on map 1", () => {
+    expect(tutorialShowing()).toBe(true);
+    expect(tutorialText()).toBe("New here? Take the 1-minute tour.");
+  });
+
+  it("is not shown on the other maps", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    controller.show();
+    expect(tutorialShowing()).toBe(false);
+  });
+
+  it("does not come back after Skip", () => {
+    clickButton("Skip");
+    expect(progress.tutorialDone).toBe(true);
+
+    controller.hide();
+    controller.show();
+    expect(tutorialShowing()).toBe(false);
+  });
+
+  it("starts over from the offer in a new game if it was not finished", () => {
+    clickButton("Show me");
+    controller.hide();
+    expect(tutorialShowing()).toBe(false);
+
+    controller.show();
+    expect(tutorialText()).toBe("New here? Take the 1-minute tour.");
+  });
+
+  it("is hidden when the game ends", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+    expect(tutorialShowing()).toBe(false);
   });
 });

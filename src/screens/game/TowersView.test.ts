@@ -9,6 +9,7 @@ import { Tower } from "../../model/Tower";
 import { ENEMIES, TOWERS } from "../../model/loadContent";
 import { TILE } from "./GameScreenView";
 import { TowersView } from "./TowersView";
+import { CIRCLE_TOWER_COLOR, SQUARE_TOWER_COLOR, TRIANGLE_TOWER_COLOR } from "../theme";
 
 const circle = TOWERS.find((d) => d.id === "circle")!;
 const triangle = TOWERS.find((d) => d.id === "triangle")!;
@@ -21,6 +22,17 @@ describe("TowersView", () => {
 
     const sprite = view.group.getChildren()[0];
     expect(sprite.position()).toEqual({ x: 3.5 * TILE, y: 2.5 * TILE });
+  });
+
+  it("draws each tower in the same color as the main menu and the shop", () => {
+    const view = new TowersView();
+    view.add(new Tower(1, circle, { x: 1, y: 1 }));
+    view.add(new Tower(2, triangle, { x: 4, y: 1 }));
+    view.add(new Tower(3, rectangle, { x: 7, y: 1 }));
+
+    expect(view.group.find<Konva.Circle>("Circle")[0].fill()).toBe(CIRCLE_TOWER_COLOR);
+    expect(view.group.find<Konva.Line>("Line")[0].fill()).toBe(TRIANGLE_TOWER_COLOR);
+    expect(view.group.find<Konva.Rect>("Rect")[0].fill()).toBe(SQUARE_TOWER_COLOR);
   });
 
   it("turns the triangle to point along its facing direction", () => {

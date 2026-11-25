@@ -40,6 +40,7 @@ beforeEach(() => {
     () => {},
     () => {},
     () => {},
+    () => {},
     sound,
   );
 });
@@ -51,7 +52,14 @@ afterEach(() => {
 
 describe("SettingsPanel sound switches", () => {
   it("shows both switches as on at first", () => {
-    expect(labels()).toEqual(["Resume", "Music: On", "Sound: On", "Back to maps", "Main menu"]);
+    expect(labels()).toEqual([
+      "Resume",
+      "Restart",
+      "Music: On",
+      "Sound: On",
+      "Back to maps",
+      "Main menu",
+    ]);
   });
 
   it("switches the music off and on again", () => {
@@ -77,7 +85,14 @@ describe("SettingsPanel sound switches", () => {
   it("changes only the switch that was clicked", () => {
     click("Music: On");
 
-    expect(labels()).toEqual(["Resume", "Music: Off", "Sound: On", "Back to maps", "Main menu"]);
+    expect(labels()).toEqual([
+      "Resume",
+      "Restart",
+      "Music: Off",
+      "Sound: On",
+      "Back to maps",
+      "Main menu",
+    ]);
     expect(sound.effectsOn).toBe(true);
   });
 
@@ -87,11 +102,58 @@ describe("SettingsPanel sound switches", () => {
       () => {},
       () => {},
       () => {},
+      () => {},
       sound,
     );
 
     const texts = later.group.find<Konva.Text>("Text");
     expect(texts.some((text) => text.text() === "Sound: Off")).toBe(true);
     later.group.destroy();
+  });
+
+  it("shows a change made on the main menu when it opens", () => {
+    sound.toggleMusic();
+    panel.open();
+    expect(labels()).toContain("Music: Off");
+  });
+});
+
+describe("SettingsPanel Escape key", () => {
+  function pressEscape(): void {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  }
+
+  it("does what Resume does while the panel is open", () => {
+    const onResume = vi.fn();
+    const escapable = new SettingsPanel(
+      onResume,
+      () => {},
+      () => {},
+      () => {},
+      sound,
+    );
+    escapable.open();
+    pressEscape();
+
+    expect(onResume).toHaveBeenCalledTimes(1);
+    escapable.close();
+    escapable.group.destroy();
+  });
+
+  it("does nothing once the panel is closed", () => {
+    const onResume = vi.fn();
+    const escapable = new SettingsPanel(
+      onResume,
+      () => {},
+      () => {},
+      () => {},
+      sound,
+    );
+    escapable.open();
+    escapable.close();
+    pressEscape();
+
+    expect(onResume).not.toHaveBeenCalled();
+    escapable.group.destroy();
   });
 });

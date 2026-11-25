@@ -2,13 +2,15 @@
 import type { ScreenSwitcher } from "../app/types";
 import Konva from "konva";
 import "vitest-canvas-mock";
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { Sound } from "../core/Sound";
 import { MAPS } from "../model/loadContent";
 import { COINS_PER_CORRECT_ANSWER, Progress } from "../model/Progress";
 import { MenuScreen } from "./MenuScreen";
 
 let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 let progress: Progress;
+let sound: Sound;
 let screen: MenuScreen;
 
 // The bonus line, or null if it is hidden
@@ -19,6 +21,16 @@ function bonusLine(): string | null {
     }
   }
   return null;
+}
+
+// True if some text on the screen reads `label`
+function hasText(label: string): boolean {
+  for (const node of screen.group.find<Konva.Text>("Text")) {
+    if (node.text() === label) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // Clicks the button whose label is `label`
@@ -36,7 +48,15 @@ function clickButton(label: string): void {
 beforeEach(() => {
   switchTo = vi.fn<ScreenSwitcher["switchTo"]>();
   progress = new Progress(MAPS);
-  screen = new MenuScreen({ switchTo }, progress);
+  // jsdom has no real audio
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+  sound = new Sound();
+  screen = new MenuScreen({ switchTo }, progress, sound);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("MenuScreen buttons", () => {
@@ -77,5 +97,28 @@ describe("MenuScreen bonus coins", () => {
     screen.hide();
     screen.show();
     expect(bonusLine()).toBeNull();
+  });
+});
+
+describe("MenuScreen music switch", () => {
+  it("shows the music as on at first", () => {
+    expect(hasText("Music: On")).toBe(true);
+  });
+
+  it("switches the music off and on again", () => {
+    clickButton("Music: On");
+    expect(sound.musicOn).toBe(false);
+    expect(hasText("Music: Off")).toBe(true);
+
+    clickButton("Music: Off");
+    expect(sound.musicOn).toBe(true);
+    expect(hasText("Music: On")).toBe(true);
+  });
+
+  it("shows a change made in a game's settings when the menu opens again", () => {
+    screen.hide();
+    sound.toggleMusic();
+    screen.show();
+    expect(hasText("Music: Off")).toBe(true);
   });
 });

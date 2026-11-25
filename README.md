@@ -11,7 +11,7 @@ A tower defense game where you answer geometry questions to build your defenses.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
 - **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
 - **Stars and stats** at the end of every game, and the best stars on each map are kept on the map screen.
-- **Tower Shop** to unlock towers and raise their upgrade level, and a **mini-game** that earns bonus coins.
+- **Tower Shop** to unlock towers and raise their upgrade level, and **two mini-games** that earn bonus coins.
 - **Double speed, music, and sound effects**, with a settings menu to pause the game or switch the sound off.
 
 ## Play it
@@ -70,9 +70,11 @@ The **Tower Shop** unlocks the triangle and square towers and raises each tower'
 
 From the main menu, select **Mini-game → Room Builder**. Drag benches, square towers, and triangle towers from the menu onto the 8 m × 6 m grid. A green preview means the piece fits. Drag placed pieces to reposition them. Select a bench or triangle and use **Rotate** to turn it. Use **Undo** to reverse the last placement, move, or rotation, or **Reset Room** to start over.
 
-Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards 5 bonus coins for every full 8 m² placed, up to the shared 50-coin savings cap. The coins go into your next tower defense game. The existing **Geometry Quiz** is available from the same picker.
+Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards 5 bonus coins for every full 8 m² placed, up to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game.
 
-**Coming next (Sprint 3):** balancing the maps, saving progress, and a leaderboard. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+The browser saves map stars, the tutorial flag, shop coins, tower upgrades, and unused mini-game bonus coins across reloads.
+
+**Coming next (Sprint 3):** balancing the maps and a leaderboard. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 

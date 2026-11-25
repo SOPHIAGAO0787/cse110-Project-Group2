@@ -2,6 +2,10 @@
 import Konva from "konva";
 import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MAPS } from "../model/loadContent";
+import { Progress } from "../model/Progress";
+import { loadGame, SAVE_KEY, saveGame } from "../model/saveGame";
+import { TowerProgress } from "../model/TowerProgress";
 import { LOSE_TEXT, WIN_TEXT } from "../screens/theme";
 import { App } from "./App";
 
@@ -86,21 +90,27 @@ function back() {
     .fire("click");
 }
 
+function startApp() {
+  app = new App("game");
+  stage = stages[stages.length - 1];
+}
+
 beforeEach(() => {
+  localStorage.clear();
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
   document.body.innerHTML = '<div id="game"></div>';
   useFixedQuizQuestions = false;
   const random = Math.random;
   // Give the quiz predictable dimensions without affecting Konva's random hit colors.
   vi.spyOn(Math, "random").mockImplementation(() => (useFixedQuizQuestions ? 0 : random()));
-  app = new App("game");
-  stage = stages[stages.length - 1];
+  startApp();
 });
 
 afterEach(() => {
   app.switchTo("menu");
   stage.destroy();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("Room Builder navigation and rewards", () => {
@@ -157,7 +167,7 @@ describe("Room Builder navigation and rewards", () => {
     expect(texts()).toEqual(expect.arrayContaining(["3 remaining", "0 / 48 m²", "48 m²"]));
   });
 
-  it("awards once, returns to the menu, and applies the coins to the next game", () => {
+  it("awards once, restores the bonus after reload, and applies it to the next game", () => {
     openRoom();
     placeBench();
     drag("Square tower", 4, 0);
@@ -176,9 +186,36 @@ describe("Room Builder navigation and rewards", () => {
     );
     click("Return to Menu");
     expect(texts()).toContain("Mini-game bonus: +5 coins in your next game");
+    stage.destroy();
+    startApp();
+    expect(texts()).toContain("Mini-game bonus: +5 coins in your next game");
     click("Play");
     click("Play");
     expect(texts()).toContain("Coins: 105");
+  });
+
+  it("saves the capped Room Builder award alongside the existing campaign and shop progress", () => {
+    const progress = new Progress(MAPS);
+    const towers = new TowerProgress();
+    progress.recordResult(MAPS[0].id, 2);
+    progress.tutorialDone = true;
+    progress.addMiniGameReward(9);
+    towers.shopCoins = 73;
+    towers.maxLevels.set("circle", 1);
+    saveGame(progress, towers);
+    stage.destroy();
+    startApp();
+
+    openRoom();
+    placeBench();
+    drag("Bench", 0, 2);
+    click("Finish Room");
+    expect(texts()).toContain("Bonus coins earned   +5");
+    const restored = new Progress(MAPS);
+    const restoredTowers = new TowerProgress();
+    loadGame(restored, restoredTowers);
+    expect(restored.toSave()).toEqual({ ...progress.toSave(), bonusCoins: 50 });
+    expect(restoredTowers.toSave()).toEqual(towers.toSave());
   });
 
   it("restarts with a fresh room and reports the actual capped reward", () => {
@@ -204,6 +241,7 @@ describe("Room Builder navigation and rewards", () => {
       .find((node) => node.isVisible())!
       .fire("click");
     expect(texts().some((text) => text.startsWith("Mini-game bonus"))).toBe(false);
+    expect(localStorage.getItem(SAVE_KEY)).toBeNull();
     openRoom();
     expect(texts()).toEqual(expect.arrayContaining(["3 remaining", "0 pts"]));
   });
@@ -299,19 +337,27 @@ describe("Room Builder navigation and rewards", () => {
     expect(texts()).toContain("Bonus coins earned   +30");
   });
 
-  it("still opens the existing timed quiz and submits a correct answer", () => {
+  it("still completes the timed quiz and persists its coins in the shared balance", () => {
+    vi.useFakeTimers();
+    openRoom();
+    placeBench();
+    click("Finish Room");
+    click("Return to Menu");
     click("Mini-game");
     useFixedQuizQuestions = true;
     click("Geometry Quiz");
     useFixedQuizQuestions = false;
     expect(texts()).toContain("5 coins per correct answer, added to your next game");
-    for (const key of "4*pi") window.dispatchEvent(new KeyboardEvent("keydown", { key }));
-    click("Submit");
-    expect(texts()).toContain("Correct!");
-    stage
-      .find<Konva.Group>(".back")
-      .find((node) => node.isVisible())!
-      .fire("click");
-    expect(texts()).toContain("Main menu");
+    for (const answer of ["4*pi", "2", "4", "8", "2"]) {
+      for (const key of answer) window.dispatchEvent(new KeyboardEvent("keydown", { key }));
+      click("Submit");
+      expect(texts()).toContain("Correct!");
+      vi.advanceTimersByTime(1200);
+    }
+    back();
+    expect(texts()).toContain("Mini-game bonus: +30 coins in your next game");
+    const restored = new Progress(MAPS);
+    loadGame(restored, new TowerProgress());
+    expect(restored.bonusCoins).toBe(30);
   });
 });
