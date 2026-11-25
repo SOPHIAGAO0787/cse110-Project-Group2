@@ -23,6 +23,7 @@ import type { Vec } from "../../model/types";
 import type { Tower } from "../../model/Tower";
 import type { ShopTower } from "../../model/shop/types";
 import { TowerUpgradeHint } from "./TowerUpgradeHint";
+import { TutorialView } from "./TutorialView";
 
 export const TILE = 48; // pixels per tile, before the map is scaled to fit the window
 const SHOP_WIDTH = 260;
@@ -54,6 +55,7 @@ export class GameScreenView {
   speedButton: Konva.Group;
   readonly prompt: QuestionPrompt;
   readonly settings: SettingsPanel;
+  readonly tutorial = new TutorialView();
   private upgradeHint = new TowerUpgradeHint();
 
   private mapCols: number;
@@ -234,6 +236,7 @@ export class GameScreenView {
       this.messageText,
       this.leakFrame,
       this.waveBanner,
+      this.tutorial.group, // under the question and the settings, which cover the map too
       this.upgradeHint.group,
       this.prompt.group,
       this.settings.group,
@@ -357,6 +360,8 @@ export class GameScreenView {
     this.leakFrame.size({ width: mapWidth, height: mapHeight });
     this.waveBanner.position({ x: this.mapGroup.x(), y: this.mapGroup.y() + mapHeight * 0.2 });
     this.waveBanner.width(mapWidth);
+    // The tutorial sits at the bottom of the map, away from the shop and the HUD buttons
+    this.tutorial.place(this.mapGroup.x() + mapWidth / 2, this.mapGroup.y() + mapHeight - 12);
     this.prompt.resize(width, height);
     this.settings.resize(width, height);
   }

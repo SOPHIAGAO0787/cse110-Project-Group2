@@ -6,11 +6,12 @@ export const COINS_PER_CORRECT_ANSWER = 5;
 export const MAX_BONUS_COINS = 50;
 
 // What the player has done across games: which map they picked, the best stars on each map,
-// and the bonus coins earned in the mini-game. It lives in memory only, so refreshing the page
-// starts over.
+// the bonus coins earned in the mini-game, and whether they have seen the tutorial. It lives in
+// memory only, so refreshing the page starts over.
 export class Progress {
   currentMapId: string; // the map the player picked to play
   bonusCoins: number; // mini-game coins waiting to be added to the next game
+  tutorialDone: boolean; // true once the player finished or skipped the tutorial on map 1
   private mapIds: string[]; // in unlock order
   private bestStars: number[]; // one per map, same order as mapIds. 0 = not won yet
 
@@ -23,6 +24,7 @@ export class Progress {
     }
     this.currentMapId = this.mapIds[0];
     this.bonusCoins = 0;
+    this.tutorialDone = false;
   }
 
   // The first map is always open. Every other map opens once the map before it is won.

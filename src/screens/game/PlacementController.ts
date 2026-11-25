@@ -26,6 +26,8 @@ export class PlacementController {
   private layoutCards: () => void;
   private refreshHint: () => void;
   private cleanup: () => void;
+  // Runs when a tower's question opens. The controller sets it, for the tutorial.
+  onQuestionOpened: () => void = () => {};
 
   constructor(
     view: GameScreenView,
@@ -129,6 +131,7 @@ export class PlacementController {
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec, config?: TowerConfig): Promise<boolean> => {
       const question = this.questions.questionFor(def, config, this.mapNumber);
+      this.onQuestionOpened();
       const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
       if (!canCommit()) return false;
       return correct;

@@ -333,6 +333,15 @@ describe("GameScreenController feedback", () => {
   });
 });
 
+// The tutorial's current tip, read from the screen
+function tutorialText(): string {
+  const tip = controller.group.findOne<Konva.Text>(".tutorial-tip");
+  if (tip === undefined) {
+    throw new Error("The tutorial is missing from the screen");
+  }
+  return tip.text();
+}
+
 describe("GameScreenController questions during gameplay", () => {
   function openQuestion() {
     let answer!: (correct: boolean) => void;
@@ -458,6 +467,28 @@ describe("GameScreenController questions during gameplay", () => {
 
     expect(message).toHaveBeenCalledWith(text);
     expect(model.towers).toHaveLength(0);
+  });
+
+  it("moves the tutorial on once the tower's question opens and once the tower is built", async () => {
+    clickButton("Show me");
+    const { answer } = openQuestion();
+    expect(tutorialText()).toContain("Answer the question");
+
+    answer(true);
+    await settleAnswer();
+    expect(tutorialText()).toContain("Press Start Wave");
+  });
+
+  it("passes the tutorial's wave and speed tips if the player did them before building", async () => {
+    clickButton("Show me");
+    clickButton("Start Wave");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    expect(tutorialText()).toContain("Drag a tower"); // still waiting for the first tower
+
+    const { answer } = openQuestion();
+    answer(true);
+    await settleAnswer();
+    expect(tutorialText()).toContain("Click a tower on the map to upgrade it");
   });
 });
 
@@ -1490,5 +1521,51 @@ describe("GameScreenController confirm and cancel squares", () => {
     expect(
       controller.group.find<Konva.Text>("Text").filter((text) => text.text() === "Enter"),
     ).toHaveLength(0);
+  });
+});
+
+describe("GameScreenController tutorial", () => {
+  function tutorialShowing(): boolean {
+    const tutorial = controller.group.findOne(".tutorial");
+    if (tutorial === undefined) {
+      throw new Error("The tutorial is missing from the screen");
+    }
+    return tutorial.visible();
+  }
+
+  it("offers the tour in the first game on map 1", () => {
+    expect(tutorialShowing()).toBe(true);
+    expect(tutorialText()).toBe("New here? Take the 1-minute tour.");
+  });
+
+  it("is not shown on the other maps", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    controller.show();
+    expect(tutorialShowing()).toBe(false);
+  });
+
+  it("does not come back after Skip", () => {
+    clickButton("Skip");
+    expect(progress.tutorialDone).toBe(true);
+
+    controller.hide();
+    controller.show();
+    expect(tutorialShowing()).toBe(false);
+  });
+
+  it("starts over from the offer in a new game if it was not finished", () => {
+    clickButton("Show me");
+    controller.hide();
+    expect(tutorialShowing()).toBe(false);
+
+    controller.show();
+    expect(tutorialText()).toBe("New here? Take the 1-minute tour.");
+  });
+
+  it("is hidden when the game ends", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+    expect(tutorialShowing()).toBe(false);
   });
 });
