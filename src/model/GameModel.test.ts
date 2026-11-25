@@ -465,6 +465,25 @@ describe("GameModel game result (So1)", () => {
     expect(game.waves.currentWave).toBe(1); // lost during wave 1, so wave 2 never started
   });
 
+  it("can be lost on map1 with a single circle tower, wherever it stands (#118)", () => {
+    const rows = loadMap(map1).tiles;
+    const buildable: Vec[] = [];
+    rows.forEach((row, y) =>
+      [...row].forEach((tile, x) => {
+        if (tile === "#") buildable.push({ x, y });
+      }),
+    );
+    expect(buildable.length).toBeGreaterThan(0);
+
+    for (const tile of buildable) {
+      const game = new GameModel(loadMap(map1));
+      expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+
+      expect(playUntilOver(game), `circle on (${tile.x}, ${tile.y})`).toEqual([false]);
+      expect(game.result).toMatchObject({ won: false, remainingLives: 0, towersPlaced: 1 });
+    }
+  });
+
   it("counts losing the last life on the step the last wave clears as a defeat", () => {
     const game = gameWithLives(MAP1_ENEMIES);
 

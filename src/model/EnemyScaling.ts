@@ -4,7 +4,7 @@ import { EnemyDef } from "./types";
  * Returns an enemy definition scaled to the given wave.
  *
  * Wave 1 uses the original stats.
- * Each subsequent wave increases HP by 15%
+ * Each subsequent wave increases HP by 10%
  * and speed by 5% of the original values.
  */
 export function scaleEnemyDef(base: EnemyDef, waveNumber: number): EnemyDef {
