@@ -9,8 +9,9 @@ export class Wallet {
     this.events = events;
     this.coins = startingCoins;
 
-    // Killing an enemy earns its reward
+    // Killing an enemy earns its reward, and clearing a wave earns the wave's bonus
     events.on("enemyKilled", (e) => this.add(e.reward));
+    events.on("waveCleared", (e) => this.add(e.bonus));
   }
 
   // True if the player has at least `cost` coins.

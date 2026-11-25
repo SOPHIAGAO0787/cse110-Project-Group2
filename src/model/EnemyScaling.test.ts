@@ -22,7 +22,7 @@ describe("EnemyScaling", () => {
   it("increases health and speed in later waves", () => {
     const scaled = scaleEnemyDef(basic, 3);
 
-    expect(scaled.hp).toBe(26);
+    expect(scaled.hp).toBe(24); // 20 HP + 10% per wave, twice
     expect(scaled.speed).toBeCloseTo(1.65);
   });
 

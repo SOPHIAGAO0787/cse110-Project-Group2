@@ -37,6 +37,9 @@ export interface MapConfig {
 export interface WaveConfig {
   // Groups spawn one after another; each spawns `count` enemies `intervalSec` apart
   groups: { enemy: string; count: number; intervalSec: number }[];
+  // Coins the player gets when the whole wave is cleared, on top of the kill rewards.
+  // 0 if left out. A whole number, 0 or more.
+  clearBonus?: number;
 }
 
 export interface EnemyDef {
@@ -122,7 +125,7 @@ export interface GameEvents {
   coinsChanged: { coins: number };
   livesChanged: { lives: number };
   waveStarted: { wave: number; totalWaves: number };
-  waveCleared: { wave: number };
+  waveCleared: { wave: number; bonus: number }; // bonus: coins for clearing it, 0 for none
   towerPlaced: { towerId: number; defId: string; tile: Vec };
   towerFired: { towerId: number };
   gameOver: { won: boolean };

@@ -58,9 +58,9 @@ describe("Tower shop UI interactions", () => {
     expect(tower.def.name).toBe("Circle Tower");
     expect(tower.def.description).toBe("Hits enemies inside a circle around it.");
     expect(tower.unlockCost).toBe(tower.def.cost);
-    expect(tower.levels[0].damage).toBe(5);
-    expect(tower.levels[0].attackSpeed).toBe(1);
-    expect(tower.levels[0].radius).toBe(2.5);
+    expect(tower.levels[0].damage).toBe(7);
+    expect(tower.levels[0].attackSpeed).toBe(0.8);
+    expect(tower.levels[0].radius).toBe(2);
   });
 
   it("provides the next upgrade's cost and improved abilities", () => {

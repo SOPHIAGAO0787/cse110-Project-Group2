@@ -14,6 +14,7 @@ import {
   SIDEBAR_FILL,
   TITLE_TEXT,
   WARNING_TEXT,
+  GOOD_TEXT,
 } from "../theme";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { SettingsPanel } from "./SettingsPanel";
@@ -299,9 +300,10 @@ export class GameScreenView {
     this.startWaveButton.visible(canStart);
   }
 
-  // Shows a message under the HUD for 2 seconds.
-  showMessage(text: string): void {
+  // Shows a message under the HUD for 2 seconds, in red like a warning unless it is good news.
+  showMessage(text: string, good = false): void {
     this.messageText.text(text);
+    this.messageText.fill(good ? GOOD_TEXT : WARNING_TEXT);
     this.messageText.visible(true);
     // Restart the 2 seconds if a message is already showing, so the old timeout can't hide the new one
     window.clearTimeout(this.messageTimer);

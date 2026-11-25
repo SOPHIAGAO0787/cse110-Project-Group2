@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GameScreenView, TILE } from "./GameScreenView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { Sound } from "../../core/Sound";
+import { GOOD_TEXT, WARNING_TEXT } from "../theme";
 
 let view: GameScreenView;
 
@@ -174,5 +175,30 @@ describe("GameScreenView feedback", () => {
     expect(frame.position()).toEqual(view.mapGroup.position());
     expect(frame.width()).toBeCloseTo(16 * TILE * view.mapGroup.scaleX());
     expect(frame.height()).toBeCloseTo(10 * TILE * view.mapGroup.scaleY());
+  });
+});
+
+describe("GameScreenView messages", () => {
+  const messageText = () =>
+    view.group.getChildren().find((node): node is Konva.Text => {
+      return node instanceof Konva.Text && node.fontStyle() === "bold" && node.fontSize() === 18;
+    })!;
+
+  it("shows a message in the warning color by default", () => {
+    view.showMessage("Not enough coins");
+    expect(messageText().text()).toBe("Not enough coins");
+    expect(messageText().fill()).toBe(WARNING_TEXT);
+  });
+
+  it("shows good news in green", () => {
+    view.showMessage("Wave 1 cleared: +10 coins", true);
+    expect(messageText().text()).toBe("Wave 1 cleared: +10 coins");
+    expect(messageText().fill()).toBe(GOOD_TEXT);
+  });
+
+  it("goes back to the warning color for the next ordinary message", () => {
+    view.showMessage("Wave 1 cleared: +10 coins", true);
+    view.showMessage("Not enough coins");
+    expect(messageText().fill()).toBe(WARNING_TEXT);
   });
 });

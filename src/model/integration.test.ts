@@ -157,7 +157,7 @@ describe("Integration: a game on map1", () => {
     expect(progress.isUnlocked("map2")).toBe(false);
 
     const won = new GameModel(loadMap(map1));
-    won.events.emit("waveCleared", { wave: map1.waves.length });
+    won.events.emit("waveCleared", { wave: map1.waves.length, bonus: 0 });
     won.tick(0);
     progress.recordResult("map1", finalStars(won));
     expect(progress.isUnlocked("map2")).toBe(true);
@@ -171,9 +171,10 @@ describe("Integration: a game on map1", () => {
       rewards.push(reward);
     });
 
-    // (6, 2) is inside the bend where the path goes down and then right,
-    // so the enemy stays in the circle's range on both sides of the corner.
-    expect(game.tryPlaceTower("circle", { x: 6, y: 2 })).toBe("ok");
+    // (3, 3) is next to the corner where the path turns from going down to going right,
+    // so the enemy stays in the circle's range on both sides of the corner, long enough
+    // for three shots to kill it.
+    expect(game.tryPlaceTower("circle", { x: 3, y: 3 })).toBe("ok");
     game.spawnEnemy("basic");
     const enemy = game.enemies[0];
 
@@ -209,14 +210,15 @@ describe("Integration: a game on map1", () => {
       lastCoins = coins;
     });
 
-    // Buildable tiles beside the path, best first
+    // Buildable tiles beside the path, best first. A circle on (6, 3) or (3, 3) kills a basic
+    // enemy on its own, and with the rest the five waves of map1 can be won.
     const towerTiles: Vec[] = [
       { x: 6, y: 3 },
+      { x: 3, y: 3 },
+      { x: 3, y: 2 },
+      { x: 7, y: 3 },
       { x: 6, y: 2 },
       { x: 4, y: 5 },
-      { x: 13, y: 4 },
-      { x: 7, y: 3 },
-      { x: 3, y: 5 },
     ];
     playUntilOver(won, towerTiles);
 
@@ -247,6 +249,16 @@ describe("Integration: a game on map1", () => {
   });
 });
 
+// Lets every enemy of the running wave spawn, and kills each one right away so none leak.
+function clearWave(game: GameModel): void {
+  while (game.waves.lastSpawnRemaining !== null) {
+    game.tick(0.1);
+    for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
+  }
+  for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
+  game.tick(0);
+}
+
 it("prepares the next wave only after cleanup, then ends normally after the final wave", () => {
   const game = new GameModel(loadMap(map1));
   game.tick(10);
@@ -264,13 +276,19 @@ it("prepares the next wave only after cleanup, then ends normally after the fina
   game.tick(1);
   expect(game.waves.currentWave).toBe(2);
   expect(game.enemies).toHaveLength(1);
-  game.tick(6.3);
-  for (const enemy of game.enemies) enemy.takeDamage(enemy.hp);
-  game.tick(0);
+  const finalWave = map1.waves.length;
+  for (let wave = 2; wave < finalWave; wave++) {
+    clearWave(game);
+    expect(game.isOver).toBe(false);
+    expect(game.waves.preparationRemaining).toBe(WAVE_PREPARATION_SECONDS);
+    game.startNextWave();
+    expect(game.waves.currentWave).toBe(wave + 1);
+  }
+  clearWave(game);
   expect(game.result?.won).toBe(true);
   expect(game.waves.preparationRemaining).toBeNull();
   game.tick(100);
-  expect(game.waves.currentWave).toBe(2);
+  expect(game.waves.currentWave).toBe(finalWave);
 });
 
 it("freezes preparation after defeat", () => {

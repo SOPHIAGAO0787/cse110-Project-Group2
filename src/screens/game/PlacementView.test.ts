@@ -25,7 +25,8 @@ describe("PlacementView", () => {
     const view = new PlacementView(circle);
     view.show({ x: 2, y: 2 }, true);
     expect(ringOf(view).visible()).toBe(true);
-    expect(ringOf(view).radius()).toBe(2.5 * TILE);
+    const radius = circle.range.kind === "circle" ? circle.range.radius : 0;
+    expect(ringOf(view).radius()).toBe(radius * TILE);
   });
 
   it("shows no ring for a triangle tower until a cone is given", () => {
