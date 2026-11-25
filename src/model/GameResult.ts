@@ -10,9 +10,15 @@ export interface GameResult {
   enemiesDefeated: number;
   coinsEarned: number; // kill rewards earned this run, before spending
   score: number; // 100 points per enemy defeated
+  shopCoinsEarned: number; // Tower Shop coins for this game, 0 on defeat (see shopCoinReward)
 }
 
 export const MAX_STARS = 3;
+
+// Every win pays Tower Shop coins: 25 per star. Defeat has 0 stars, so it pays nothing.
+export function shopCoinReward(stars: number): number {
+  return stars * 25;
+}
 
 // Victory earns stars by the share of lives kept: all of them = 3, at least half = 2, fewer = 1.
 // Defeat always earns 0.

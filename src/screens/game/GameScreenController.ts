@@ -166,6 +166,7 @@ export class GameScreenController implements Screen {
       this.refreshWaveTimers();
       const result = this.model.result;
       if (result) {
+        this.towerProgress.shopCoins += result.shopCoinsEarned;
         // A win unlocks the next map and its stars show on the map screen
         this.progress.recordResult(this.map.id, result.stars);
         // This game had the bonus coins. Leaving early (no result) keeps them for the next game.

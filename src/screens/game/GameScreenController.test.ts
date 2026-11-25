@@ -658,6 +658,49 @@ describe("GameScreenController settings", () => {
   });
 });
 
+describe("GameScreenController Tower Shop coins", () => {
+  // Wins the current game with this many lives left
+  function win(lives: number): void {
+    model.lives.remaining = lives;
+    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.tick(0);
+  }
+
+  it.each([
+    [20, 3, 75],
+    [10, 2, 50],
+    [1, 1, 25],
+  ])("pays a win with %i lives left (%i stars) %i coins", (lives, stars, reward) => {
+    win(lives);
+    expect(model.result).toMatchObject({ won: true, stars, shopCoinsEarned: reward });
+    expect(towerProgress.shopCoins).toBe(200 + reward);
+  });
+
+  it("pays again for winning the same map again", () => {
+    win(1);
+    controller.hide();
+    controller.show();
+    model = models[models.length - 1];
+    win(20);
+    expect(model.result).toMatchObject({ won: true, stars: 3, shopCoinsEarned: 75 });
+    expect(towerProgress.shopCoins).toBe(300);
+  });
+
+  it("pays nothing for a loss", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+    expect(model.result).toMatchObject({ won: false, shopCoinsEarned: 0 });
+    expect(towerProgress.shopCoins).toBe(200);
+  });
+
+  it("does not reward leaving an unfinished match", () => {
+    clickIcon("back");
+    controller.hide();
+    expect(towerProgress.shopCoins).toBe(200);
+    expect(switchTo).toHaveBeenCalledWith("maps");
+  });
+});
+
 describe("GameScreenController mini-game bonus coins", () => {
   // Starts a new game, the way the App does when the player picks a map again
   function startNewGame(): void {
