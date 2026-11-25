@@ -2,7 +2,7 @@ import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
 import { Sound } from "../../core/Sound";
 import { GameModel } from "../../model/GameModel";
-import { findMap } from "../../model/loadContent";
+import { findMap, MAPS } from "../../model/loadContent";
 import type { MapConfig } from "../../model/types";
 import type { Screen, ScreenSwitcher } from "../../app/types";
 import { GameScreenView } from "./GameScreenView";
@@ -141,6 +141,7 @@ export class GameScreenController implements Screen {
       () => this.active,
       this.screenHeight,
     );
+    this.placement.onQuestionOpened = () => this.view.tutorial.advance("question");
 
     const refreshHud = () => {
       this.refreshUpgradeHint();
@@ -160,6 +161,7 @@ export class GameScreenController implements Screen {
     events.on("gameOver", () => {
       this.loop.stop();
       this.view.prompt.cancel();
+      this.view.tutorial.stop();
       this.disposePlacement();
       this.refreshWaveTimers();
       const result = this.model.result;
@@ -185,6 +187,8 @@ export class GameScreenController implements Screen {
       if (tower) towersView.add(tower);
     });
     events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
+    events.on("towerPlaced", () => this.view.tutorial.advance("towerPlaced"));
+    events.on("waveStarted", () => this.view.tutorial.advance("waveStarted"));
 
     // Feedback for kills, new waves and lost lives
     events.on("enemyKilled", ({ enemyId, reward }) => {
@@ -215,6 +219,13 @@ export class GameScreenController implements Screen {
     this.view.settings.close();
     this.view.backButton.visible(true);
 
+    // The tutorial is for the first map, until the player finishes or skips it once
+    if (this.map.id === MAPS[0].id && !this.progress.tutorialDone) {
+      this.view.tutorial.start(() => {
+        this.progress.tutorialDone = true;
+      });
+    }
+
     window.addEventListener("keydown", this.onSpeedKey);
     this.active = true;
     this.group.visible(true);
@@ -226,6 +237,7 @@ export class GameScreenController implements Screen {
     window.removeEventListener("keydown", this.onSpeedKey);
     this.view.prompt.cancel(); // closes the popup and removes its key listener
     this.view.settings.close(); // also removes its Escape listener
+    this.view.tutorial.stop();
     this.disposePlacement();
     this.loop.stop();
     this.model.events.clear();
@@ -292,5 +304,6 @@ export class GameScreenController implements Screen {
       this.speed = 1;
     }
     this.view.setSpeed(this.speed);
+    this.view.tutorial.advance("speed");
   }
 }
