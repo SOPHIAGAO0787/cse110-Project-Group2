@@ -11,7 +11,7 @@ A tower defense game where you answer geometry questions to build your defenses.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
 - **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
 - **Stars and stats** at the end of every game, and the best stars on each map are kept on the map screen.
-- **Tower Shop** to unlock towers and raise their upgrade level, and a **mini-game** that earns bonus coins.
+- **Tower Shop** to unlock towers and raise their upgrade level, and **two mini-games** that earn bonus coins.
 - **Double speed, music, and sound effects**, with a settings menu to pause the game or switch the sound off.
 
 ## Play it
@@ -58,17 +58,23 @@ The triangle and square towers are aimed after they are dropped: move the mouse 
 
 Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols.
 
-## Tower Shop and mini-game
+## Tower Shop and mini-games
 
 The **Tower Shop** unlocks the triangle and square towers and raises each tower's upgrade level. A placed tower can be upgraded in a game up to the level bought here. The shop has its own coins for now; coins earned in games do not count there yet.
 
 ![The Tower Shop showing the circle tower's stats and next upgrade](assets/tower-shop.png)
 
-The **mini-game** is a five-question geometry quiz with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50.
+**Geometry Quiz** is a five-question round with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50.
 
 ![Answering the five mini-game questions and returning to the menu with a coin bonus](assets/mini-game.gif)
 
-**Coming next (Sprint 3):** balancing the maps, saving progress, a leaderboard, and a second mini-game. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+From the main menu, select **Mini-game → Room Builder**. Drag benches, square towers, and triangle towers from the menu onto the 8 m × 6 m grid. A green preview means the piece fits. Drag placed pieces to reposition them. Select a bench or triangle and use **Rotate** to turn it. Use **Undo** to reverse the last placement, move, or rotation, or **Reset Room** to start over.
+
+Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards 5 bonus coins for every full 8 m² placed, up to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game.
+
+The browser saves map stars, the tutorial flag, shop coins, tower upgrades, and unused mini-game bonus coins across reloads.
+
+**Coming next (Sprint 3):** balancing the maps and a leaderboard. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 
@@ -84,14 +90,14 @@ src/
     Progress.ts       what is kept between games: the chosen map, stars, and bonus coins
     geometry/         tower range shapes
     questions/        picks and checks geometry questions
-    minigame/         the rules of the timed geometry quiz
+    minigame/         the quiz and Room Builder rules
     shop/             shop data: tower costs, stats, and upgrades
   data/               maps, towers, enemies, upgrades, and questions (JSON)
   screens/            Menu, Map Select and Result screens, and what screens share:
                       Page (header and card), theme (colors and font), and buttons
     game/             the game screen: view, controller, grid, towers, enemies, effects,
                       placement, question popup, and settings
-    minigame/         the mini-game screen
+    minigame/         the minigame picker, quiz, and Room Builder
     shop/             the Tower Shop screen
 assets/               images for this README
 public/audio/         the music loop and the sound effects, made for this game
