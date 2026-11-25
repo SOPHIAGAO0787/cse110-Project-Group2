@@ -78,6 +78,15 @@ export class QuestionPrompt {
     verticalAlign: "middle",
     wrap: "none",
   });
+  // Tells the player which kinds of answers the box understands
+  private formatText = new Konva.Text({
+    x: PAD,
+    width: PANEL_W - 2 * PAD,
+    text: "You can type π, fractions or decimals",
+    fontSize: 12,
+    fill: "#aaa",
+    align: "center",
+  });
   private cursorBar = new Konva.Rect({ y: 98, width: 2, height: 24, fill: "black" });
   private symbolRow = new Konva.Group({
     x: (PANEL_W - (SYMBOLS.length * SYMBOL_W + (SYMBOLS.length - 1) * SYMBOL_GAP)) / 2,
@@ -115,6 +124,7 @@ export class QuestionPrompt {
   private phase: "typing" | "wrong" | "correct" = "typing";
   private resolve: ((correct: boolean) => void) | null = null;
   private attemptsLeft = 0;
+  private cost = 0; // coins a wrong answer costs, shown after the last try
   private width = 0;
   private height = 0;
   private panelH = 0; // set by layout(), because it depends on the question
@@ -187,6 +197,7 @@ export class QuestionPrompt {
       this.promptText,
       this.inputBox,
       this.inputText,
+      this.formatText,
       this.symbolRow,
       this.answerLabel,
       this.cursorBar,
@@ -201,7 +212,7 @@ export class QuestionPrompt {
   }
 
   // Stacks everything from the top down, so the panel is as tall as this question needs:
-  // question, input box, symbol row, a reserved feedback area, then the buttons.
+  // question, input box, the grey format line, symbol row, a reserved feedback area, then the buttons.
   private layout(hint: string): void {
     this.titleText.y(PAD);
     const closeBottom = CLOSE_MARGIN + CLOSE_SIZE;
@@ -211,8 +222,11 @@ export class QuestionPrompt {
     this.inputText.y(inputY);
     this.cursorBar.y(inputY + (INPUT_H - this.cursorBar.height()) / 2);
 
-    const symbolsY = inputY + INPUT_H + 8;
-    this.answerLabel.y(symbolsY + 6);
+    const formatY = inputY + INPUT_H + 4;
+    this.formatText.y(formatY);
+    this.answerLabel.y(formatY); // shown in place of the format line once the tries are used up
+
+    const symbolsY = formatY + this.formatText.height() + 4;
     this.symbolRow.y(symbolsY);
 
     // Reserve room for the longest feedback this question can show, so the panel
@@ -222,7 +236,7 @@ export class QuestionPrompt {
     let feedbackH = MIN_FEEDBACK_H;
     for (const text of [
       `Not quite. ${hint}\n(${MAX_ATTEMPTS} tries left)`,
-      `Not quite.\nYou answered ${"8".repeat(MAX_TYPED)}.\n${hint}`, // the longest answer the box allows
+      this.lastTryText("8".repeat(MAX_TYPED), hint), // the longest answer the box allows
     ]) {
       this.feedback.text(text);
       feedbackH = Math.max(feedbackH, this.feedback.height());
@@ -237,12 +251,29 @@ export class QuestionPrompt {
     this.panel.height(this.panelH);
   }
 
+  // What the feedback says once the last try is wrong
+  private lastTryText(typed: string, hint: string): string {
+    let firstLine = "Not quite.";
+    if (this.cost > 0) {
+      firstLine = `Not quite. −${this.cost} coins`;
+    }
+    return `${firstLine}\nYou answered ${typed}.\n${hint}`;
+  }
+
   // Shows the popup next to `anchor` (screen pixels, not map pixels).
+  // cost is the coins a wrong answer takes, shown after the last try (0 shows nothing).
   // Resolves true if the player answers correctly, false otherwise.
-  ask(question: PickedQuestion, anchor: Vec): Promise<boolean> {
+  ask(question: PickedQuestion, anchor: Vec, cost = 0): Promise<boolean> {
     this.cancel(); // in case a previous question is somehow still open
 
     this.question = question;
+    this.cost = cost;
+    // Skipping costs coins too, so the player is told before closing the question
+    if (cost > 0) {
+      this.formatText.text(`You can type π, fractions or decimals\nSkipping costs ${cost} coins`);
+    } else {
+      this.formatText.text("You can type π, fractions or decimals");
+    }
     this.typed = "";
     this.cursor = 0;
     this.phase = "typing";
@@ -250,6 +281,7 @@ export class QuestionPrompt {
     this.submitButton.visible(true);
     this.continueButton.visible(false);
     this.symbolRow.visible(true);
+    this.formatText.visible(true);
     this.answerLabel.visible(false);
     this.inputText.fill("black");
     this.feedback.fill("#ff6b6b");
@@ -402,6 +434,7 @@ export class QuestionPrompt {
       this.phase = "correct";
       this.symbolRow.visible(false);
       this.cursorBar.visible(false);
+      this.formatText.visible(false);
       this.inputText.fill("#15803d");
       this.inputBox.stroke("#4ade80");
       this.inputBox.strokeWidth(3);
@@ -423,8 +456,9 @@ export class QuestionPrompt {
       this.phase = "wrong";
       this.symbolRow.visible(false);
       this.cursorBar.visible(false);
+      this.formatText.visible(false);
       this.answerLabel.visible(true);
-      this.feedback.text(`Not quite.\nYou answered ${this.typed}.\n${this.question.hint}`);
+      this.feedback.text(this.lastTryText(this.typed, this.question.hint));
       this.inputText.text(formatAnswer(this.question.answer));
       this.inputText.fill("#15803d");
       this.inputBox.stroke("#4ade80");

@@ -2,6 +2,7 @@
   "general": [
     {
       "id": "gen-triangle-angle-sum",
+      "level": 1,
       "prompt": "What do the three angles of any triangle add up to, in degrees?",
       "answer": 180,
       "tolerance": 0,
@@ -9,6 +10,7 @@
     },
     {
       "id": "gen-quadrilateral-angle-sum",
+      "level": 1,
       "prompt": "What do the four angles of any quadrilateral add up to, in degrees?",
       "answer": 360,
       "tolerance": 0,
@@ -16,6 +18,7 @@
     },
     {
       "id": "gen-rect-area",
+      "level": 1,
       "prompt": "A rectangle is 3 tiles wide and 4 tiles tall. What is its area in tiles²?",
       "answer": 12,
       "tolerance": 0,
@@ -23,6 +26,7 @@
     },
     {
       "id": "gen-rect-perimeter",
+      "level": 1,
       "prompt": "A rectangle is 8 long and 3 wide. What is its perimeter?",
       "answer": 22,
       "tolerance": 0,
@@ -30,6 +34,7 @@
     },
     {
       "id": "gen-square-area",
+      "level": 2,
       "prompt": "A square has sides of length 7.5. What is its area?",
       "answer": 56.25,
       "tolerance": 0,
@@ -37,6 +42,7 @@
     },
     {
       "id": "gen-square-perimeter",
+      "level": 1,
       "prompt": "A square has sides of length 5. What is its perimeter?",
       "answer": 20,
       "tolerance": 0,
@@ -44,6 +50,7 @@
     },
     {
       "id": "gen-easy-triangle-area",
+      "level": 1,
       "prompt": "A triangle has a base of 6 and a height of 4. What is its area?",
       "answer": 12,
       "tolerance": 0,
@@ -51,6 +58,7 @@
     },
     {
       "id": "gen-hard-triangle-perimeter",
+      "level": 3,
       "prompt": "A right triangle has non-hypotenuse legs of length 12 and 5. What is its perimeter?",
       "answer": 30,
       "tolerance": 0,
@@ -58,6 +66,7 @@
     },
     {
       "id": "gen-hypotenuse",
+      "level": 2,
       "prompt": "A right triangle has legs of length 3 and 4. How long is the hypotenuse?",
       "answer": 5,
       "tolerance": 0,
@@ -65,6 +74,7 @@
     },
     {
       "id": "gen-circle-area",
+      "level": 2,
       "prompt": "What is the area of a circle with radius 1?",
       "answer": 3.14159265,
       "tolerance": 0.01,
@@ -72,6 +82,7 @@
     },
     {
       "id": "gen-square-side",
+      "level": 2,
       "prompt": "A square has an area of 49. How long is one side?",
       "answer": 7,
       "tolerance": 0,
@@ -79,6 +90,7 @@
     },
     {
       "id": "gen-right-angle",
+      "level": 1,
       "prompt": "How many degrees are in a right angle?",
       "answer": 90,
       "tolerance": 0,
@@ -86,6 +98,7 @@
     },
     {
       "id": "gen-circle-diameter",
+      "level": 1,
       "prompt": "A circle has a radius of 6. What is its diameter?",
       "answer": 12,
       "tolerance": 0,
@@ -95,6 +108,7 @@
   "circle": [
     {
       "id": "circle-circumference-d",
+      "level": 2,
       "prompt": "A circle has a diameter of 10. What is its circumference?",
       "answer": 31.4159265,
       "tolerance": 0.2,
@@ -102,6 +116,7 @@
     },
     {
       "id": "circle-radius-from-d",
+      "level": 1,
       "prompt": "A circle has a diameter of 7. What is its radius?",
       "answer": 3.5,
       "tolerance": 0,
@@ -109,6 +124,7 @@
     },
     {
       "id": "circle-degrees",
+      "level": 1,
       "prompt": "How many degrees are in a full circle?",
       "answer": 360,
       "tolerance": 0,
@@ -116,6 +132,7 @@
     },
     {
       "id": "circle-radius-t",
+      "level": 1,
       "template": "This tower's range has a diameter of {diameter} tiles. What is its radius?",
       "answer": "radius",
       "relativeTolerance": 0.01,
@@ -123,6 +140,7 @@
     },
     {
       "id": "easy-circle-diameter-t",
+      "level": 1,
       "template": "This tower's range has a radius of {radius} tiles. What is its diameter?",
       "answer": "2 * radius",
       "tolerance": 0,
@@ -130,6 +148,7 @@
     },
     {
       "id": "easy-circle-circumference-t",
+      "level": 2,
       "template": "This tower's range has a radius of {radius} tiles. What is its circumference?",
       "answer": "2 * pi * radius",
       "relativeTolerance": 0.01,
@@ -137,6 +156,7 @@
     },
     {
       "id": "easy-circle-area-t",
+      "level": 2,
       "template": "This tower's range has a radius of {radius} tiles. How much area does it cover?",
       "answer": "pi * radius^2",
       "relativeTolerance": 0.01,
@@ -144,6 +164,7 @@
     },
     {
       "id": "mid-circle-circumference-t",
+      "level": 2,
       "template": "This tower's range has a diameter of {diameter} tiles. What is its circumference?",
       "answer": "2 * pi * radius",
       "relativeTolerance": 0.01,
@@ -151,6 +172,7 @@
     },
     {
       "id": "hard-circle-diameter-t",
+      "level": 3,
       "template": "This tower covers an area of {areaOverPi}π tiles². What is its diameter?",
       "answer": "2 * radius",
       "hint": "Area = πr².",
@@ -158,6 +180,7 @@
     },
     {
       "id": "hard-circle-circumference-t",
+      "level": 3,
       "template": "This tower covers an area of {areaOverPi}π tiles². What is its circumference?",
       "answer": "2 * pi * radius",
       "relativeTolerance": 0.01,
@@ -165,6 +188,7 @@
     },
     {
       "id": "hard-circle-area-t",
+      "level": 3,
       "template": "This tower's range has a circumference of {circumferenceOverPi}π tiles. What is its area?",
       "answer": "pi * radius^2",
       "relativeTolerance": 0.01,
@@ -172,6 +196,7 @@
     },
     {
       "id": "tower-dpm-circle-t",
+      "level": 2,
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,
@@ -181,6 +206,7 @@
   "triangle": [
     {
       "id": "triangle-third-angle",
+      "level": 1,
       "prompt": "A triangle has angles of 50° and 50°. What is the third angle in °?",
       "answer": 80,
       "tolerance": 0,
@@ -188,6 +214,7 @@
     },
     {
       "id": "triangle-right-acute",
+      "level": 1,
       "prompt": "A right triangle has one 30° angle. What is the other acute angle in °?",
       "answer": 60,
       "tolerance": 0,
@@ -195,6 +222,7 @@
     },
     {
       "id": "triangle-equilateral",
+      "level": 1,
       "prompt": "What is each angle of an equilateral triangle in °?",
       "answer": 60,
       "tolerance": 0,
@@ -202,6 +230,7 @@
     },
     {
       "id": "triangle-quarter",
+      "level": 1,
       "prompt": "A 90° sector covers what fraction of a full circle?",
       "answer": 0.25,
       "tolerance": 0.01,
@@ -209,6 +238,7 @@
     },
     {
       "id": "triangle-isosceles",
+      "level": 2,
       "prompt": "An isosceles triangle has a top angle of 40°. What angle are both of the two equal base angles in °?",
       "answer": 70,
       "tolerance": 0,
@@ -216,6 +246,7 @@
     },
     {
       "id": "easy-triangle-area-t",
+      "level": 2,
       "template": "Your sector has a radius of {radius} tiles and an angle of {degrees}°. How much area does it cover?",
       "answer": "fraction * pi * radius^2",
       "relativeTolerance": 0.01,
@@ -223,6 +254,7 @@
     },
     {
       "id": "easy-triangle-fraction-t",
+      "level": 1,
       "template": "Your sector has an angle of {degrees}°. What fraction of a full circle is that?",
       "answer": "degrees / 360",
       "tolerance": 0.01,
@@ -230,6 +262,7 @@
     },
     {
       "id": "easy-triangle-arc-t",
+      "level": 2,
       "template": "Your sector has a radius of {radius} tiles and an angle of {degrees}°. How long is its curved edge?",
       "answer": "fraction * 2 * pi * radius",
       "relativeTolerance": 0.01,
@@ -237,6 +270,7 @@
     },
     {
       "id": "hard1-triangle-radius-t",
+      "level": 3,
       "template": "Your sector has a curved edge of length {arcOverPi}π tiles and an angle of {degrees}°. How long is its radius? Round to the nearest thousandth.",
       "answer": "radius",
       "relativeTolerance": 0.01,
@@ -244,6 +278,7 @@
     },
     {
       "id": "hard2-triangle-radius-t",
+      "level": 3,
       "template": "Your sector covers an area of {areaOverPi}π tiles² and has an angle of {degrees}°. How long is its radius? Round to the nearest thousandth.",
       "answer": "radius",
       "relativeTolerance": 0.01,
@@ -251,6 +286,7 @@
     },
     {
       "id": "triangle-degrees-t",
+      "level": 2,
       "template": "Your sector is {fractionDecimal} of a full circle. What is the angle of the sector?",
       "answer": "degrees",
       "hint": "How many degrees are in a full circle?",
@@ -258,6 +294,7 @@
     },
     {
       "id": "hard-triangle-area-t",
+      "level": 3,
       "template": "Your sector has a curved edge of length {arcOverPi}π tiles and an angle of {degrees}°. How much area does it cover? Round to the nearest thousandth.",
       "answer": "fraction * pi * radius^2",
       "relativeTolerance": 0.01,
@@ -265,6 +302,7 @@
     },
     {
       "id": "hard-triangle-arc-t",
+      "level": 3,
       "template": "Your sector covers an area of {areaOverPi}π tiles² and has an angle of {degrees}°. How long is its curved edge? Round to the nearest thousandth.",
       "answer": "fraction * 2 * pi * radius",
       "relativeTolerance": 0.01,
@@ -272,6 +310,7 @@
     },
     {
       "id": "tower-dpm-triangle-t",
+      "level": 2,
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,
@@ -281,6 +320,7 @@
   "rectangle": [
     {
       "id": "rect-block-tiles",
+      "level": 1,
       "prompt": "A block of tiles is 2 wide and 3 deep. How many tiles is that?",
       "answer": 6,
       "tolerance": 0,
@@ -288,6 +328,7 @@
     },
     {
       "id": "rect-perimeter",
+      "level": 1,
       "prompt": "A rectangle is 2 by 3. What is its perimeter?",
       "answer": 10,
       "tolerance": 0,
@@ -295,6 +336,7 @@
     },
     {
       "id": "rect-missing-side",
+      "level": 1,
       "prompt": "A rectangle has an area of 12 and one side of 3. How long is the other side?",
       "answer": 4,
       "tolerance": 0,
@@ -302,6 +344,7 @@
     },
     {
       "id": "rect-square-diagonal",
+      "level": 2,
       "prompt": "A square has sides of length 1. How long is its diagonal?",
       "answer": 1.41421356,
       "tolerance": 0.01,
@@ -309,6 +352,7 @@
     },
     {
       "id": "rect-area-t",
+      "level": 1,
       "template": "Your block is {width} tiles wide and {depth} tiles deep. What is its area?",
       "answer": "width * depth",
       "tolerance": 0,
@@ -316,6 +360,7 @@
     },
     {
       "id": "rect-perimeter-t",
+      "level": 1,
       "template": "Your block is {width} tiles wide and {depth} tiles deep. What is its perimeter?",
       "answer": "2 * (width + depth)",
       "tolerance": 0,
@@ -323,6 +368,7 @@
     },
     {
       "id": "rect-diagonal-t",
+      "level": 2,
       "template": "Your block is {width} tiles wide and {depth} tiles deep. How long is its diagonal?",
       "answer": "sqrt(width^2 + depth^2)",
       "relativeTolerance": 0.01,
@@ -330,6 +376,7 @@
     },
     {
       "id": "rect-rate-t",
+      "level": 3,
       "template": "A block of area {rateArea} fires {baseRate} shots per second, and smaller blocks fire faster: rate × {rateArea} ÷ area. Your block has area {area}. How many shots are fired per minute?",
       "answer": "60 * baseRate * rateArea / area",
       "tolerance": 0.5,
@@ -337,6 +384,7 @@
     },
     {
       "id": "tower-dpm-rectangle-t",
+      "level": 2,
       "template": "This tower deals {damage} damage per shot and fires {rate} shots per second. How much damage per minute is that?",
       "answer": "60 * damage * rate",
       "tolerance": 0.02,

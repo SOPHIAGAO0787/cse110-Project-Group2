@@ -83,6 +83,7 @@ interface Parts {
   promptText: Konva.Text;
   inputBox: Konva.Rect;
   inputText: Konva.Text;
+  formatText: Konva.Text;
   answerLabel: Konva.Text;
   feedback: Konva.Text;
   closeButton: Konva.Group;
@@ -459,6 +460,20 @@ describe("QuestionPrompt functionality", () => {
       expect(symbolRow.y()).toBeGreaterThan(inputBox().y() + 40);
     });
 
+    it("shows a grey line under the input box saying what can be typed", () => {
+      void prompt.ask(question, anchor);
+      const { formatText } = parts();
+      expect(formatText.visible()).toBe(true);
+      expect(formatText.text()).toBe("You can type π, fractions or decimals");
+      expect(formatText.y()).toBeGreaterThanOrEqual(inputBox().y() + inputBox().height());
+    });
+
+    it("hides the format line once the tries are used up", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      expect(parts().formatText.visible()).toBe(false);
+    });
+
     it("centers the title and the question in the panel", () => {
       void prompt.ask(question, anchor);
       expect(centerOf(parts().titleText)).toBe(PANEL_W / 2);
@@ -801,6 +816,32 @@ describe("QuestionPrompt answer output", () => {
       expect(parts().inputText.fill()).toBe(ANSWER_GREEN);
       expect(parts().answerLabel.visible()).toBe(true);
       expect(parts().answerLabel.getParent()).not.toBeNull();
+    });
+
+    it("says how many coins the wrong answer costs", () => {
+      void prompt.ask(question, anchor, 13);
+      useAllTries();
+      expect(feedbackShown()).toContain("Not quite. −13 coins");
+    });
+
+    it("says before answering that skipping the question costs coins", () => {
+      void prompt.ask(question, anchor, 13);
+      expect(parts().formatText.text()).toContain("Skipping costs 13 coins");
+      void prompt.ask(question, anchor);
+      expect(parts().formatText.text()).not.toContain("coins");
+    });
+
+    it("doesn't mention coins when the answer costs nothing", () => {
+      void prompt.ask(question, anchor);
+      useAllTries();
+      expect(feedbackShown()).not.toContain("coins");
+    });
+
+    it("keeps the same panel height when showing the coins lost", () => {
+      void prompt.ask(question, anchor, 13);
+      const before = panelHeight();
+      useAllTries();
+      expect(panelHeight()).toBe(before);
     });
 
     it("says what the player answered, and gives the hint", () => {

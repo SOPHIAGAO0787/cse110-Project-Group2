@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { towerVariables } from "./TowerQuestionsHandling";
+import { towerVariables, wrongAnswerCost } from "./TowerQuestionsHandling";
 import { QuestionService } from "./QuestionService";
 import { defaultConfig, fireRateFor, rangeReach } from "../towerConfig";
 import {
@@ -8,6 +8,7 @@ import {
   QUESTION_POOLS,
   TOWERS,
   VARIABLES_BY_KIND,
+  type QuestionEntry,
 } from "../loadContent";
 import type { TowerConfig, TowerDef } from "../types";
 
@@ -176,30 +177,65 @@ describe("towerVariables", () => {
 // Builds every template in the real questions.json through QuestionService, so a formula that
 // can't be worked out (and would be skipped quietly in the game) fails here instead.
 describe("questions.json templates", () => {
+  // Map 1 asks level 1 questions and map 3 asks levels 2 and 3, so the two maps cover every level
+  const mapLevels: [number, number[]][] = [
+    [1, [1]],
+    [3, [2, 3]],
+  ];
+
   it.each(towerCases)("can all be asked for %s with its default settings", (_id, tower) => {
-    const pool = QUESTION_POOLS[tower.id] ?? [];
     const random = vi.spyOn(Math, "random");
     const asked = new Set<string>();
+    const expected: string[] = [];
 
-    for (let i = 0; i < pool.length; i++) {
-      // First draw: skip the general group (only drawn when there are general questions).
-      // Second draw: the i-th of the tower's own questions.
-      if (GENERAL_QUESTIONS.length > 0) random.mockReturnValueOnce(0.99);
-      random.mockReturnValueOnce((i + 0.5) / pool.length);
+    for (const [mapNumber, levels] of mapLevels) {
+      const pool: QuestionEntry[] = [];
+      for (const entry of QUESTION_POOLS[tower.id] ?? []) {
+        if (entry.level !== undefined && levels.includes(entry.level)) {
+          pool.push(entry);
+          expected.push(entry.id);
+        }
+      }
+      let generalCount = 0;
+      for (const question of GENERAL_QUESTIONS) {
+        if (question.level !== undefined && levels.includes(question.level)) {
+          generalCount++;
+        }
+      }
 
-      // A new service each time: one service skips the questions it just asked,
-      // which would shift the pool and break the i-th pick
-      const question = new QuestionService().questionFor(tower);
-      asked.add(question.id);
+      for (let i = 0; i < pool.length; i++) {
+        // First draw: skip the general group (only drawn when there are general questions).
+        // Second draw: the i-th of the tower's own questions for this map.
+        if (generalCount > 0) random.mockReturnValueOnce(0.99);
+        random.mockReturnValueOnce((i + 0.5) / pool.length);
 
-      expect(Number.isFinite(question.answer), question.id).toBe(true);
-      expect(question.tolerance, question.id).toBeGreaterThanOrEqual(0);
-      for (const text of [question.prompt, question.hint]) {
-        expect(text, question.id).not.toMatch(/[{}]|undefined|NaN/);
+        // A new service each time: one service skips the questions it just asked,
+        // which would shift the pool and break the i-th pick
+        const question = new QuestionService().questionFor(tower, undefined, mapNumber);
+        asked.add(question.id);
+
+        expect(Number.isFinite(question.answer), question.id).toBe(true);
+        expect(question.tolerance, question.id).toBeGreaterThanOrEqual(0);
+        for (const text of [question.prompt, question.hint]) {
+          expect(text, question.id).not.toMatch(/[{}]|undefined|NaN/);
+        }
       }
     }
 
     // A template that didn't build shifts the pool, so some id would be missing here
-    expect([...asked].sort()).toEqual(pool.map((entry) => entry.id).sort());
+    expect([...asked].sort()).toEqual(expected.sort());
+  });
+});
+
+describe("wrongAnswerCost", () => {
+  const circle = towerOfKind("circle");
+
+  it.each([
+    [100, 25],
+    [50, 13], // 12.5 rounds up
+    [75, 19], // 18.75 rounds up
+    [0, 0],
+  ])("costs a quarter of a %i coin tower, rounded: %i coins", (cost, lost) => {
+    expect(wrongAnswerCost({ ...circle, cost })).toBe(lost);
   });
 });

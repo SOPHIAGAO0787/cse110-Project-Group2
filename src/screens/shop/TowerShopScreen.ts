@@ -2,9 +2,14 @@ import type { Screen, ScreenSwitcher } from "../../app/types";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 import { TowerShopView } from "./TowerShopView";
 import { TowerProgress } from "../../model/TowerProgress";
+import { SettingsPanel } from "../game/SettingsPanel";
+import { Sound } from "../../core/Sound";
 
 export class TowerShopScreen implements Screen {
   private view: TowerShopView;
+  private settings: SettingsPanel;
+
+  private onBuy: () => void; // called after each unlock or upgrade, so the App can save
 
   private selectedId = SHOP_TOWERS[0]?.def.id ?? "";
 
@@ -13,7 +18,18 @@ export class TowerShopScreen implements Screen {
   constructor(
     app: ScreenSwitcher,
     private progress: TowerProgress,
+    onBuy: () => void,
+    sound: Sound = new Sound(),
   ) {
+    this.onBuy = onBuy;
+    this.settings = new SettingsPanel(
+      () => this.settings.close(),
+      () => {}, // the shop's settings have no Restart button
+      () => app.switchTo("maps"),
+      () => app.switchTo("menu"),
+      sound,
+      "shop",
+    );
     this.view = new TowerShopView({
       onSelect: (id) => {
         this.selectedId = id;
@@ -21,9 +37,14 @@ export class TowerShopScreen implements Screen {
       },
       onAction: () => this.handleAction(),
       onBack: () => app.switchTo("menu"),
+      onSettings: () => {
+        this.view.closePopup();
+        this.settings.open();
+      },
     });
 
     this.group = this.view.group;
+    this.group.add(this.settings.group);
     this.refresh();
   }
 
@@ -33,12 +54,14 @@ export class TowerShopScreen implements Screen {
   }
 
   hide(): void {
+    this.settings.close();
     this.view.closePopup();
     this.group.visible(false);
   }
 
   resize(width: number, height: number): void {
     this.view.resize(width, height);
+    this.settings.resize(width, height);
   }
 
   private refresh(): void {
@@ -75,6 +98,7 @@ export class TowerShopScreen implements Screen {
     // Temporary successful interaction for the UI demonstration.
     this.progress.shopCoins -= cost;
     this.progress.maxLevels.set(tower.def.id, locked ? 0 : levelIndex + 1);
+    this.onBuy();
     this.refresh();
   }
 }

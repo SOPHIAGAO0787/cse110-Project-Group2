@@ -208,6 +208,7 @@ function check(pools: Record<string, unknown[]>): () => void {
 
 const fixedQ = (id: string, fields: Record<string, unknown> = {}) => ({
   id,
+  level: 1,
   prompt: "What is 2 + 2?",
   answer: 4,
   tolerance: 0,
@@ -217,6 +218,7 @@ const fixedQ = (id: string, fields: Record<string, unknown> = {}) => ({
 
 const templateQ = (id: string, fields: Record<string, unknown> = {}) => ({
   id,
+  level: 1,
   template: "The range has radius {radius}. What is its diameter?",
   answer: "2 * radius",
   hint: "Double {radius}.",
@@ -249,6 +251,31 @@ describe("checkQuestions", () => {
     it("rejects the same id twice, even in different groups", () => {
       expect(check({ general: [fixedQ("a")], [circle.id]: [fixedQ("a")] })).toThrow(
         /duplicate id "a"/,
+      );
+    });
+  });
+
+  describe("levels", () => {
+    it("gives every question and template in questions.json a level of 1, 2 or 3", () => {
+      for (const entries of Object.values(QUESTION_POOLS)) {
+        for (const entry of entries) {
+          expect([1, 2, 3]).toContain(entry.level);
+        }
+      }
+    });
+
+    it.each([
+      ["no level", { level: undefined }],
+      ["a level of 0", { level: 0 }],
+      ["a level of 4", { level: 4 }],
+      ["a level that isn't a number", { level: "1" }],
+    ])("rejects a question with %s", (_label, fields) => {
+      expect(check({ general: [fixedQ("a", fields)] })).toThrow(/"a" needs a level of 1, 2 or 3/);
+    });
+
+    it("rejects a template with no level", () => {
+      expect(check({ [circle.id]: [templateQ("t", { level: undefined })] })).toThrow(
+        /"t" needs a level of 1, 2 or 3/,
       );
     });
   });

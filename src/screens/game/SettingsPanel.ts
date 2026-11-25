@@ -4,13 +4,15 @@ import { DEFAULT_BUTTON_WIDTH, makeButton, setButtonLabel } from "../button";
 import { FONT } from "../theme";
 
 const PANEL_WIDTH = 280;
-const PANEL_HEIGHT = 436;
+const PANEL_HEIGHT = 504;
 
 // The settings box over a dimmed screen, opened with the gear button on the game screen.
 // The game is paused while it is open; the controller does the pausing.
+// Escape does the same as Resume.
 //
 //   ┌── Settings ──────┐
 //   │  [ Resume ]      │
+//   │  [ Restart ]     │
 //   │  [ Music: On ]   │
 //   │  [ Sound: On ]   │
 //   │  [ Back to maps ]│
@@ -23,17 +25,28 @@ export class SettingsPanel {
   private sound: Sound;
   private musicButton: Konva.Group;
   private effectsButton: Konva.Group;
+  private onEscapeKey: (e: KeyboardEvent) => void; // listens only while the panel is open
+  private panelHeight: number;
 
   constructor(
     onResume: () => void,
+    onRestart: () => void,
     onBackToMaps: () => void,
     onMainMenu: () => void,
     sound: Sound,
+    mode: "game" | "shop" = "game",
   ) {
     this.sound = sound;
+    this.onEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onResume();
+      }
+    };
+    this.panelHeight = mode === "shop" ? 232 : PANEL_HEIGHT;
+    if (mode === "shop") this.dim.on("click tap", () => this.close());
     const panel = new Konva.Rect({
       width: PANEL_WIDTH,
-      height: PANEL_HEIGHT,
+      height: this.panelHeight,
       fill: "#222",
       stroke: "white",
       strokeWidth: 2,
@@ -50,6 +63,7 @@ export class SettingsPanel {
       fill: "white",
     });
     const resumeButton = makeButton("Resume", onResume);
+    const restartButton = makeButton("Restart", onRestart);
     // The two switches get their labels in refreshSoundLabels()
     this.musicButton = makeButton("", () => {
       this.sound.toggleMusic();
@@ -61,24 +75,31 @@ export class SettingsPanel {
     });
     this.refreshSoundLabels();
     const mapsButton = makeButton("Back to maps", onBackToMaps);
-    const menuButton = makeButton("Main menu", onMainMenu);
+    const menuButton = makeButton(mode === "shop" ? "Back to main menu" : "Main menu", onMainMenu);
     // Center the buttons in the box
     const buttonX = (PANEL_WIDTH - DEFAULT_BUTTON_WIDTH) / 2;
     resumeButton.position({ x: buttonX, y: 84 });
-    this.musicButton.position({ x: buttonX, y: 152 });
-    this.effectsButton.position({ x: buttonX, y: 220 });
-    mapsButton.position({ x: buttonX, y: 288 });
-    menuButton.position({ x: buttonX, y: 356 });
+    restartButton.position({ x: buttonX, y: 152 });
+    this.musicButton.position({ x: buttonX, y: 220 });
+    this.effectsButton.position({ x: buttonX, y: 288 });
+    mapsButton.position({ x: buttonX, y: 356 });
+    menuButton.position({ x: buttonX, y: 424 });
 
-    this.box.add(
-      panel,
-      title,
-      resumeButton,
-      this.musicButton,
-      this.effectsButton,
-      mapsButton,
-      menuButton,
-    );
+    this.box.add(panel, title);
+    if (mode === "shop") {
+      this.musicButton.y(84);
+      menuButton.y(152);
+      this.box.add(this.musicButton, menuButton);
+    } else {
+      this.box.add(
+        resumeButton,
+        restartButton,
+        this.musicButton,
+        this.effectsButton,
+        mapsButton,
+        menuButton,
+      );
+    }
     this.group.add(this.dim, this.box);
   }
 
@@ -101,16 +122,20 @@ export class SettingsPanel {
   }
 
   open(): void {
+    // The main menu can switch the music too, so the labels may be out of date
+    this.refreshSoundLabels();
     this.group.visible(true);
+    window.addEventListener("keydown", this.onEscapeKey);
   }
 
   close(): void {
     this.group.visible(false);
+    window.removeEventListener("keydown", this.onEscapeKey);
   }
 
   // Covers the whole screen and keeps the box in the middle
   resize(width: number, height: number): void {
     this.dim.size({ width, height });
-    this.box.position({ x: (width - PANEL_WIDTH) / 2, y: (height - PANEL_HEIGHT) / 2 });
+    this.box.position({ x: (width - PANEL_WIDTH) / 2, y: (height - this.panelHeight) / 2 });
   }
 }

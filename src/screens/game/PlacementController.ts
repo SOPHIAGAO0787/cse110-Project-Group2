@@ -1,11 +1,12 @@
 import type { GameModel } from "../../model/GameModel";
-import { TOWERS } from "../../model/loadContent";
+import { MAPS, TOWERS } from "../../model/loadContent";
 import type { MapConfig, TowerConfig, Vec } from "../../model/types";
 import type { GameScreenView } from "./GameScreenView";
 import type { GridView } from "./GridView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "./PlacementView";
 import type { QuestionService } from "../../model/questions/QuestionService";
+import { wrongAnswerCost } from "../../model/questions/TowerQuestionsHandling";
 import { InGameTowerCard } from "./InGameTowerCard";
 import type { TowerProgress } from "../../model/TowerProgress";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
@@ -18,6 +19,7 @@ export class PlacementController {
   private view: GameScreenView;
   private model: GameModel;
   private map: MapConfig;
+  private mapNumber: number; // this map's place in the map list, starting at 1
   private towerProgress: TowerProgress;
   private questions: QuestionService;
   private isActive: () => boolean; // false while the game screen is hidden
@@ -25,6 +27,8 @@ export class PlacementController {
   private layoutCards: () => void;
   private refreshHint: () => void;
   private cleanup: () => void;
+  // Runs when a tower's question opens. The controller sets it, for the tutorial.
+  onQuestionOpened: () => void = () => {};
 
   constructor(
     view: GameScreenView,
@@ -39,6 +43,13 @@ export class PlacementController {
     this.view = view;
     this.model = model;
     this.map = map;
+    // Later maps ask harder questions. A map that isn't in the list counts as the first.
+    this.mapNumber = 1;
+    for (let i = 0; i < MAPS.length; i++) {
+      if (MAPS[i].id === map.id) {
+        this.mapNumber = i + 1;
+      }
+    }
     this.towerProgress = towerProgress;
     this.questions = questions;
     this.isActive = isActive;
@@ -120,10 +131,11 @@ export class PlacementController {
 
     // Asks the question and returns true only if the player answered correctly.
     const beforeCommit = async (tile: Vec, config?: TowerConfig): Promise<boolean> => {
-      const question = this.questions.questionFor(def, config);
-      const correct = await this.view.prompt.ask(question, this.view.tileToScreen(tile));
+      const question = this.questions.questionFor(def, config, this.mapNumber);
+      this.onQuestionOpened();
+      const anchor = this.view.tileToScreen(tile);
+      const correct = await this.view.prompt.ask(question, anchor, wrongAnswerCost(def));
       if (!canCommit()) return false;
-      if (correct) model.recordQuestionSolved();
       return correct;
     };
 
@@ -222,6 +234,18 @@ export class PlacementController {
       }
 
       if (!ok || !canCommit()) {
+        // A wrong answer, or closing the question with Esc or ✕, costs part of the tower's price.
+        // Nothing is taken if the game ended or the screen closed while the question was open.
+        if (canCommit()) {
+          let lost = wrongAnswerCost(def);
+          if (lost > this.model.wallet.coins) {
+            lost = this.model.wallet.coins; // coins never go below 0
+          }
+          if (lost > 0) {
+            this.model.wallet.spend(lost);
+            this.view.showMessage(`−${lost} coins for the missed question`);
+          }
+        }
         placement.cancel();
         pv.hide();
         return;
@@ -240,7 +264,9 @@ export class PlacementController {
       pv.hide();
       const result = this.model.tryPlaceTower(def.id, tile, config);
       // TowersView draws successful placements through the towerPlaced event.
+      // The answer counts as solved only now, once the tower is really on the map.
       if (result === "ok") {
+        this.model.recordQuestionSolved();
         return;
       }
 
