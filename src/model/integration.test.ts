@@ -171,9 +171,10 @@ describe("Integration: a game on map1", () => {
       rewards.push(reward);
     });
 
-    // (6, 2) is inside the bend where the path goes down and then right,
-    // so the enemy stays in the circle's range on both sides of the corner.
-    expect(game.tryPlaceTower("circle", { x: 6, y: 2 })).toBe("ok");
+    // (3, 3) is next to the corner where the path turns from going down to going right,
+    // so the enemy stays in the circle's range on both sides of the corner, long enough
+    // for three shots to kill it.
+    expect(game.tryPlaceTower("circle", { x: 3, y: 3 })).toBe("ok");
     game.spawnEnemy("basic");
     const enemy = game.enemies[0];
 
@@ -209,14 +210,15 @@ describe("Integration: a game on map1", () => {
       lastCoins = coins;
     });
 
-    // Buildable tiles beside the path, best first
+    // Buildable tiles beside the path, best first. A circle on (6, 3) or (3, 3) kills a basic
+    // enemy on its own, and with the rest the five waves of map1 can be won.
     const towerTiles: Vec[] = [
       { x: 6, y: 3 },
+      { x: 3, y: 3 },
+      { x: 3, y: 2 },
+      { x: 7, y: 3 },
       { x: 6, y: 2 },
       { x: 4, y: 5 },
-      { x: 13, y: 4 },
-      { x: 7, y: 3 },
-      { x: 3, y: 5 },
     ];
     playUntilOver(won, towerTiles);
 
