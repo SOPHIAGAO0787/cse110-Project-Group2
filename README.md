@@ -6,12 +6,12 @@ A tower defense game where you answer geometry questions to build your defenses.
 
 ## Features
 
-- **Four maps** (Circle Grove, s Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
+- **Four maps** (Circle Grove, Angle Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
 - **Three towers, three shapes.** The circle tower hits everything in its circle. The triangle and square towers are aimed by the player.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
 - **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
 - **Stars and stats** at the end of every game, and the best stars on each map are kept on the map screen.
-- **Tower Shop** to unlock towers and raise their upgrade level, and a **mini-game** that earns bonus coins.
+- **Tower Shop** to unlock towers and raise their upgrade level, and **two mini-games** that earn bonus coins.
 - **Double speed, music, and sound effects**, with a settings menu to pause the game or switch the sound off.
 
 ## Play it
@@ -25,10 +25,10 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 ## How to play
 
-1. Click **Play** on the main menu and pick a map. Winning a map unlocks the next one.
+1. Click **Play** on the main menu and pick a map. Winning a map unlocks the next one. The first game on Circle Grove offers a short tour, which can be skipped.
 2. Drag a tower from the shop on the right onto a green tile. For a triangle or square tower, move the mouse to aim its cone or block. Then press **Enter**.
-3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. Questions get harder on later maps. A correct answer places the tower and spends its coins.
-4. Click **Start Wave** to send enemies down the path. A white arrow shows where they come in, and a red flag shows where they leave. Defeating an enemy earns coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
+3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. Questions get harder on later maps. A correct answer places the tower and spends its coins. A wrong answer, or skipping the question, costs a quarter of the tower's price.
+4. Click **Start Wave** to send enemies down the path. A white arrow shows where they come in, and a red flag shows where they leave. Defeating an enemy earns coins, clearing a wave earns bonus coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
 5. Click a placed tower to upgrade it, up to the level bought in the Tower Shop.
 6. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars, score, and stats.
 
@@ -40,11 +40,11 @@ During a game, the speed button (or **Space**) switches between normal and doubl
 
 ## Towers
 
-| Tower    | Cost | Range                                                                               |
-| -------- | ---- | ----------------------------------------------------------------------------------- |
-| Circle   | 50   | A circle of radius 2.5 tiles. Hits every enemy inside it.                           |
-| Triangle | 75   | A cone with a fixed area. A wider cone reaches less far. Hits the front-most enemy. |
-| Square   | 100  | A block of up to 6 tiles next to the tower. A smaller block fires faster.           |
+| Tower    | Cost | Range                                                                                                 |
+| -------- | ---- | ----------------------------------------------------------------------------------------------------- |
+| Circle   | 50   | A circle of radius 2 tiles. Hits every enemy inside it.                                               |
+| Triangle | 70   | A cone with a fixed area. A wider cone reaches less far. Hits the front-most enemy.                   |
+| Square   | 75   | A block of up to 6 tiles next to the tower. Hits every enemy inside it. A smaller block fires faster. |
 
 The triangle and square towers are aimed after they are dropped: move the mouse to turn them, and move it closer or further to change the cone's angle or the block's size. Then press **Enter** for the question.
 
@@ -58,17 +58,23 @@ The triangle and square towers are aimed after they are dropped: move the mouse 
 
 Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols, and a line under the box reminds you which formats work.
 
-## Tower Shop and mini-game
+## Tower Shop and mini-games
 
 The **Tower Shop** unlocks the triangle and square towers and raises each tower's upgrade level. A placed tower can be upgraded in a game up to the level bought here. The shop has its own coins for now; coins earned in games do not count there yet.
 
 ![The Tower Shop showing the circle tower's stats and next upgrade](assets/tower-shop.png)
 
-The **mini-game** is a five-question geometry quiz with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50. After each answer, the next question shows by itself.
+**Geometry Quiz** is a five-question round with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50. After each answer, the next question shows by itself.
 
 ![Answering the five mini-game questions and returning to the menu with a coin bonus](assets/mini-game.gif)
 
-**Coming next (Sprint 3):** balancing the maps, coins at the end of each wave, saving progress, a short tutorial, and wrong answers that cost coins. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+From the main menu, select **Mini-game → Room Builder**. Drag benches, square towers, and triangle towers from the menu onto the 8 m × 6 m grid. A green preview means the piece fits. Drag placed pieces to reposition them. Select a bench or triangle and use **Rotate** to turn it. Use **Undo** to reverse the last placement, move, or rotation, or **Reset Room** to start over.
+
+Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards 5 bonus coins for every full 8 m² placed, up to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game.
+
+The browser saves map stars, the tutorial flag, shop coins, tower upgrades, and unused mini-game bonus coins across reloads.
+
+**Coming next (Sprint 3):** Tower Shop coins for winning games, and a leaderboard. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 
@@ -84,14 +90,14 @@ src/
     Progress.ts       what is kept between games: the chosen map, stars, and bonus coins
     geometry/         tower range shapes
     questions/        picks and checks geometry questions
-    minigame/         the rules of the timed geometry quiz
+    minigame/         the quiz and Room Builder rules
     shop/             shop data: tower costs, stats, and upgrades
   data/               maps, towers, enemies, upgrades, and questions (JSON)
   screens/            Menu, Map Select and Result screens, and what screens share:
                       Page (header and card), theme (colors and font), and buttons
     game/             the game screen: view, controller, grid, towers, enemies, effects,
                       placement, question popup, and settings
-    minigame/         the mini-game screen
+    minigame/         the minigame picker, quiz, and Room Builder
     shop/             the Tower Shop screen
 assets/               images for this README
 public/audio/         the music loop and the sound effects, made for this game

@@ -10,8 +10,10 @@ import { COINS_PER_CORRECT_ANSWER, MAX_BONUS_COINS } from "../../model/Progress"
 import { makeBackButton, makeButton } from "../button";
 import { CARD_FILL, FONT, PAGE_BACKGROUND, TITLE_TEXT } from "../theme";
 
-// How long "Correct!" or the right answer stays on screen before the next question shows
-const FEEDBACK_MS = 1200;
+// How long the feedback stays on screen before the next question shows. After a wrong answer
+// or running out of time it shows the right answer, which takes longer to read than "Correct!".
+const CORRECT_FEEDBACK_MS = 1200;
+const WRONG_FEEDBACK_MS = 3000;
 // The most characters the answer can have, so it fits on one line
 const MAX_TYPED = 28;
 // The π and √ buttons are narrow, so both fit under the answer
@@ -182,10 +184,14 @@ export class GeometryMiniGameScreen implements Screen {
     if (this.model.phase !== "feedback" || this.nextTimer !== null) {
       return;
     }
+    let wait = WRONG_FEEDBACK_MS;
+    if (this.model.feedback === "correct") {
+      wait = CORRECT_FEEDBACK_MS;
+    }
     this.nextTimer = window.setTimeout(() => {
       this.nextTimer = null;
       this.next();
-    }, FEEDBACK_MS);
+    }, wait);
   }
 
   // Cancels the timer, so a closed or restarted screen doesn't move on by itself

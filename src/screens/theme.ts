@@ -36,3 +36,5 @@ export const TRIANGLE_TOWER_COLOR = "#f5a623";
 export const COST_TEXT = "#1f9d57";
 // Messages like "Not enough coins"
 export const WARNING_TEXT = "#d64545";
+// Messages that are good news, like "Wave 1 cleared: +10 coins"
+export const GOOD_TEXT = "#1f9d57";

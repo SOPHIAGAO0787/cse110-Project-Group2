@@ -18,6 +18,7 @@ import { MAPS } from "../../model/loadContent";
 import { Progress } from "../../model/Progress";
 import { TowerProgress } from "../../model/TowerProgress";
 import { TowersView } from "./TowersView";
+import { CIRCLE_TOWER_COLOR } from "../theme";
 import { Sound, type EffectName } from "../../core/Sound";
 
 // Capture real model instances without exposing the controller's private fields.
@@ -81,6 +82,17 @@ function expectHud(coins: number, lives: number, wave: number, enemies: number):
 }
 
 // Clicks the real button with this label on the screen, e.g. "Start Wave".
+// How many enemies wave n (1-based) of map1 sends, and how long its last enemy takes to spawn.
+function waveSize(n: number): number {
+  return map.waves[n - 1].groups.reduce((total, group) => total + group.count, 0);
+}
+function lastSpawnSeconds(n: number): number {
+  const { groups } = map.waves[n - 1];
+  // Every enemy waits its group's interval before the next spawns; the last one has no wait after it.
+  const total = groups.reduce((sum, group) => sum + group.count * group.intervalSec, 0);
+  return total - groups[groups.length - 1].intervalSec;
+}
+
 function clickButton(text: string): void {
   const label = controller.group.find<Konva.Text>("Text").find((t) => t.text() === text);
   if (label === undefined) {
@@ -179,7 +191,7 @@ describe("GameScreenController HUD event wiring", () => {
       expectHud(map.startingCoins, map.startingLives, number, enemies);
 
       model.waves.enemiesLeft = 0;
-      model.events.emit("waveCleared", { wave: number });
+      model.events.emit("waveCleared", { wave: number, bonus: 0 });
       expectHud(map.startingCoins, map.startingLives, number, 0);
     }
   });
@@ -249,23 +261,24 @@ describe("GameScreenController HUD event wiring", () => {
     expectHud(25, map.startingLives, 0, 0);
   });
 
-  it("Start Wave updates the HUD through both waves", () => {
+  it("Start Wave updates the HUD through the first two waves", () => {
+    const total = map.waves.length;
     clickButton("Start Wave");
-    expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 5");
+    expect(hud()).toContain(`Wave: 1/${total}   ·   Enemies Remaining: ${waveSize(1)}`);
 
     // Spawn all of wave 1, then kill one enemy and let the rest leak.
-    model.tick(5);
-    expect(model.enemies).toHaveLength(5);
+    model.tick(lastSpawnSeconds(1) + 0.1);
+    expect(model.enemies).toHaveLength(waveSize(1));
     const first = model.enemies[0];
     model.events.emit("enemyKilled", { enemyId: first.id, reward: first.def.reward });
     expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
       `Coins: ${map.startingCoins + first.def.reward}`,
     );
-    expect(hud()).toContain("Enemies Remaining: 4");
-    for (let i = 1; i < 5; i++) {
+    expect(hud()).toContain(`Enemies Remaining: ${waveSize(1) - 1}`);
+    for (let i = 1; i < waveSize(1); i++) {
       model.events.emit("enemyLeaked", { enemyId: model.enemies[i].id });
     }
-    expect(hud()).toContain("Wave: 1/2   ·   Enemies Remaining: 0");
+    expect(hud()).toContain(`Wave: 1/${total}   ·   Enemies Remaining: 0`);
 
     // A click skips preparation and starts wave 2 immediately.
     clickStartWave();
@@ -273,15 +286,17 @@ describe("GameScreenController HUD event wiring", () => {
     // These enemies were removed through events above; remove their stale model objects.
     model.enemies = [];
     model.tick(0);
-    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
-    model.tick(7);
+    expect(hud()).toContain(`Wave: 2/${total}   ·   Enemies Remaining: ${waveSize(2)}`);
+    model.tick(lastSpawnSeconds(2) + 0.1);
     const wave2 = [...model.enemies];
     for (const enemy of wave2) {
       model.events.emit("enemyLeaked", { enemyId: enemy.id });
     }
-    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
-    clickButton("Start Wave");
-    expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 0");
+    expect(hud()).toContain(`Wave: 2/${total}   ·   Enemies Remaining: 0`);
+    // Wave 2 is not the last one, so the button now starts wave 3.
+    clickStartWave();
+    expect(model.waves.currentWave).toBe(3);
+    expect(hud()).toContain(`Wave: 3/${total}`);
   });
 });
 
@@ -318,6 +333,24 @@ describe("GameScreenController feedback", () => {
     expect(textsOnScreen()).toContain("Wave 1");
   });
 
+  it("says how many coins clearing a wave gave", () => {
+    model.events.emit("waveCleared", { wave: 1, bonus: 25 });
+    expect(textsOnScreen()).toContain("Wave 1 cleared: +25 coins");
+  });
+
+  it("says nothing about coins for a wave with no bonus", () => {
+    model.events.emit("waveCleared", { wave: 1, bonus: 0 });
+    expect(textsOnScreen().some((text) => text.includes("cleared"))).toBe(false);
+  });
+
+  it("shows the bonus in the coins at the top", () => {
+    const before = model.wallet.coins;
+    model.events.emit("waveCleared", { wave: 1, bonus: 25 });
+    expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
+      `Coins: ${before + 25}`,
+    );
+  });
+
   it("flashes the red frame when an enemy leaks", () => {
     const frame = controller.group
       .getChildren()
@@ -331,6 +364,15 @@ describe("GameScreenController feedback", () => {
     expect(frame.opacity()).toBeGreaterThan(0.9); // the fade-out has just started
   });
 });
+
+// The tutorial's current tip, read from the screen
+function tutorialText(): string {
+  const tip = controller.group.findOne<Konva.Text>(".tutorial-tip");
+  if (tip === undefined) {
+    throw new Error("The tutorial is missing from the screen");
+  }
+  return tip.text();
+}
 
 describe("GameScreenController questions during gameplay", () => {
   function openQuestion() {
@@ -361,6 +403,12 @@ describe("GameScreenController questions during gameplay", () => {
     const add = vi.spyOn(TowersView.prototype, "add");
     const fire = vi.spyOn(TowersView.prototype, "fire").mockImplementation(() => {});
     const { answer } = openQuestion();
+    // The shop card's icon has the same color, so count the circles before and after placing
+    const circleTowerCount = () =>
+      controller.group
+        .find<Konva.Circle>("Circle")
+        .filter((circle) => circle.fill() === CIRCLE_TOWER_COLOR).length;
+    const before = circleTowerCount();
 
     answer(true);
     await settleAnswer();
@@ -368,11 +416,9 @@ describe("GameScreenController questions during gameplay", () => {
     expect(model.towers).toHaveLength(1);
     const tower = model.towers[0];
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
-    expect(
-      controller.group.find<Konva.Circle>("Circle").filter((circle) => circle.fill() === "#2a5d99"),
-    ).toHaveLength(1);
+    expect(circleTowerCount()).toBe(before + 1);
 
-    model.spawnEnemy("basic");
+    model.spawnEnemy("tank"); // slow enough to still be in range when the first shot comes
     model.tick(1 / tower.fireRate);
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
 
@@ -454,6 +500,28 @@ describe("GameScreenController questions during gameplay", () => {
     expect(message).toHaveBeenCalledWith(text);
     expect(model.towers).toHaveLength(0);
   });
+
+  it("moves the tutorial on once the tower's question opens and once the tower is built", async () => {
+    clickButton("Show me");
+    const { answer } = openQuestion();
+    expect(tutorialText()).toContain("Answer the question");
+
+    answer(true);
+    await settleAnswer();
+    expect(tutorialText()).toContain("Press Start Wave");
+  });
+
+  it("passes the tutorial's wave and speed tips if the player did them before building", async () => {
+    clickButton("Show me");
+    clickButton("Start Wave");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    expect(tutorialText()).toContain("Drag a tower"); // still waiting for the first tower
+
+    const { answer } = openQuestion();
+    answer(true);
+    await settleAnswer();
+    expect(tutorialText()).toContain("Click a tower on the map to upgrade it");
+  });
 });
 
 describe("GameScreenController game over (So1)", () => {
@@ -470,7 +538,7 @@ describe("GameScreenController game over (So1)", () => {
 
   it("records a win so the next map unlocks", () => {
     // Clearing the last wave with every life left is a 3-star win
-    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.events.emit("waveCleared", { wave: map.waves.length, bonus: 0 });
     model.tick(0);
 
     expect(model.result).toMatchObject({ won: true, stars: 3 });
@@ -547,6 +615,13 @@ describe("GameScreenController settings", () => {
     expect(switchTo).toHaveBeenCalledWith("maps");
   });
 
+  it("restarts the same map without recording a result", () => {
+    clickIcon("settings");
+    clickButton("Restart");
+    expect(switchTo).toHaveBeenCalledWith("game");
+    expect(progress.starsFor("map1")).toBe(0);
+  });
+
   it("goes to the main menu without recording a result", () => {
     clickIcon("settings");
     clickButton("Main menu");
@@ -559,6 +634,27 @@ describe("GameScreenController settings", () => {
     controller.hide();
     controller.show();
     expect(settingsOpen()).toBe(false);
+  });
+
+  it("closes with Escape and the game goes on", () => {
+    const start = vi.spyOn(GameLoop.prototype, "start");
+    clickIcon("settings");
+    start.mockClear(); // show() already started the loop once
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(settingsOpen()).toBe(false);
+    expect(start).toHaveBeenCalled();
+  });
+
+  it("ignores Escape after leaving the game from the settings", () => {
+    const start = vi.spyOn(GameLoop.prototype, "start");
+    clickIcon("settings");
+    clickButton("Back to maps");
+    controller.hide(); // the App hides the game screen on the switch
+    start.mockClear();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(start).not.toHaveBeenCalled();
   });
 });
 
@@ -591,7 +687,7 @@ describe("GameScreenController mini-game bonus coins", () => {
     progress.addMiniGameReward(3);
     const bonus = progress.bonusCoins;
     startNewGame();
-    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.events.emit("waveCleared", { wave: map.waves.length, bonus: 0 });
     model.tick(0);
 
     // The bonus was part of this game's coins, so it counts in the final coins
@@ -726,7 +822,7 @@ describe("GameScreenController tower upgrades", () => {
     const tower = model.towers[0];
 
     expect(add).toHaveBeenCalledExactlyOnceWith(tower);
-    model.spawnEnemy("basic");
+    model.spawnEnemy("tank"); // slow enough to still be in range when the first shot comes
     model.tick(1 / tower.fireRate);
 
     expect(fire).toHaveBeenCalledExactlyOnceWith(tower.id);
@@ -880,8 +976,8 @@ it("refreshes timers through simulated frames and resets them on re-entry", () =
       .find((text) => /^(Next Wave In|Last Enemy Spawns In):/.test(text.text()));
   expect(timer()).toBeUndefined();
   clickStartWave();
-  expect(timer()?.text()).toBe("Last Enemy Spawns In: 5s");
-  frame(5);
+  expect(timer()?.text()).toBe(`Last Enemy Spawns In: ${Math.ceil(lastSpawnSeconds(1))}s`);
+  frame(Math.ceil(lastSpawnSeconds(1)));
   expect(timer()).toBeUndefined();
   for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
   frame(0);
@@ -889,8 +985,8 @@ it("refreshes timers through simulated frames and resets them on re-entry", () =
   frame(1);
   expect(timer()?.text()).toBe(`Next Wave In: ${WAVE_PREPARATION_SECONDS - 1}s`);
   frame(WAVE_PREPARATION_SECONDS - 1);
-  expect(hud()).toContain("Wave: 2/2");
-  expect(timer()?.text()).toBe("Last Enemy Spawns In: 7s");
+  expect(hud()).toContain(`Wave: 2/${map.waves.length}`);
+  expect(timer()?.text()).toBe(`Last Enemy Spawns In: ${Math.ceil(lastSpawnSeconds(2))}s`);
   const stop = vi.spyOn(GameLoop.prototype, "stop");
   controller.hide();
   expect(stop).toHaveBeenCalled();
@@ -913,7 +1009,7 @@ it("shows an early-start button only during preparation and clears it after the 
   expect(button().getParent()!.visible()).toBe(true);
   clickStartWave();
   expect(button().getParent()!.visible()).toBe(false);
-  model.tick(4.8);
+  model.tick(lastSpawnSeconds(1) + 0.01);
   for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
   model.tick(0);
   expect(button().text()).toBe("Start Next Wave");
@@ -923,10 +1019,17 @@ it("shows an early-start button only during preparation and clears it after the 
   expect(model.waves.currentWave).toBe(2);
   expect(model.waves.preparationRemaining).toBeNull();
   expect(button().getParent()!.visible()).toBe(false);
-  expect(hud()).toContain("Wave: 2/2   ·   Enemies Remaining: 8");
-  model.tick(6.3);
-  for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
-  model.tick(0);
+  expect(hud()).toContain(`Wave: 2/${map.waves.length}   ·   Enemies Remaining: ${waveSize(2)}`);
+  // Play out every remaining wave, killing each enemy as it spawns so none leak.
+  for (let wave = 2; wave <= map.waves.length; wave++) {
+    while (model.waves.lastSpawnRemaining !== null) {
+      model.tick(0.1);
+      for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+    }
+    for (const enemy of model.enemies) enemy.takeDamage(enemy.hp);
+    model.tick(0);
+    if (wave < map.waves.length) clickStartWave();
+  }
   expect(model.result?.won).toBe(true);
   expect(button().getParent()!.visible()).toBe(false);
   expect(
@@ -935,7 +1038,7 @@ it("shows an early-start button only during preparation and clears it after the 
       .some((text) => text.text().startsWith("Next Wave In:")),
   ).toBe(false);
   clickStartWave();
-  expect(model.waves.currentWave).toBe(2);
+  expect(model.waves.currentWave).toBe(map.waves.length); // the game is over, so nothing starts
   controller.hide();
   controller.show();
   expect(button().text()).toBe("Start Wave");
@@ -994,6 +1097,18 @@ it("keeps simulation and automatic waves running while an unanswered prompt stay
   expect(model.towers).toHaveLength(1);
   expect(stop).not.toHaveBeenCalled();
   expect(start).not.toHaveBeenCalled();
+});
+
+it("keeps the settings closed while a question is open, so one Escape only closes the question", () => {
+  const { prompt } = openPlacementQuestion();
+  clickIcon("settings");
+
+  const title = controller.group.find<Konva.Text>("Text").find((t) => t.text() === "Settings");
+  if (title === undefined) {
+    throw new Error("Settings title is missing from the screen");
+  }
+  expect(title.isVisible()).toBe(false);
+  expect(prompt.group.visible()).toBe(true);
 });
 
 it("prevents duplicate prompts and placements while retaining retries", async () => {
@@ -1073,7 +1188,7 @@ it.each(["defeat", "victory"])(
   async (outcome) => {
     const { prompt } = openPlacementQuestion();
     if (outcome === "defeat") model.lives.remaining = 0;
-    else model.events.emit("waveCleared", { wave: model.waves.totalWaves });
+    else model.events.emit("waveCleared", { wave: model.waves.totalWaves, bonus: 0 });
     frames[frames.length - 1](0);
     expect(prompt.group.visible()).toBe(false);
     press("5");
@@ -1128,7 +1243,7 @@ it("rechecks funds after a correct answer", async () => {
 });
 
 describe("GameScreenController game speed", () => {
-  // The text on the speed button: "1x" or "2x"
+  // The text on the speed button: "1x", "2x" or "0.5x"
   function speedLabel(): string {
     const button = controller.group.findOne<Konva.Group>(".speed");
     if (button === undefined) {
@@ -1161,7 +1276,17 @@ describe("GameScreenController game speed", () => {
     expect(model.elapsedSeconds).toBeCloseTo(0.2);
   });
 
-  it("goes back to normal speed on a second click", () => {
+  it("runs at half speed after a second click", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("0.5x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.05);
+  });
+
+  it("goes back to normal speed on a third click", () => {
+    clickIcon("speed");
     clickIcon("speed");
     clickIcon("speed");
     runFrame(0.1);
@@ -1173,6 +1298,9 @@ describe("GameScreenController game speed", () => {
   it("switches the speed with the Space key", () => {
     press(" ");
     expect(speedLabel()).toBe("2x");
+
+    press(" ");
+    expect(speedLabel()).toBe("0.5x");
 
     press(" ");
     expect(speedLabel()).toBe("1x");
@@ -1199,6 +1327,16 @@ describe("GameScreenController game speed", () => {
 
     expect(speedLabel()).toBe("2x");
     expect(model.elapsedSeconds).toBeCloseTo(0.1);
+  });
+
+  it("stays at half speed while a question is open", () => {
+    clickIcon("speed");
+    clickIcon("speed");
+    openPlacementQuestion();
+    runFrame(0.1);
+
+    expect(speedLabel()).toBe("0.5x");
+    expect(model.elapsedSeconds).toBeCloseTo(0.05);
   });
 
   it("keeps the chosen speed for the next game", () => {
@@ -1422,5 +1560,51 @@ describe("GameScreenController confirm and cancel squares", () => {
     expect(
       controller.group.find<Konva.Text>("Text").filter((text) => text.text() === "Enter"),
     ).toHaveLength(0);
+  });
+});
+
+describe("GameScreenController tutorial", () => {
+  function tutorialShowing(): boolean {
+    const tutorial = controller.group.findOne(".tutorial");
+    if (tutorial === undefined) {
+      throw new Error("The tutorial is missing from the screen");
+    }
+    return tutorial.visible();
+  }
+
+  it("offers the tour in the first game on map 1", () => {
+    expect(tutorialShowing()).toBe(true);
+    expect(tutorialText()).toBe("New here? Take the 1-minute tour.");
+  });
+
+  it("is not shown on the other maps", () => {
+    controller.hide();
+    progress.currentMapId = "map2";
+    controller.show();
+    expect(tutorialShowing()).toBe(false);
+  });
+
+  it("does not come back after Skip", () => {
+    clickButton("Skip");
+    expect(progress.tutorialDone).toBe(true);
+
+    controller.hide();
+    controller.show();
+    expect(tutorialShowing()).toBe(false);
+  });
+
+  it("starts over from the offer in a new game if it was not finished", () => {
+    clickButton("Show me");
+    controller.hide();
+    expect(tutorialShowing()).toBe(false);
+
+    controller.show();
+    expect(tutorialText()).toBe("New here? Take the 1-minute tour.");
+  });
+
+  it("is hidden when the game ends", () => {
+    model.lives.remaining = 0;
+    model.tick(0);
+    expect(tutorialShowing()).toBe(false);
   });
 });

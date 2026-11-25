@@ -21,10 +21,10 @@ describe("Enemy type configurations", () => {
 
   it("preserves the expected enemy counts", () => {
     const expectedCounts = [
-      [5, 8],
-      [6, 9, 12],
-      [8, 10, 14],
-      [8, 12, 14, 18],
+      [5, 9, 11, 17, 22],
+      [8, 12, 15, 22, 27, 33],
+      [10, 16, 22, 26, 30, 35],
+      [6, 10, 12, 16, 20, 24, 27, 32],
     ];
 
     maps.forEach((map, index) => {
@@ -40,7 +40,9 @@ describe("Enemy type configurations", () => {
     for (const map of maps) {
       const firstWaveTypes = map.waves[0].groups.map((group) => group.enemy);
 
-      expect(firstWaveTypes).toEqual(["basic"]);
+      // Wave 1 opens with basic enemies (Peaks adds a single tank) and never with fast ones.
+      expect(firstWaveTypes).toContain("basic");
+      expect(firstWaveTypes).not.toContain("fast");
 
       const laterTypes = map.waves
         .slice(1)

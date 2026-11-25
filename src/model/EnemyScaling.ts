@@ -4,7 +4,7 @@ import { EnemyDef } from "./types";
  * Returns an enemy definition scaled to the given wave.
  *
  * Wave 1 uses the original stats.
- * Each subsequent wave increases HP by 15%
+ * Each subsequent wave increases HP by 10%
  * and speed by 5% of the original values.
  */
 export function scaleEnemyDef(base: EnemyDef, waveNumber: number): EnemyDef {
@@ -14,7 +14,7 @@ export function scaleEnemyDef(base: EnemyDef, waveNumber: number): EnemyDef {
 
   const waveLevel = waveNumber - 1;
 
-  const healthMultiplier = 1 + 0.15 * waveLevel; // 15% increase per wave
+  const healthMultiplier = 1 + 0.1 * waveLevel; // 10% increase per wave
   const speedMultiplier = 1 + 0.05 * waveLevel; // 5% increase per wave
 
   return {

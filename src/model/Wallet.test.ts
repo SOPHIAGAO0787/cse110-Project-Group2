@@ -117,4 +117,39 @@ describe("Wallet (St1)", () => {
     expect(wallet.coins).toBe(100);
     expect(totals).toEqual([]);
   });
+
+  it("adds the wave's bonus when waveCleared is emitted, and announces the new total", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+    const totals: number[] = [];
+    events.on("coinsChanged", ({ coins }) => totals.push(coins));
+
+    events.emit("waveCleared", { wave: 1, bonus: 25 });
+
+    expect(wallet.coins).toBe(125);
+    expect(totals).toEqual([125]);
+  });
+
+  it("adds the bonus of every wave cleared, on top of kill rewards", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+
+    events.emit("enemyKilled", { enemyId: 1, reward: 5 });
+    events.emit("waveCleared", { wave: 1, bonus: 10 });
+    events.emit("waveCleared", { wave: 2, bonus: 15 });
+
+    expect(wallet.coins).toBe(130);
+  });
+
+  it("a wave with no bonus changes nothing and emits nothing", () => {
+    const events = new EventBus();
+    const wallet = new Wallet(100, events);
+    let changes = 0;
+    events.on("coinsChanged", () => changes++);
+
+    events.emit("waveCleared", { wave: 1, bonus: 0 });
+
+    expect(wallet.coins).toBe(100);
+    expect(changes).toBe(0);
+  });
 });

@@ -3,10 +3,13 @@ import { GameScreenController } from "../screens/game/GameScreenController";
 import { MapSelectScreen } from "../screens/MapSelectScreen";
 import { MenuScreen } from "../screens/MenuScreen";
 import { GeometryMiniGameScreen } from "../screens/minigame/GeometryMiniGameScreen";
+import { MinigameSelectScreen } from "../screens/minigame/MinigameSelectScreen";
+import { RoomBuilderScreen } from "../screens/minigame/RoomBuilderScreen";
 import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResult } from "../model/GameResult";
 import { MAPS } from "../model/loadContent";
 import { Progress } from "../model/Progress";
+import { loadGame, saveGame } from "../model/saveGame";
 import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 import { TowerProgress } from "../model/TowerProgress";
@@ -27,19 +30,36 @@ export class App implements ScreenSwitcher {
   private shop: TowerShopScreen;
   private towerProgress = new TowerProgress();
   private miniGame: GeometryMiniGameScreen;
+  private minigames: MinigameSelectScreen;
+  private roomBuilder: RoomBuilderScreen;
 
   constructor(containerId: string) {
     this.stage = new Konva.Stage({ container: containerId });
     this.stage.add(this.layer);
+    // Pick up where the player left off, before the screens read the progress
+    loadGame(this.progress, this.towerProgress);
 
-    this.menu = new MenuScreen(this, this.progress);
+    this.menu = new MenuScreen(this, this.progress, this.sound);
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress, this.towerProgress, this.sound);
     this.result = new ResultScreen(this);
-    this.shop = new TowerShopScreen(this, this.towerProgress, this.sound);
+    this.shop = new TowerShopScreen(this, this.towerProgress, () => this.save(), this.sound);
+    this.minigames = new MinigameSelectScreen(this);
+    this.roomBuilder = new RoomBuilderScreen(
+      (areaUsed) => {
+        const awarded = this.progress.addRoomBuilderReward(areaUsed);
+        this.save();
+        return awarded;
+      },
+      () => this.switchTo("menu"),
+      (effect) => this.sound.play(effect),
+    );
     // A finished mini-game round turns its correct answers into bonus coins for the next game
     this.miniGame = new GeometryMiniGameScreen(
-      (result) => this.progress.addMiniGameReward(result.correctAnswers),
+      (result) => {
+        this.progress.addMiniGameReward(result.correctAnswers);
+        this.save();
+      },
       () => this.switchTo("menu"),
     );
     for (const screen of this.allScreens()) {
@@ -66,15 +86,35 @@ export class App implements ScreenSwitcher {
     } else if (name === "shop") {
       this.current = this.shop;
     } else if (name === "minigame") {
+      this.current = this.minigames;
+    } else if (name === "quiz") {
       this.current = this.miniGame;
+    } else if (name === "roomBuilder") {
+      this.current = this.roomBuilder;
     } else {
+      // The game screen has already recorded the finished game, so this is the moment to save it
       this.current = this.result;
+      this.save();
     }
     this.current.show(data);
   }
 
+  // Called after each finished game, shop purchase and mini-game round
+  private save(): void {
+    saveGame(this.progress, this.towerProgress);
+  }
+
   private allScreens(): Screen[] {
-    return [this.menu, this.maps, this.game, this.result, this.shop, this.miniGame];
+    return [
+      this.menu,
+      this.maps,
+      this.game,
+      this.result,
+      this.shop,
+      this.minigames,
+      this.miniGame,
+      this.roomBuilder,
+    ];
   }
 
   private resize(): void {

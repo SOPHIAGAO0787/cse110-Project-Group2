@@ -14,6 +14,7 @@ import {
   SIDEBAR_FILL,
   TITLE_TEXT,
   WARNING_TEXT,
+  GOOD_TEXT,
 } from "../theme";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { SettingsPanel } from "./SettingsPanel";
@@ -23,6 +24,7 @@ import type { Vec } from "../../model/types";
 import type { Tower } from "../../model/Tower";
 import type { ShopTower } from "../../model/shop/types";
 import { TowerUpgradeHint } from "./TowerUpgradeHint";
+import { TutorialView } from "./TutorialView";
 
 export const TILE = 48; // pixels per tile, before the map is scaled to fit the window
 const SHOP_WIDTH = 260;
@@ -54,6 +56,7 @@ export class GameScreenView {
   speedButton: Konva.Group;
   readonly prompt: QuestionPrompt;
   readonly settings: SettingsPanel;
+  readonly tutorial = new TutorialView();
   private upgradeHint = new TowerUpgradeHint();
 
   private mapCols: number;
@@ -109,7 +112,8 @@ export class GameScreenView {
     fill: WARNING_TEXT,
     visible: false,
   });
-  // The speed button shows a fast-forward sign (two triangles pointing right) and "1x" or "2x"
+  // The speed button shows a fast-forward sign (two triangles pointing right) and "1x", "2x"
+  // or "0.5x"
   private speedArrowOne = new Konva.RegularPolygon({
     x: 15,
     y: ICON_BUTTON_SIZE / 2,
@@ -129,7 +133,8 @@ export class GameScreenView {
   private speedLabel = new Konva.Text({
     x: 34,
     text: "1x",
-    width: 32,
+    width: 36, // room for "0.5x"
+    wrap: "none",
     height: ICON_BUTTON_SIZE,
     align: "center",
     verticalAlign: "middle",
@@ -160,8 +165,8 @@ export class GameScreenView {
   });
 
   // onStartWave runs on Start Wave, onBack on the back arrow and on "Back to maps" in the
-  // settings, onOpenSettings on the gear, onResume / onMainMenu on those settings buttons,
-  // and onToggleSpeed on the speed button. The settings switch the sound on and off.
+  // settings, onOpenSettings on the gear, onResume / onRestart / onMainMenu on those settings
+  // buttons, and onChangeSpeed on the speed button. The settings switch the sound on and off.
   constructor(
     mapCols: number,
     mapRows: number,
@@ -169,8 +174,9 @@ export class GameScreenView {
     onBack: () => void,
     onOpenSettings: () => void,
     onResume: () => void,
+    onRestart: () => void,
     onMainMenu: () => void,
-    onToggleSpeed: () => void,
+    onChangeSpeed: () => void,
     questions: QuestionService,
     sound: Sound,
   ) {
@@ -182,9 +188,9 @@ export class GameScreenView {
     this.settingsButton = makeSettingsButton(onOpenSettings);
     const speedIcon = new Konva.Group();
     speedIcon.add(this.speedArrowOne, this.speedArrowTwo, this.speedLabel);
-    this.speedButton = makeIconButton("speed", speedIcon, onToggleSpeed, SPEED_BUTTON_WIDTH);
+    this.speedButton = makeIconButton("speed", speedIcon, onChangeSpeed, SPEED_BUTTON_WIDTH);
     this.prompt = new QuestionPrompt(questions);
-    this.settings = new SettingsPanel(onResume, onBack, onMainMenu, sound);
+    this.settings = new SettingsPanel(onResume, onRestart, onBack, onMainMenu, sound);
     this.shopGroup.add(
       this.shopBackground,
       this.shopTitle,
@@ -231,6 +237,7 @@ export class GameScreenView {
       this.messageText,
       this.leakFrame,
       this.waveBanner,
+      this.tutorial.group, // under the question and the settings, which cover the map too
       this.upgradeHint.group,
       this.prompt.group,
       this.settings.group,
@@ -293,9 +300,10 @@ export class GameScreenView {
     this.startWaveButton.visible(canStart);
   }
 
-  // Shows a message under the HUD for 2 seconds.
-  showMessage(text: string): void {
+  // Shows a message under the HUD for 2 seconds, in red like a warning unless it is good news.
+  showMessage(text: string, good = false): void {
     this.messageText.text(text);
+    this.messageText.fill(good ? GOOD_TEXT : WARNING_TEXT);
     this.messageText.visible(true);
     // Restart the 2 seconds if a message is already showing, so the old timeout can't hide the new one
     window.clearTimeout(this.messageTimer);
@@ -354,6 +362,8 @@ export class GameScreenView {
     this.leakFrame.size({ width: mapWidth, height: mapHeight });
     this.waveBanner.position({ x: this.mapGroup.x(), y: this.mapGroup.y() + mapHeight * 0.2 });
     this.waveBanner.width(mapWidth);
+    // The tutorial sits at the bottom of the map, away from the shop and the HUD buttons
+    this.tutorial.place(this.mapGroup.x() + mapWidth / 2, this.mapGroup.y() + mapHeight - 12);
     this.prompt.resize(width, height);
     this.settings.resize(width, height);
   }

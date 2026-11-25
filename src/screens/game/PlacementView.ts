@@ -1,5 +1,6 @@
 import Konva from "konva";
 import { TILE } from "./GameScreenView";
+import { CIRCLE_TOWER_COLOR, SQUARE_TOWER_COLOR, TRIANGLE_TOWER_COLOR } from "../theme";
 import { tileToPixel } from "./coords";
 import { rectZone } from "../../model/geometry/rect";
 import { sectorRadius } from "../../model/geometry/sector";
@@ -76,7 +77,13 @@ function makeHint(index: number, text: string): Konva.Text {
 function makeMenuIcon(def: TowerDef): Konva.Shape {
   switch (def.range.kind) {
     case "sector":
-      return new Konva.RegularPolygon({ x: 130, y: 120, sides: 3, radius: 28, fill: "#2a8f5d" });
+      return new Konva.RegularPolygon({
+        x: 130,
+        y: 120,
+        sides: 3,
+        radius: 28,
+        fill: TRIANGLE_TOWER_COLOR,
+      });
     case "rect":
       return new Konva.Rect({
         x: 130,
@@ -86,10 +93,10 @@ function makeMenuIcon(def: TowerDef): Konva.Shape {
         offsetX: 22,
         offsetY: 22,
         cornerRadius: 4,
-        fill: "#b5651d",
+        fill: SQUARE_TOWER_COLOR,
       });
     case "circle":
-      return new Konva.Circle({ x: 130, y: 120, radius: 24, fill: "#4a90d9" });
+      return new Konva.Circle({ x: 130, y: 120, radius: 24, fill: CIRCLE_TOWER_COLOR });
   }
 }
 

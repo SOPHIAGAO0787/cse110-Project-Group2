@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { TowerDef } from "../../model/types";
 import { InGameTowerCard } from "./InGameTowerCard";
 import { BUTTON_FILL, CARD_BORDER } from "../theme";
+import { TOWERS } from "../../model/loadContent";
 
 const tower: TowerDef = {
   id: "circle",
@@ -51,7 +52,33 @@ describe("InGameTowerCard", () => {
 
   it("shows instructions for placing the tower", () => {
     expect(displayedText()).toContain("Drag onto a tile that turns green.");
-    expect(displayedText()).toContain("Press Enter to answer the question.");
+    expect(displayedText()).toContain("Enter: answer the question.");
+  });
+
+  it("names the confirm and cancel squares next to their keys", () => {
+    expect(displayedText()).toContain("✓ or Enter");
+    expect(displayedText()).toContain("✕ or Escape: cancel.");
+  });
+
+  it("fits every line of text inside the card for every tower", () => {
+    for (const def of TOWERS) {
+      const towerCard = new InGameTowerCard(def, new Konva.Circle({ radius: 24 }));
+      const background = towerCard.group.findOne<Konva.Rect>("Rect");
+      if (background === undefined) {
+        throw new Error("the card has no background");
+      }
+      for (const text of towerCard.group.find<Konva.Text>("Text")) {
+        expect(text.y() + text.height()).toBeLessThanOrEqual(background.height());
+      }
+      towerCard.group.destroy();
+    }
+  });
+
+  it("starts each block of text below the one above it", () => {
+    const texts = card.group.find<Konva.Text>("Text");
+    for (let i = 1; i < texts.length; i++) {
+      expect(texts[i].y()).toBeGreaterThanOrEqual(texts[i - 1].y() + texts[i - 1].height());
+    }
   });
 
   it("tells the player to aim for towers that are aimed", () => {

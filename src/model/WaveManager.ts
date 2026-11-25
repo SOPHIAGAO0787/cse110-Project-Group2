@@ -135,6 +135,7 @@ export class WaveManager {
     if (this.currentWave < this.totalWaves) {
       this.preparationRemaining = WAVE_PREPARATION_SECONDS;
     }
-    this.events.emit("waveCleared", { wave: this.currentWave });
+    const bonus = this.waves[this.currentWave - 1].clearBonus ?? 0;
+    this.events.emit("waveCleared", { wave: this.currentWave, bonus });
   }
 }

@@ -1,7 +1,8 @@
 import Konva from "konva";
 import type { Screen, ScreenSwitcher } from "../app/types";
+import type { Sound } from "../core/Sound";
 import type { Progress } from "../model/Progress";
-import { makeButton } from "./button";
+import { makeButton, setButtonLabel } from "./button";
 import { CARD_WIDTH, Page } from "./Page";
 import {
   CIRCLE_TOWER_COLOR,
@@ -15,6 +16,7 @@ import {
 const BUTTON_WIDTH = 320;
 // Left edge of anything BUTTON_WIDTH wide that is centered in the card
 const BUTTON_X = (CARD_WIDTH - BUTTON_WIDTH) / 2;
+const MUSIC_BUTTON_WIDTH = 180;
 
 // The first screen. The player starts a game, opens the tower shop or plays the mini-game from here.
 export class MenuScreen implements Screen {
@@ -22,12 +24,16 @@ export class MenuScreen implements Screen {
   private page: Page;
   private app: ScreenSwitcher;
   private progress: Progress;
+  private sound: Sound;
+  // The music switch in the top right corner. The settings in a game switch the same music.
+  private musicButton: Konva.Group;
   // Tells the player how many mini-game coins their next game starts with
   private bonusText: Konva.Text;
 
-  constructor(app: ScreenSwitcher, progress: Progress) {
+  constructor(app: ScreenSwitcher, progress: Progress, sound: Sound) {
     this.app = app;
     this.progress = progress;
+    this.sound = sound;
     this.page = new Page();
     this.group = this.page.group;
 
@@ -74,6 +80,19 @@ export class MenuScreen implements Screen {
     );
     miniGameButton.position({ x: BUTTON_X, y: 564 });
 
+    // Gets its label in refreshMusicLabel()
+    this.musicButton = makeButton(
+      "",
+      () => {
+        this.sound.toggleMusic();
+        this.refreshMusicLabel();
+      },
+      MUSIC_BUTTON_WIDTH,
+    );
+    // Level with the title, as far from the right edge as the title is from the left
+    this.musicButton.position({ x: CARD_WIDTH - 56 - MUSIC_BUTTON_WIDTH, y: 37 });
+    this.refreshMusicLabel();
+
     this.bonusText = new Konva.Text({
       y: 644,
       width: CARD_WIDTH,
@@ -91,6 +110,7 @@ export class MenuScreen implements Screen {
       playButton,
       shopButton,
       miniGameButton,
+      this.musicButton,
       this.bonusText,
     );
   }
@@ -100,7 +120,18 @@ export class MenuScreen implements Screen {
     const bonus = this.progress.bonusCoins;
     this.bonusText.text(`Mini-game bonus: +${bonus} coins in your next game`);
     this.bonusText.visible(bonus > 0);
+    // The music may have been switched in a game's settings since the last visit
+    this.refreshMusicLabel();
     this.group.visible(true);
+  }
+
+  // Same labels as the music switch in the game's settings
+  private refreshMusicLabel(): void {
+    if (this.sound.musicOn) {
+      setButtonLabel(this.musicButton, "Music: On");
+    } else {
+      setButtonLabel(this.musicButton, "Music: Off");
+    }
   }
 
   hide(): void {
