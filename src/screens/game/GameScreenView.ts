@@ -46,11 +46,11 @@ const STATUS_TOTAL_WIDTH = STATUS_WIDTHS.reduce((sum, width) => sum + width, 0) 
 
 // The HUD shows match status; the shop sidebar shows the gameplay coin balance.
 //
-//   ┌─────────────────────────────────────┬────────┐
+//   ┌───────────────────────────────────────────────┬────────┐
 //   │ [←] [♥ Lives] [≈ Wave] [▲ Enemies] [▶▶1x] [⚙] │ Shop $ │
-//   ├─────────────────────────────────────┤        │
-//   │                 map                 │        │
-//   └─────────────────────────────────────┴────────┘
+//   ├───────────────────────────────────────────────┤        │
+//   │                      map                      │        │
+//   └───────────────────────────────────────────────┴────────┘
 //
 // Anything drawn in tile pixels (map, enemies, towers, range preview) goes in mapGroup,
 // which is scaled and centered automatically. HUD and shop are not scaled.
