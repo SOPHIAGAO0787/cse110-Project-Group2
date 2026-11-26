@@ -60,7 +60,6 @@ export class Sound {
   private music: HTMLAudioElement;
   private effects: { [name: string]: HTMLAudioElement } = {};
   private lastPlayedAt: { [name: string]: number } = {}; // when each effect last played, in ms
-  private lastPopAt = 0; // time of the last pop, in milliseconds
   // Called after the Music or Sound switch changes. The App uses it to save the settings.
   onChange: () => void = () => {};
 
