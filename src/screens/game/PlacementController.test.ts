@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlacementController } from "./PlacementController";
 import { GameScreenView } from "./GameScreenView";
 import { GridView } from "./GridView";
+import { TowersView } from "./TowersView";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { GameModel } from "../../model/GameModel";
 import { MAPS, TOWERS } from "../../model/loadContent";
@@ -46,6 +47,7 @@ function startGame(map: MapConfig): void {
     towerProgress,
     questions,
     gridView,
+    new TowersView(),
     () => true,
     800,
   );

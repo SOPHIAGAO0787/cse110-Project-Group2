@@ -11,7 +11,7 @@ import { GridView } from "./GridView";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { TOWERS } from "../../model/loadContent";
-import { GameScreenView } from "./GameScreenView";
+import { GameScreenView, TILE } from "./GameScreenView";
 import map from "../../data/maps/map1.json";
 import map2 from "../../data/maps/map2.json";
 import { MAPS } from "../../model/loadContent";
@@ -901,6 +901,23 @@ describe("GameScreenController tower upgrades", () => {
     expect(hintText()).toContain("Unlock Level 3 in the Tower Shop first.");
     grid.group.fire("pointerleave");
     expect(hint.visible()).toBe(false);
+  });
+
+  it("shows the hovered tower's range, and the bigger one after an upgrade", () => {
+    const grid = prepareTower();
+    // The range group joins the map on the first hover
+    const range = () => controller.group.findOne<Konva.Group>(".tower-range")!;
+    const radius = () => range().findOne<Konva.Circle>("Circle")!.radius();
+
+    grid.group.fire("pointermove");
+    expect(radius()).toBe(model.towers[0].reach * TILE);
+    const before = radius();
+    grid.group.fire("click");
+    expect(model.towers[0].level).toBe(1);
+    expect(radius()).toBe(model.towers[0].reach * TILE);
+    expect(radius()).toBeGreaterThan(before);
+    grid.group.fire("pointerleave");
+    expect(range().getChildren().length).toBe(0);
   });
 
   it("refreshes hover affordability when the wallet changes", () => {

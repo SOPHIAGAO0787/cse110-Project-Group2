@@ -179,3 +179,47 @@ describe("TowersView square tower", () => {
     expect(body.rotation()).toBe(0);
   });
 });
+
+describe("TowersView range on hover", () => {
+  it("shows the range of a circle tower around its tile", () => {
+    const view = new TowersView();
+    const tower = new Tower(1, circle, { x: 3, y: 2 });
+    view.add(tower);
+
+    view.showRange(tower);
+
+    const range = view.group.findOne<Konva.Group>(".tower-range")!;
+    expect(range.position()).toEqual({ x: 3.5 * TILE, y: 2.5 * TILE });
+    expect(range.findOne<Konva.Circle>("Circle")!.radius()).toBe(tower.reach * TILE);
+  });
+
+  it("shows the aimed cone of a triangle tower and the aimed block of a square tower", () => {
+    const view = new TowersView();
+    const cone = new Tower(1, triangle, { x: 1, y: 1 }, { kind: "sector", facing: 0, spread: 1 });
+    const block = new Tower(2, rectangle, { x: 5, y: 1 });
+    view.add(cone);
+    view.add(block);
+    const range = () => view.group.findOne<Konva.Group>(".tower-range")!;
+
+    view.showRange(cone);
+    expect(range().findOne<Konva.Wedge>("Wedge")!.radius()).toBe(cone.reach * TILE);
+
+    view.showRange(block);
+    expect(range().getChildren().length).toBe(1); // the cone is gone
+    expect(range().findOne("Rect")).toBeDefined();
+  });
+
+  it("draws the range above every tower and removes it on hideRange", () => {
+    const view = new TowersView();
+    const first = new Tower(1, circle, { x: 1, y: 1 });
+    view.add(first);
+    view.showRange(first);
+    view.add(new Tower(2, circle, { x: 4, y: 1 }));
+    view.showRange(first);
+
+    const children = view.group.getChildren();
+    expect(children[children.length - 1].name()).toBe("tower-range");
+    view.hideRange();
+    expect(view.group.findOne<Konva.Group>(".tower-range")!.getChildren().length).toBe(0);
+  });
+});
