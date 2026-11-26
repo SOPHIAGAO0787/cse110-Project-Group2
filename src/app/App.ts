@@ -46,11 +46,12 @@ export class App implements ScreenSwitcher {
     this.shop = new TowerShopScreen(this, this.towerProgress, () => this.save(), this.sound);
     this.minigames = new MinigameSelectScreen(this);
     this.roomBuilder = new RoomBuilderScreen(
-      (areaUsed) => {
-        const awarded = this.progress.addRoomBuilderReward(areaUsed);
+      (earnedCoins) => {
+        const awarded = this.progress.addRoomBuilderReward(earnedCoins);
         this.save();
         return awarded;
       },
+      () => this.switchTo("minigame"),
       () => this.switchTo("menu"),
       (effect) => this.sound.play(effect),
     );

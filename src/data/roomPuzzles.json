@@ -1,0 +1,110 @@
+[
+  {
+    "id": "tower-lounge",
+    "name": "Tower Lounge",
+    "difficulty": "Easy",
+    "blocks": ["####", "####", "####"],
+    "inventories": [
+      { "id": "a", "bench": 3, "square": 4, "triangle": 4 },
+      { "id": "b", "bench": 2, "square": 4, "triangle": 8 },
+      { "id": "c", "bench": 4, "square": 2, "triangle": 4 },
+      { "id": "d", "bench": 1, "square": 6, "triangle": 8 }
+    ]
+  },
+  {
+    "id": "square-study",
+    "name": "Square Study",
+    "difficulty": "Easy",
+    "blocks": ["###", "###", "###"],
+    "inventories": [
+      { "id": "a", "bench": 2, "square": 3, "triangle": 4 },
+      { "id": "b", "bench": 3, "square": 1, "triangle": 4 },
+      { "id": "c", "bench": 1, "square": 4, "triangle": 6 },
+      { "id": "d", "bench": 0, "square": 5, "triangle": 8 }
+    ]
+  },
+  {
+    "id": "long-gallery",
+    "name": "Long Gallery",
+    "difficulty": "Easy",
+    "blocks": ["#####", "#####"],
+    "inventories": [
+      { "id": "a", "bench": 2, "square": 4, "triangle": 4 },
+      { "id": "b", "bench": 4, "square": 0, "triangle": 4 },
+      { "id": "c", "bench": 1, "square": 5, "triangle": 6 },
+      { "id": "d", "bench": 0, "square": 6, "triangle": 8 }
+    ]
+  },
+  {
+    "id": "corner-room",
+    "name": "L-shaped Room",
+    "difficulty": "Medium",
+    "blocks": ["##..", "##..", "##..", "####"],
+    "inventories": [
+      { "id": "a", "bench": 3, "square": 2, "triangle": 4 },
+      { "id": "b", "bench": 2, "square": 3, "triangle": 6 },
+      { "id": "c", "bench": 1, "square": 4, "triangle": 8 },
+      { "id": "d", "bench": 0, "square": 5, "triangle": 10 }
+    ]
+  },
+  {
+    "id": "horseshoe",
+    "name": "U-shaped Room",
+    "difficulty": "Medium",
+    "blocks": ["#..#", "#..#", "####", "####"],
+    "inventories": [
+      { "id": "a", "bench": 4, "square": 2, "triangle": 4 },
+      { "id": "b", "bench": 3, "square": 2, "triangle": 8 },
+      { "id": "c", "bench": 2, "square": 3, "triangle": 10 },
+      { "id": "d", "bench": 1, "square": 4, "triangle": 12 }
+    ]
+  },
+  {
+    "id": "crossbar",
+    "name": "T-shaped Room",
+    "difficulty": "Medium",
+    "blocks": ["#####", "..#..", "..#..", "..#.."],
+    "inventories": [
+      { "id": "a", "bench": 3, "square": 0, "triangle": 4 },
+      { "id": "b", "bench": 2, "square": 2, "triangle": 4 },
+      { "id": "c", "bench": 1, "square": 2, "triangle": 8 },
+      { "id": "d", "bench": 0, "square": 3, "triangle": 10 }
+    ]
+  },
+  {
+    "id": "courtyard",
+    "name": "Courtyard",
+    "difficulty": "Hard",
+    "blocks": ["####", "#..#", "#..#", "####"],
+    "inventories": [
+      { "id": "a", "bench": 4, "square": 1, "triangle": 6 },
+      { "id": "b", "bench": 3, "square": 1, "triangle": 10 },
+      { "id": "c", "bench": 2, "square": 2, "triangle": 12 },
+      { "id": "d", "bench": 0, "square": 4, "triangle": 16 }
+    ]
+  },
+  {
+    "id": "narrow-passage",
+    "name": "Narrow Passage",
+    "difficulty": "Hard",
+    "blocks": ["##...", "###..", "..###", "...##"],
+    "inventories": [
+      { "id": "a", "bench": 4, "square": 0, "triangle": 4 },
+      { "id": "b", "bench": 3, "square": 0, "triangle": 8 },
+      { "id": "c", "bench": 2, "square": 1, "triangle": 10 },
+      { "id": "d", "bench": 1, "square": 1, "triangle": 14 }
+    ]
+  },
+  {
+    "id": "staircase",
+    "name": "Staircase",
+    "difficulty": "Hard",
+    "blocks": ["#...", "##..", "###.", "####"],
+    "inventories": [
+      { "id": "a", "bench": 3, "square": 0, "triangle": 8 },
+      { "id": "b", "bench": 2, "square": 1, "triangle": 10 },
+      { "id": "c", "bench": 1, "square": 2, "triangle": 12 },
+      { "id": "d", "bench": 0, "square": 2, "triangle": 16 }
+    ]
+  }
+]

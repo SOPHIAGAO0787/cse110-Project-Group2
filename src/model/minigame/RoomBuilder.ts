@@ -1,16 +1,13 @@
-export const ROOM_WIDTH = 8;
-export const ROOM_HEIGHT = 6;
-export const ROOM_AREA = ROOM_WIDTH * ROOM_HEIGHT;
+import { ROOM_DIFFICULTIES, roomReward, type RoomPuzzle } from "./RoomPuzzles";
 
 const POINTS_PER_METER = 10;
 
 export const PIECES = {
-  bench: { name: "Bench", width: 4, height: 2, inventory: 3, formula: "length × width", turns: 2 },
+  bench: { name: "Bench", width: 4, height: 2, formula: "length × width", turns: 2 },
   square: {
     name: "Square tower",
     width: 2,
     height: 2,
-    inventory: 4,
     formula: "side × side",
     turns: 1,
   },
@@ -18,7 +15,6 @@ export const PIECES = {
     name: "Triangle tower",
     width: 2,
     height: 2,
-    inventory: 4,
     formula: "½ × base × height",
     turns: 4,
   },
@@ -68,9 +64,7 @@ export function pieceCorners({ kind, turn, x, y, width, height }: Readonly<RoomP
   return kind === "triangle" ? corners.filter((_, index) => index !== (turn + 1) % 4) : corners;
 }
 
-function overlaps(first: RoomPiece, second: RoomPiece): boolean {
-  const a = pieceCorners(first);
-  const b = pieceCorners(second);
+function overlaps(a: RoomCell[], b: RoomCell[]): boolean {
   // All edge normals are horizontal, vertical, or diagonal. A separating (or touching)
   // projection on any of those axes means the shapes share no interior area.
   const axes = [
@@ -94,6 +88,12 @@ export class RoomBuilder {
   private history: { index: number; previous?: RoomPiece }[] = [];
   private complete = false;
 
+  constructor(readonly puzzle: RoomPuzzle) {}
+
+  get maxReward(): number {
+    return ROOM_DIFFICULTIES[this.puzzle.layout.difficulty].maxReward;
+  }
+
   get pieces(): readonly Readonly<RoomPiece>[] {
     return this.placements;
   }
@@ -104,21 +104,26 @@ export class RoomBuilder {
 
   get stats() {
     const areaUsed = this.placements.reduce((area, piece) => area + pieceArea(piece.kind), 0);
+    const area = this.puzzle.layout.area;
     return {
       areaUsed,
-      areaRemaining: ROOM_AREA - areaUsed,
-      utilization: Math.round((areaUsed / ROOM_AREA) * 100),
+      areaRemaining: area - areaUsed,
+      utilization: Math.round((areaUsed / area) * 100),
+      potentialReward: roomReward(areaUsed, area, this.maxReward),
       score: pointsForArea(areaUsed),
       count: this.placements.length,
     };
   }
 
   remaining(kind: PieceKind): number {
-    return PIECES[kind].inventory - this.placements.filter((piece) => piece.kind === kind).length;
+    return (
+      this.puzzle.inventory[kind] - this.placements.filter((piece) => piece.kind === kind).length
+    );
   }
 
   placementError(piece: RoomPiece, movingIndex?: number): string | null {
     const { kind, x, y, width, height } = piece;
+    const layout = this.puzzle.layout;
     if (this.complete) return "This room is complete.";
     if (movingIndex === undefined && this.remaining(kind) === 0)
       return "No pieces of this type remaining.";
@@ -127,12 +132,27 @@ export class RoomBuilder {
       !Number.isInteger(y) ||
       x < 0 ||
       y < 0 ||
-      x + width > ROOM_WIDTH ||
-      y + height > ROOM_HEIGHT
+      x + width > layout.width ||
+      y + height > layout.height
     ) {
       return "This piece must fit inside the room.";
     }
-    return this.placements.some((placed, index) => index !== movingIndex && overlaps(piece, placed))
+    const corners = pieceCorners(piece);
+    for (let row = y; row < y + height; row++) {
+      for (let col = x; col < x + width; col++) {
+        if (layout.cells[row][col]) continue;
+        const cell = [
+          { x: col, y: row },
+          { x: col + 1, y: row },
+          { x: col + 1, y: row + 1 },
+          { x: col, y: row + 1 },
+        ];
+        if (overlaps(corners, cell)) return "This piece crosses a blocked cell.";
+      }
+    }
+    return this.placements.some(
+      (placed, index) => index !== movingIndex && overlaps(corners, pieceCorners(placed)),
+    )
       ? "This piece overlaps another piece."
       : null;
   }

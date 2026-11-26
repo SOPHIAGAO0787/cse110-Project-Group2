@@ -2,6 +2,7 @@
 import Konva from "konva";
 import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ROOM_SOLUTIONS } from "../model/minigame/RoomPuzzles.fixtures";
 import { MAPS } from "../model/loadContent";
 import { Progress } from "../model/Progress";
 import { loadGame, SAVE_KEY, saveGame } from "../model/saveGame";
@@ -13,6 +14,7 @@ const stages = Konva.stages;
 let stage: Konva.Stage;
 let app: App;
 let useFixedQuizQuestions: boolean;
+let puzzleSamples: number[];
 
 function visibleText() {
   return stage.find<Konva.Text>("Text").filter((node) => node.isVisible());
@@ -70,9 +72,28 @@ function drag(label: string, x: number, y: number) {
   release(x, y);
 }
 
-function openRoom() {
+function openDifficulty() {
   click("Mini-game");
   click("Room Builder");
+}
+
+function chooseDifficulty(difficulty: string, layout = 0, inventory = 0) {
+  puzzleSamples = [layout, inventory];
+  visibleText()
+    .find((node) => node.text() === difficulty && node.listening())!
+    .getParent()!
+    .fire("click");
+}
+
+function openRoom() {
+  openDifficulty();
+  chooseDifficulty("Easy");
+}
+
+function leaveRoom() {
+  back();
+  back();
+  back();
 }
 
 function placeBench() {
@@ -100,9 +121,12 @@ beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
   document.body.innerHTML = '<div id="game"></div>';
   useFixedQuizQuestions = false;
+  puzzleSamples = [];
   const random = Math.random;
   // Give the quiz predictable dimensions without affecting Konva's random hit colors.
-  vi.spyOn(Math, "random").mockImplementation(() => (useFixedQuizQuestions ? 0 : random()));
+  vi.spyOn(Math, "random").mockImplementation(() =>
+    useFixedQuizQuestions ? 0 : (puzzleSamples.shift() ?? random()),
+  );
   startApp();
 });
 
@@ -116,7 +140,7 @@ afterEach(() => {
 describe("Room Builder navigation and rewards", () => {
   it("opens from the main menu and shows score, area and feedback after placement", () => {
     openRoom();
-    expect(texts()).toContain("Make every space count!");
+    expect(texts()).toContain("Easy — Tower Lounge");
     placeBench();
     expect(texts()).toEqual(
       expect.arrayContaining([
@@ -125,6 +149,7 @@ describe("Room Builder navigation and rewards", () => {
         "8 / 48 m²",
         "17%",
         "2 remaining",
+        "3 / 20 coins",
       ]),
     );
     drag("Bench", 0, 0);
@@ -181,7 +206,7 @@ describe("Room Builder navigation and rewards", () => {
         "Area filled   12 / 48 m²",
         "Room utilization   25%",
         "Pieces placed   2",
-        "Bonus coins earned   +5",
+        "Bonus coins awarded   +5",
       ]),
     );
     click("Return to Menu");
@@ -210,7 +235,8 @@ describe("Room Builder navigation and rewards", () => {
     placeBench();
     drag("Bench", 0, 2);
     click("Finish Room");
-    expect(texts()).toContain("Bonus coins earned   +5");
+    expect(texts()).toContain("Bonus coins awarded   +5");
+    expect(texts()).toContain("The shared 50-coin savings cap reduced your award.");
     const restored = new Progress(MAPS);
     const restoredTowers = new TowerProgress();
     loadGame(restored, restoredTowers);
@@ -220,30 +246,26 @@ describe("Room Builder navigation and rewards", () => {
 
   it("restarts with a fresh room and reports the actual capped reward", () => {
     openRoom();
-    for (let round = 0; round < 5; round++) {
+    for (let round = 0; round < 6; round++) {
       for (let y = 0; y < 6; y += 2) drag("Bench", 0, y);
       drag("Square tower", 4, 0);
       click("Finish Room");
-      expect(texts()).toContain(`Bonus coins earned   +${[15, 15, 15, 5, 0][round]}`);
-      click("Play Again");
+      expect(texts()).toContain(`Bonus coins awarded   +${[11, 11, 11, 11, 6, 0][round]}`);
+      click("Try Again");
       expect(texts()).toEqual(expect.arrayContaining(["0 pts", "3 remaining"]));
     }
-    const back = stage.find<Konva.Group>(".back").find((node) => node.isVisible())!;
-    back.fire("click");
+    leaveRoom();
     expect(texts()).toContain("Mini-game bonus: +50 coins in your next game");
   });
 
   it("leaves unfinished rooms without coins and opens a fresh round", () => {
     openRoom();
     placeBench();
-    stage
-      .find<Konva.Group>(".back")
-      .find((node) => node.isVisible())!
-      .fire("click");
+    leaveRoom();
     expect(texts().some((text) => text.startsWith("Mini-game bonus"))).toBe(false);
     expect(localStorage.getItem(SAVE_KEY)).toBeNull();
     openRoom();
-    expect(texts()).toEqual(expect.arrayContaining(["3 remaining", "0 pts"]));
+    expect(texts()).toEqual(expect.arrayContaining(["2 remaining", "8 remaining", "0 pts"]));
   });
 
   it("moves a placed piece, rejects invalid moves, and undoes movement", () => {
@@ -296,7 +318,7 @@ describe("Room Builder navigation and rewards", () => {
     expect(triangle().points()).toEqual(original);
     expect(texts()).toContain("120 pts");
     click("Finish Room");
-    expect(texts()).toContain("Bonus coins earned   +5");
+    expect(texts()).toContain("Bonus coins awarded   +5");
   });
 
   it("cancels an in-flight drag on reset or navigation and ignores the late release", () => {
@@ -306,7 +328,7 @@ describe("Room Builder navigation and rewards", () => {
       press(placedPieces()[0], 32, 32);
       window.dispatchEvent(pointer("pointermove", grid(), 32, 3 * 64 + 32));
       expect(document.body.style.cursor).toBe("grabbing");
-      if (leave) back();
+      if (leave) leaveRoom();
       else click("Reset Room");
       release(0, 3);
       expect(document.body.style.cursor).toBe("default");
@@ -315,11 +337,13 @@ describe("Room Builder navigation and rewards", () => {
         openRoom();
       }
       expect(placedPieces()).toHaveLength(0);
-      expect(texts()).toEqual(expect.arrayContaining(["0 pts", "3 remaining"]));
+      expect(texts()).toEqual(
+        expect.arrayContaining(["0 pts", leave ? "8 remaining" : "3 remaining"]),
+      );
     }
   });
 
-  it("reaches 100% with all inventory, rejects another drag, and awards 30 coins", () => {
+  it("reaches 100% with all inventory, rejects another drag, and awards 20 coins", () => {
     openRoom();
     for (const y of [0, 2, 4]) drag("Bench", 0, y);
     for (const x of [4, 6]) {
@@ -334,7 +358,91 @@ describe("Room Builder navigation and rewards", () => {
     expect(texts()).toContain("No pieces of this type remaining.");
     expect(placedPieces()).toHaveLength(11);
     click("Finish Room");
-    expect(texts()).toContain("Bonus coins earned   +30");
+    expect(texts()).toContain("Perfect Room! 100% Utilization");
+    expect(texts()).toContain("Bonus coins awarded   +20");
+  });
+
+  it("selects an irregular Medium puzzle, rejects a blocked drop, and resets the same puzzle", () => {
+    openDifficulty();
+    expect(texts()).toContain("Select Difficulty");
+    back();
+    expect(texts()).toContain("Geometry Quiz");
+    click("Room Builder");
+    chooseDifficulty("Medium");
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Medium — L-shaped Room", "0 / 40 m²", "0 / 30 coins"]),
+    );
+    drag("Bench", 4, 0);
+    expect(texts()).toContain("This piece crosses a blocked cell.");
+    placeBench();
+    expect(texts()).toEqual(expect.arrayContaining(["8 / 40 m²", "6 / 30 coins"]));
+    click("Reset Room");
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Medium — L-shaped Room", "0 / 40 m²", "3 remaining"]),
+    );
+    expect(localStorage.getItem(SAVE_KEY)).toBeNull();
+  });
+
+  it("retries the same Hard inventory, advances to a different one, and changes difficulty", () => {
+    openDifficulty();
+    chooseDifficulty("Hard");
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Hard — Courtyard", "6 remaining", "0 / 40 coins"]),
+    );
+    click("Finish Room");
+    expect(texts()).toContain("Bonus coins awarded   +0");
+    click("Try Again");
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Hard — Courtyard", "6 remaining", "0 / 48 m²"]),
+    );
+    click("Finish Room");
+    puzzleSamples = [0, 0];
+    click("Next Puzzle");
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Hard — Courtyard", "10 remaining", "0 / 48 m²"]),
+    );
+    click("Finish Room");
+    click("Change Difficulty");
+    expect(texts()).toContain("Select Difficulty");
+    chooseDifficulty("Easy", 0.5);
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Easy — Square Study", "0 / 36 m²", "0 / 20 coins"]),
+    );
+  });
+
+  it.each([
+    ["Medium", "corner-room", 30, 30],
+    ["Hard", "courtyard", 40, 10],
+  ])("shows the perfect %s performance reward and actual payout", (difficulty, id, max, award) => {
+    if (difficulty === "Hard") {
+      const progress = new Progress(MAPS);
+      progress.addMiniGameReward(8);
+      saveGame(progress, new TowerProgress());
+      stage.destroy();
+      startApp();
+    }
+    openDifficulty();
+    chooseDifficulty(difficulty);
+    const names = { bench: "Bench", square: "Square tower", triangle: "Triangle tower" };
+    const turns = { bench: 0, square: 0, triangle: 0 };
+    for (const [kind, x, y, turn = 0] of ROOM_SOLUTIONS[`${id}/a`]) {
+      const limit = kind === "bench" ? 2 : 4;
+      const rotationCount = (turn - turns[kind] + limit) % limit;
+      if (rotationCount > 0) {
+        select(names[kind]);
+        for (let count = 0; count < rotationCount; count++) click("Rotate");
+      }
+      drag(names[kind], x, y);
+      turns[kind] = turn;
+    }
+    click("Finish Room");
+    expect(texts()).toEqual(
+      expect.arrayContaining([
+        "Perfect Room! 100% Utilization",
+        `Performance reward   ${max} coins`,
+        `Bonus coins awarded   +${award}`,
+      ]),
+    );
   });
 
   it("still completes the timed quiz and persists its coins in the shared balance", () => {
@@ -355,9 +463,9 @@ describe("Room Builder navigation and rewards", () => {
       vi.advanceTimersByTime(1200);
     }
     back();
-    expect(texts()).toContain("Mini-game bonus: +30 coins in your next game");
+    expect(texts()).toContain("Mini-game bonus: +28 coins in your next game");
     const restored = new Progress(MAPS);
     loadGame(restored, new TowerProgress());
-    expect(restored.bonusCoins).toBe(30);
+    expect(restored.bonusCoins).toBe(28);
   });
 });
