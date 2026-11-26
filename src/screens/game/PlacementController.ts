@@ -9,6 +9,7 @@ import type { QuestionService } from "../../model/questions/QuestionService";
 import { wrongAnswerCost } from "../../model/questions/TowerQuestionsHandling";
 import { InGameTowerCard } from "./InGameTowerCard";
 import type { TowerProgress } from "../../model/TowerProgress";
+import type { Tower } from "../../model/Tower";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 
@@ -29,6 +30,7 @@ export class PlacementController {
   private cleanup: () => void;
   // Runs when a tower's question opens. The controller sets it, for the tutorial.
   onQuestionOpened: () => void = () => {};
+  onTowerHover: (tower: Tower | undefined) => void = () => {};
 
   constructor(
     view: GameScreenView,
@@ -162,6 +164,7 @@ export class PlacementController {
         !this.view.settings.isOpen() &&
         placement.state.kind === "idle";
       const container = stage?.container();
+      this.onTowerHover(canShow ? tower : undefined);
       if (!canShow || !tower) {
         this.view.hideTowerUpgradeHint();
         if (container) container.style.cursor = "default";

@@ -13,6 +13,8 @@ const toDegrees = (radians: number) => (radians * 180) / Math.PI;
 interface TowerSprite {
   group: Konva.Group; // the tower's visual, positioned at its tile
   fire(): void; // the animation when it shoots
+  showRange(): void;
+  hideRange(): void;
   // Called every frame with where the tower's target is (null if none); dt is in seconds.
   update?(target: Vec | null, dt: number): void;
 }
@@ -61,6 +63,14 @@ function pop(node: Konva.Node): void {
 class CircleSprite implements TowerSprite {
   group = new Konva.Group({ listening: false });
   private body = new Konva.Circle({ radius: TILE / 2, fill: CIRCLE_TOWER_COLOR });
+  private range = new Konva.Circle({
+    name: "tower-range",
+    stroke: "#4a90d9",
+    strokeWidth: 2,
+    fill: "#4a90d933",
+    visible: false,
+    listening: false,
+  });
   private shake = new Shake(this.body, (t) => ({
     x: 3 * (1 - t) * Math.sin(t * Math.PI * 6), // wobbles x
     y: 2 * (1 - t) * Math.sin(t * Math.PI * 3), // wobbles y
@@ -69,7 +79,15 @@ class CircleSprite implements TowerSprite {
 
   constructor(tower: Tower) {
     this.tower = tower;
-    this.group.add(this.body);
+    this.group.add(this.body, this.range);
+  }
+
+  showRange(): void {
+    this.range.radius(this.tower.reach * TILE).visible(true);
+  }
+
+  hideRange(): void {
+    this.range.visible(false);
   }
 
   fire(): void {
@@ -108,6 +126,7 @@ class TriangleSprite implements TowerSprite {
   private tower: Tower;
   private facing: number; // where the cone points (the real hit area; never changes)
   private spread: number;
+  private range: Konva.Wedge;
   private angle: number; // where the body points right now: swings towards the target, else back to `facing`
 
   constructor(tower: Tower) {
@@ -117,14 +136,33 @@ class TriangleSprite implements TowerSprite {
     this.facing = cfg.facing;
     this.spread = cfg.spread;
     this.angle = cfg.facing;
+    this.range = new Konva.Wedge({
+      name: "tower-range",
+      radius: tower.reach * TILE,
+      angle: toDegrees(cfg.spread),
+      rotation: toDegrees(cfg.facing) - toDegrees(cfg.spread) / 2,
+      stroke: "#4a90d9",
+      strokeWidth: 2,
+      fill: "#4a90d933",
+      visible: false,
+      listening: false,
+    });
     this.pointBody();
-    this.group.add(this.body);
+    this.group.add(this.body, this.range);
 
     // Kick backwards, away from where the body is pointing.
     this.shake = new Shake(this.body, (t) => {
       const k = 4 * (1 - t) * Math.sin(t * Math.PI * 6);
       return { x: -Math.cos(this.angle) * k, y: -Math.sin(this.angle) * k };
     });
+  }
+
+  showRange(): void {
+    this.range.visible(true);
+  }
+
+  hideRange(): void {
+    this.range.visible(false);
   }
 
   // Only the body turns, so the cone flash below is not rotated twice.
@@ -170,11 +208,18 @@ class RectSprite implements TowerSprite {
   // so squashing and shaking it works like the other towers.
   private body = new Konva.Group({ listening: false });
   private tower: Tower;
+  private range: Konva.Rect;
 
   constructor(tower: Tower) {
     const cfg = tower.config;
     if (cfg.kind !== "rect") throw new Error("RectSprite needs a rect config");
     this.tower = tower;
+    this.range = this.zoneRect();
+    this.range.name("tower-range");
+    this.range.fill("#4a90d933");
+    this.range.stroke("#4a90d9");
+    this.range.strokeWidth(2);
+    this.range.visible(false);
 
     const size = TILE * 0.8;
     this.body.add(
@@ -195,7 +240,15 @@ class RectSprite implements TowerSprite {
       }),
     );
     this.body.rotation(FACING_DEGREES[cfg.facing]); // the barrel starts out pointing right
-    this.group.add(this.body);
+    this.group.add(this.body, this.range);
+  }
+
+  showRange(): void {
+    this.range.visible(true);
+  }
+
+  hideRange(): void {
+    this.range.visible(false);
   }
 
   // The block this tower hits, as a rectangle relative to the tower's centre (in pixels).
@@ -249,6 +302,7 @@ function makeSprite(tower: Tower): TowerSprite {
 export class TowersView {
   group = new Konva.Group({ listening: false }); // so GridView's hover still gets the mouse
   private sprites = new Map<number, TowerSprite>();
+  private hoveredTowerId: number | null = null;
 
   add(tower: Tower): void {
     const sprite = makeSprite(tower);
@@ -259,6 +313,14 @@ export class TowersView {
 
   fire(towerId: number): void {
     this.sprites.get(towerId)?.fire();
+  }
+
+  showRange(towerId: number | null): void {
+    if (this.hoveredTowerId !== null && this.hoveredTowerId !== towerId) {
+      this.sprites.get(this.hoveredTowerId)?.hideRange();
+    }
+    this.hoveredTowerId = towerId;
+    if (towerId !== null) this.sprites.get(towerId)?.showRange();
   }
 
   // Once per frame: lets each tower swing towards its current target.

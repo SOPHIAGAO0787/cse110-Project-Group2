@@ -10,12 +10,79 @@ import { ENEMIES, TOWERS } from "../../model/loadContent";
 import { TILE } from "./GameScreenView";
 import { TowersView } from "./TowersView";
 import { CIRCLE_TOWER_COLOR, SQUARE_TOWER_COLOR, TRIANGLE_TOWER_COLOR } from "../theme";
+import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 
 const circle = TOWERS.find((d) => d.id === "circle")!;
 const triangle = TOWERS.find((d) => d.id === "triangle")!;
 const rectangle = TOWERS.find((d) => d.id === "rectangle")!;
 
 describe("TowersView", () => {
+  it("shows the hovered circle's current range and hides it on leave", () => {
+    const view = new TowersView();
+    const tower = new Tower(1, circle, { x: 3, y: 2 });
+    view.add(tower);
+    const range = view.group.findOne<Konva.Circle>(".tower-range")!;
+    expect(range.visible()).toBe(false);
+    expect(range.listening()).toBe(false);
+    expect(view.group.listening()).toBe(false);
+
+    view.showRange(tower.id);
+    expect(range.visible()).toBe(true);
+    expect(range.radius()).toBe(tower.reach * TILE);
+    const upgraded = SHOP_TOWERS.find((shop) => shop.def.id === "circle")!;
+    tower.upgrade(upgraded.levels[1]);
+    view.showRange(tower.id);
+    expect(range.radius()).toBe(tower.reach * TILE);
+
+    view.showRange(null);
+    expect(range.visible()).toBe(false);
+  });
+
+  it("shows the triangle's placed cone instead of its turning body direction", () => {
+    const view = new TowersView();
+    const config = { kind: "sector", facing: Math.PI / 2, spread: Math.PI / 3 } as const;
+    const tower = new Tower(1, triangle, { x: 2, y: 3 }, config);
+    view.add(tower);
+    view.showRange(tower.id);
+    const range = view.group.findOne<Konva.Wedge>(".tower-range")!;
+    expect(range.visible()).toBe(true);
+    expect(range.radius()).toBeCloseTo(tower.reach * TILE);
+    expect(range.angle()).toBeCloseTo(60);
+    expect(range.rotation()).toBeCloseTo(60);
+    expect(range.listening()).toBe(false);
+  });
+
+  it("shows the square's aimed block and switches off the previous tower's range", () => {
+    const view = new TowersView();
+    const circleTower = new Tower(1, circle, { x: 1, y: 1 });
+    const squareTower = new Tower(
+      2,
+      rectangle,
+      { x: 1, y: 1 },
+      {
+        kind: "rect",
+        facing: "right",
+        width: 2,
+        depth: 3,
+        side: -1,
+      },
+    );
+    view.add(circleTower);
+    view.add(squareTower);
+    view.showRange(circleTower.id);
+    view.showRange(squareTower.id);
+    const circleRange = (view.group.getChildren()[0] as Konva.Group).findOne<Konva.Circle>(
+      ".tower-range",
+    )!;
+    const block = (view.group.getChildren()[1] as Konva.Group).findOne<Konva.Rect>(".tower-range")!;
+    expect(circleRange.visible()).toBe(false);
+    expect(block.visible()).toBe(true);
+    expect(block.position()).toEqual({ x: 0.5 * TILE, y: -1.5 * TILE });
+    expect(block.size()).toEqual({ width: 3 * TILE, height: 2 * TILE });
+    expect(block.listening()).toBe(false);
+    view.showRange(null);
+    expect(block.visible()).toBe(false);
+  });
   it("puts a sprite at the centre of the tower's tile", () => {
     const view = new TowersView();
     view.add(new Tower(1, circle, { x: 3, y: 2 }));

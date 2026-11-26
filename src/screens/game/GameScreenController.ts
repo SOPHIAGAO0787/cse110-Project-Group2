@@ -142,6 +142,7 @@ export class GameScreenController implements Screen {
       this.screenHeight,
     );
     this.placement.onQuestionOpened = () => this.view.tutorial.advance("question");
+    this.placement.onTowerHover = (tower) => towersView.showRange(tower?.id ?? null);
 
     const refreshHud = () => {
       this.refreshUpgradeHint();
