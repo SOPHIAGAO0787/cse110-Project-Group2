@@ -192,8 +192,24 @@ export class GameModel {
     }
 
     tower.upgrade(nextStats);
+    tower.totalInvested += cost;
 
     return `${tower.def.name} upgraded to Level ${tower.level + 1}.`;
+  }
+
+  // Returns the refund on success, or null when the tower cannot be sold.
+  trySellTower(towerId: number): number | null {
+    if (this.isOver) return null;
+    const index = this.towers.findIndex((tower) => tower.id === towerId);
+    if (index === -1) return null;
+
+    const tower = this.towers[index];
+    const refund = tower.sellValue;
+    this.towers.splice(index, 1);
+    this.grid.release(tower.tile);
+    this.wallet.add(refund);
+    this.events.emit("towerSold", { towerId, tile: tower.tile, refund });
+    return refund;
   }
 
   // Adds an enemy using stats scaled to the current wave.

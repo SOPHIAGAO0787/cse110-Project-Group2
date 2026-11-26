@@ -16,6 +16,15 @@ const triangle = TOWERS.find((d) => d.id === "triangle")!;
 const rectangle = TOWERS.find((d) => d.id === "rectangle")!;
 
 describe("TowersView", () => {
+  it("removes only the sold tower's sprite", () => {
+    const view = new TowersView();
+    view.add(new Tower(1, circle, { x: 1, y: 1 }));
+    view.add(new Tower(2, triangle, { x: 2, y: 1 }));
+    view.remove(1);
+    view.remove(1);
+    expect(view.group.getChildren()).toHaveLength(1);
+    expect(view.group.getChildren()[0].position()).toEqual({ x: 2.5 * TILE, y: 1.5 * TILE });
+  });
   it("puts a sprite at the centre of the tower's tile", () => {
     const view = new TowersView();
     view.add(new Tower(1, circle, { x: 3, y: 2 }));

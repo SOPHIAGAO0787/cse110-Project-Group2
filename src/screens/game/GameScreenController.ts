@@ -190,6 +190,7 @@ export class GameScreenController implements Screen {
       const tower = this.model.towers.find((t) => t.id === towerId);
       if (tower) towersView.add(tower);
     });
+    events.on("towerSold", ({ towerId }) => towersView.remove(towerId));
     events.on("towerFired", ({ towerId }) => towersView.fire(towerId));
     events.on("towerPlaced", () => this.view.tutorial.advance("towerPlaced"));
     events.on("waveStarted", () => this.view.tutorial.advance("waveStarted"));

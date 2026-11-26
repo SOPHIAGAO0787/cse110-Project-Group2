@@ -257,6 +257,11 @@ export class TowersView {
     this.sprites.set(tower.id, sprite);
   }
 
+  remove(towerId: number): void {
+    this.sprites.get(towerId)?.group.destroy();
+    this.sprites.delete(towerId);
+  }
+
   fire(towerId: number): void {
     this.sprites.get(towerId)?.fire();
   }

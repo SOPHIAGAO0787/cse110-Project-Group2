@@ -27,7 +27,7 @@ const STEPS: TutorialStep[] = [
   },
   { text: "Click the speed button or press Space to change the speed.", waitFor: "speed" },
   {
-    text: "Each enemy you stop gives coins. Click a tower on the map to upgrade it.",
+    text: "Each enemy you stop gives coins. Click a tower on the map for upgrade and sell options.",
     waitFor: null,
   },
 ];

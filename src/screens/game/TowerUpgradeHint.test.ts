@@ -28,20 +28,23 @@ function show(maxLevel: number, coins: number) {
 }
 
 describe("TowerUpgradeHint", () => {
-  it("shows the next level's cost, stat changes, and click instruction", () => {
+  it("shows the next level's cost and stats on hover", () => {
     show(1, 75);
     expect(text()).toContain("Upgrade to Level 2 · 75 coins");
     expect(text()).toContain("Damage: 7 → 10");
     expect(text()).toContain("Speed: 0.8 → 1.2 shots/sec");
     expect(text()).toContain("Radius: 2 → 2.8 tiles");
-    expect(text()).toContain("Click this tower to upgrade.");
-    expect(hint.group.listening()).toBe(false);
+    expect(text()).toContain("Use Upgrade below.");
+    expect(hint.group.findOne(".upgrade-tower-button")?.visible()).toBe(true);
+    expect(hint.group.findOne(".sell-tower-button")?.visible()).toBe(true);
+    expect(hint.group.findOne(".sell-tower-button")?.listening()).toBe(true);
+    expect(text()).toContain("Sell Tower (+25 coins)");
   });
 
   it("explains the purchased level cap before offering an upgrade", () => {
     show(0, 200);
     expect(text()).toContain("Unlock Level 2 in the Tower Shop first.");
-    expect(text()).not.toContain("Click this tower to upgrade.");
+    expect(text()).not.toContain("Spend 75 gameplay coins.");
   });
 
   it("shows exactly how many more match coins are needed", () => {
@@ -68,16 +71,16 @@ describe("TowerUpgradeHint", () => {
     tower.upgrade(circle.levels[2]);
     hint.show(tower, circle, 2, 200, { x: 200, y: 200 }, { x: 800, y: 600 });
     expect(text()).toContain("Maximum level reached");
-    expect(text()).not.toContain("Click this tower to upgrade.");
+    expect(text()).not.toContain("Spend 75 gameplay coins.");
   });
 
   it("keeps the panel inside the viewport at a bottom-right tower", () => {
     show(1, 200);
     expect(hint.group.x()).toBeGreaterThanOrEqual(8);
     expect(hint.group.x() + 280).toBeLessThanOrEqual(800);
-    expect(hint.group.y() + 216).toBeLessThanOrEqual(600);
+    expect(hint.group.y() + 300).toBeLessThanOrEqual(600);
     for (const node of hint.group.find<Konva.Text>("Text")) {
-      expect(node.y() + node.height()).toBeLessThan(216);
+      expect(node.y() + node.height()).toBeLessThan(300);
     }
   });
 });

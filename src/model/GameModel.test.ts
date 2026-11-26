@@ -134,6 +134,104 @@ describe("GameModel.tryPlaceTower", () => {
   });
 });
 
+describe("GameModel.trySellTower", () => {
+  const map = loadMap(map1);
+  const tile = { x: 0, y: 2 };
+
+  it.each([
+    ["circle", 50, 25],
+    ["triangle", 70, 35],
+    ["rectangle", 75, 37],
+  ])("refunds half of a new %s tower, rounded down", (defId, price, refund) => {
+    const progress = new TowerProgress();
+    progress.maxLevels.set(defId, 0);
+    const game = new GameModel(map, progress);
+    const sold: number[] = [];
+    game.events.on("towerSold", (event) => sold.push(event.refund));
+    expect(game.tryPlaceTower(defId, tile)).toBe("ok");
+    const tower = game.towers[0];
+    expect(tower.totalInvested).toBe(price);
+    expect(tower.sellValue).toBe(refund);
+
+    expect(game.trySellTower(tower.id)).toBe(refund);
+    expect(game.wallet.coins).toBe(map.startingCoins - price + refund);
+    expect(game.towers).toHaveLength(0);
+    expect(game.grid.isOccupied(tile)).toBe(false);
+    expect(game.grid.isBuildable(tile)).toBe(true);
+    expect(sold).toEqual([refund]);
+  });
+
+  it("includes only paid upgrades for this tower and leaves other towers alone", () => {
+    const progress = new TowerProgress();
+    progress.maxLevels.set("circle", 1);
+    const game = new GameModel(map, progress);
+    game.wallet.add(200);
+    expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+    expect(game.tryPlaceTower("circle", { x: 1, y: 2 })).toBe("ok");
+    const [first, other] = game.towers;
+    expect(game.tryUpgradeTower(first.id)).toContain("upgraded");
+    expect(first.totalInvested).toBe(125);
+    expect(other.totalInvested).toBe(50);
+    const before = game.wallet.coins;
+
+    expect(game.trySellTower(first.id)).toBe(62);
+    expect(game.wallet.coins).toBe(before + 62);
+    expect(game.towers).toEqual([other]);
+    expect(game.grid.isOccupied(other.tile)).toBe(true);
+    expect(other.level).toBe(0);
+    expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+    expect(game.towers[1].id).not.toBe(first.id);
+  });
+
+  it("rejects duplicate and unknown sales without wallet or event changes", () => {
+    const game = new GameModel(map);
+    expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+    const id = game.towers[0].id;
+    expect(game.trySellTower(id)).toBe(25);
+    const coins = game.wallet.coins;
+    const changes: number[] = [];
+    game.events.on("coinsChanged", ({ coins }) => changes.push(coins));
+    expect(game.trySellTower(id)).toBeNull();
+    expect(game.trySellTower(999)).toBeNull();
+    expect(game.wallet.coins).toBe(coins);
+    expect(changes).toEqual([]);
+    expect(game.towers).toHaveLength(0);
+  });
+
+  it("stops sold towers attacking and does not count the refund as kill income", () => {
+    const game = new GameModel(map);
+    expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+    const tower = game.towers[0];
+    game.spawnEnemy("basic");
+    const enemy = game.enemies[0];
+    const hp = enemy.hp;
+    const fired: number[] = [];
+    game.events.on("towerFired", ({ towerId }) => fired.push(towerId));
+    expect(game.trySellTower(tower.id)).toBe(25);
+    game.tick(1 / tower.fireRate);
+    expect(enemy.hp).toBe(hp);
+    expect(fired).toEqual([]);
+    game.lives.remaining = 0;
+    game.tick(0);
+    expect(game.result?.enemiesDefeated).toBe(0);
+    expect(game.result?.coinsEarned).toBe(0);
+    expect(game.trySellTower(tower.id)).toBeNull();
+  });
+
+  it("does not sell a live tower after the game ends", () => {
+    const game = new GameModel(map);
+    expect(game.tryPlaceTower("circle", tile)).toBe("ok");
+    const tower = game.towers[0];
+    game.lives.remaining = 0;
+    game.tick(0);
+    const coins = game.wallet.coins;
+    expect(game.trySellTower(tower.id)).toBeNull();
+    expect(game.wallet.coins).toBe(coins);
+    expect(game.towers).toEqual([tower]);
+    expect(game.grid.isOccupied(tile)).toBe(true);
+  });
+});
+
 // Test for R2: Remove dead enemies and enemies that reached the base
 describe("GameModel enemy cleanup (R2)", () => {
   it("removes dead enemies and awards coins", () => {

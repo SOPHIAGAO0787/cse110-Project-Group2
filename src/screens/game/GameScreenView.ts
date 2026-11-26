@@ -217,7 +217,7 @@ export class GameScreenView {
         x: 20,
         y: 60,
         width: SHOP_WIDTH - 32,
-        text: "Hover a tower · click to upgrade",
+        text: "Click a tower for options",
         fontSize: 11,
         fontFamily: FONT,
         fill: TITLE_TEXT,
@@ -249,7 +249,11 @@ export class GameScreenView {
     shop: ShopTower | undefined,
     maxLevel: number,
     coins: number,
+    onSell: () => void = () => {},
+    onUpgrade: () => void = () => {},
   ): void {
+    this.upgradeHint.onSell = onSell;
+    this.upgradeHint.onUpgrade = onUpgrade;
     this.upgradeHint.show(tower, shop, maxLevel, coins, this.tileToScreen(tower.tile), {
       x: this.background.width(),
       y: this.background.height(),
@@ -258,6 +262,12 @@ export class GameScreenView {
 
   hideTowerUpgradeHint(): void {
     this.upgradeHint.hide();
+  }
+
+  isTowerPanelTarget(target: Konva.Node): boolean {
+    return (
+      target === this.upgradeHint.group || target.getAncestors().includes(this.upgradeHint.group)
+    );
   }
 
   // Rewrites the HUD text. The controller calls this whenever one of these values changes.

@@ -29,7 +29,7 @@ Then open the URL Vite prints (usually http://localhost:5173).
 2. Drag a tower from the shop on the right onto a green tile. For a triangle or square tower, move the mouse to aim its cone or block. Then press **Enter**.
 3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. Questions get harder on later maps. A correct answer places the tower and spends its coins. A wrong answer, or skipping the question, costs a quarter of the tower's price.
 4. Click **Start Wave** to send enemies down the path. A white arrow shows where they come in, and a red flag shows where they leave. Defeating an enemy earns coins, clearing a wave earns bonus coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
-5. Click a placed tower to upgrade it, up to the level bought in the Tower Shop.
+5. Hover over or click a placed tower to open its information panel. Use **Upgrade Tower** to upgrade it, up to the level bought in the Tower Shop, or **Sell Tower** to recover half of its purchase and upgrade costs, rounded down.
 6. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars, score, and stats.
 
 During a game, the speed button (or **Space**) switches between normal and double speed. The gear button opens the settings, where the music and the sound effects can each be switched off.
