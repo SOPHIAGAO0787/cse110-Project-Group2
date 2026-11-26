@@ -19,11 +19,12 @@ export class Sound {
   private lastPopAt = 0; // time of the last pop, in milliseconds
 
   constructor() {
-    this.music = new Audio("/audio/music.mp3");
+    // No leading "/": the files load from next to the page, which also works on GitHub Pages
+    this.music = new Audio("audio/music.mp3");
     this.music.loop = true;
     this.music.volume = 0.4; // quieter than the effects
     for (const name of EFFECT_NAMES) {
-      this.effects[name] = new Audio("/audio/" + name + ".mp3");
+      this.effects[name] = new Audio("audio/" + name + ".mp3");
     }
   }
 
