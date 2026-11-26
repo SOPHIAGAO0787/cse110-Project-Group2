@@ -133,7 +133,7 @@ A map is drawn in plain colors unless it names a **tileset**. A tileset is one p
 
 ## Sound credits
 
-The music and the effects for waves, pops, lost lives, placing towers, winning, losing, right and wrong answers, upgrades, and not enough coins were made for this game. The three tower shots are from [Freesound](https://freesound.org), converted to MP3 for the game:
+The music and the effects for waves, pops, lost lives, placing towers, winning, losing, wrong answers, upgrades, and not enough coins were made for this game. The three tower shots are from [Freesound](https://freesound.org), converted to MP3 for the game:
 
 | Tower shot               | File                             | Original sound                                            | Author                                                     | License                                                   |
 | ------------------------ | -------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |

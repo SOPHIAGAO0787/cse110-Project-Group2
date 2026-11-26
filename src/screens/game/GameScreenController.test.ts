@@ -1478,7 +1478,7 @@ describe("GameScreenController sound effects", () => {
     expect(playSound).not.toHaveBeenCalled();
   });
 
-  it("plays the wrong sound for a wrong try and the correct sound for the right answer", async () => {
+  it("plays the wrong sound for a wrong try and only the place sound for the right answer", async () => {
     openPlacementQuestion();
     playSound.mockClear();
 
@@ -1490,8 +1490,7 @@ describe("GameScreenController sound effects", () => {
     press("5");
     press("Enter");
     await settlePlacement();
-    expect(playSound).toHaveBeenCalledWith("correct");
-    expect(playSound.mock.calls.filter(([name]) => name === "wrong")).toHaveLength(1);
+    expect(playSound.mock.calls.map(([name]) => name)).toEqual(["wrong", "place"]);
   });
 
   it("plays no answer sound when a question is closed without an answer", () => {
@@ -1500,8 +1499,7 @@ describe("GameScreenController sound effects", () => {
 
     press("Escape");
 
-    expect(playSound).not.toHaveBeenCalledWith("wrong");
-    expect(playSound).not.toHaveBeenCalledWith("correct");
+    expect(playSound).not.toHaveBeenCalled();
   });
 
   it("plays the no-coins sound when the wallet cannot pay for a tower", () => {

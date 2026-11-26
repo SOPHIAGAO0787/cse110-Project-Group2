@@ -5,7 +5,7 @@ import { Sound, type EffectName } from "./Sound";
 // The gap Sound.ts keeps between two shots of one tower type, in milliseconds
 const FIRE_GAP_MS = 200;
 const SHOTS: EffectName[] = ["fire-circle", "fire-triangle", "fire-square"];
-const NEW_EFFECTS: EffectName[] = [...SHOTS, "correct", "wrong", "upgrade", "no-coins"];
+const NEW_EFFECTS: EffectName[] = [...SHOTS, "wrong", "upgrade", "no-coins"];
 const EFFECTS: EffectName[] = ["wave", "pop", "leak", "place", "win", "lose", ...NEW_EFFECTS];
 
 // jsdom has no real audio, so play() and pause() are replaced and only counted
@@ -86,11 +86,11 @@ describe("Sound effects", () => {
   });
 
   it("starts from the beginning when an effect plays again", () => {
-    sound.play("correct");
+    sound.play("wrong");
     const audio = play.mock.contexts[0] as HTMLAudioElement;
     audio.currentTime = 1.5;
 
-    sound.play("correct");
+    sound.play("wrong");
 
     expect(audio.currentTime).toBe(0);
   });
@@ -130,7 +130,7 @@ describe("Sound tower shots", () => {
   it("does not let a shot hold back a pop or any other effect", () => {
     sound.play("fire-circle");
     sound.play("pop");
-    sound.play("correct");
+    sound.play("wrong");
 
     expect(play).toHaveBeenCalledTimes(3);
   });

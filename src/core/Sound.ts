@@ -9,7 +9,6 @@ export type EffectName =
   | "fire-circle"
   | "fire-triangle"
   | "fire-square"
-  | "correct"
   | "wrong"
   | "upgrade"
   | "no-coins";
@@ -24,7 +23,6 @@ const EFFECT_NAMES: EffectName[] = [
   "fire-circle",
   "fire-triangle",
   "fire-square",
-  "correct",
   "wrong",
   "upgrade",
   "no-coins",

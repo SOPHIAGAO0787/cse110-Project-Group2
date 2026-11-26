@@ -152,8 +152,11 @@ export class GameScreenController implements Screen {
     this.placement.onQuestionOpened = () => this.view.tutorial.advance("question");
     this.placement.onUpgraded = () => this.sound.play("upgrade");
     this.placement.onNotEnoughCoins = () => this.sound.play("no-coins");
-    // Every try is heard: a wrong answer with tries left sounds wrong, and so does the last one
-    this.view.prompt.onAnswer = (correct) => this.sound.play(correct ? "correct" : "wrong");
+    // Every wrong try is heard, the last one too. A right answer has no sound of its own: the
+    // tower it places is heard through the place sound, so the two never play on top of each other.
+    this.view.prompt.onAnswer = (correct) => {
+      if (!correct) this.sound.play("wrong");
+    };
 
     const refreshHud = () => {
       this.refreshUpgradeHint();
