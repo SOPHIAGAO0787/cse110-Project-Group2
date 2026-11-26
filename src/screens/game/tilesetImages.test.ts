@@ -37,7 +37,7 @@ describe("loadTilesetImages", () => {
   it("loads each sheet from public/tilesets and remembers it under the tileset's id", async () => {
     await loadTilesetImages([tileset("load-a", "a.png"), tileset("load-b", "b.png")]);
 
-    expect(FakeImage.requested.sort()).toEqual(["/tilesets/a.png", "/tilesets/b.png"]);
+    expect(FakeImage.requested.sort()).toEqual(["tilesets/a.png", "tilesets/b.png"]);
     expect(getTilesetImage("load-a")).toBeInstanceOf(FakeImage);
     expect(getTilesetImage("load-b")).toBeInstanceOf(FakeImage);
   });
@@ -48,7 +48,7 @@ describe("loadTilesetImages", () => {
   });
 
   it("still finishes when a sheet fails to load, and warns about it", async () => {
-    FakeImage.failing = ["/tilesets/broken.png"];
+    FakeImage.failing = ["tilesets/broken.png"];
     await loadTilesetImages([tileset("fail-ok", "fine.png"), tileset("fail-bad", "broken.png")]);
 
     expect(getTilesetImage("fail-bad")).toBeUndefined();
@@ -56,7 +56,7 @@ describe("loadTilesetImages", () => {
   });
 
   it("keeps the sheets that did load when another one fails", async () => {
-    FakeImage.failing = ["/tilesets/broken.png"];
+    FakeImage.failing = ["tilesets/broken.png"];
     await loadTilesetImages([tileset("keep-bad", "broken.png"), tileset("keep-ok", "fine.png")]);
     expect(getTilesetImage("keep-ok")).toBeDefined();
   });

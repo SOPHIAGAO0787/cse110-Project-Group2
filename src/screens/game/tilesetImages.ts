@@ -29,7 +29,8 @@ export async function loadTilesetImages(tilesets: Tileset[]): Promise<void> {
   await Promise.all(
     tilesets.map(async (tileset) => {
       try {
-        registerTilesetImage(tileset.id, await loadImage(`/tilesets/${tileset.sheet}`));
+        // No leading "/": the sheet loads from next to the page, which also works on GitHub Pages
+        registerTilesetImage(tileset.id, await loadImage(`tilesets/${tileset.sheet}`));
       } catch (error) {
         console.warn(`Tileset "${tileset.id}":`, error);
       }
