@@ -74,7 +74,7 @@ From the main menu, select **Mini-game → Room Builder**, then choose **Easy**,
 
 Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards a share of the difficulty maximum based on the fraction of usable area filled, rounded down. A perfect room earns 20, 30, or 40 coins by difficulty, subject to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game. **Reset Room** and **Try Again** retain the current layout and inventory. **Next Puzzle** picks a different combination at the same difficulty.
 
-The browser saves map stars, the tutorial flag, shop coins, tower upgrades, unused mini-game bonus coins, and the music and sound switches across reloads.
+The browser saves map stars, the tutorial flag, shop coins, tower upgrades, unused mini-game bonus coins, and the music and sound switches across reloads. **Reset progress** on the main menu starts over from map 1 with a new Tower Shop; it asks first and keeps the music and sound switches.
 
 **Coming next (Sprint 3):** New music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 

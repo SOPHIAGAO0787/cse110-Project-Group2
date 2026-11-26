@@ -76,6 +76,16 @@ export class Progress {
     return awarded;
   }
 
+  // Back to a new game: no stars (so only map 1 is open), no bonus coins, and the tutorial again
+  reset(): void {
+    for (let i = 0; i < this.bestStars.length; i++) {
+      this.bestStars[i] = 0;
+    }
+    this.currentMapId = this.mapIds[0];
+    this.bonusCoins = 0;
+    this.tutorialDone = false;
+  }
+
   // Called when a game ends: that game got the bonus coins, so they are gone now.
   useBonusCoins(): void {
     this.bonusCoins = 0;

@@ -41,7 +41,7 @@ export class App implements ScreenSwitcher {
     loadSettings(this.sound);
     this.sound.onChange = () => saveSettings(this.sound);
 
-    this.menu = new MenuScreen(this, this.progress, this.sound);
+    this.menu = new MenuScreen(this, this.progress, this.sound, () => this.resetProgress());
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress, this.towerProgress, this.sound);
     this.result = new ResultScreen(this);
@@ -100,6 +100,13 @@ export class App implements ScreenSwitcher {
       this.save();
     }
     this.current.show(data);
+  }
+
+  // The menu's Reset progress button. The settings have their own save, so they stay.
+  private resetProgress(): void {
+    this.progress.reset();
+    this.towerProgress.reset();
+    this.save();
   }
 
   // Called after each finished game, shop purchase and mini-game round

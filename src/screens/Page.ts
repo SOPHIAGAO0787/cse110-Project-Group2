@@ -7,6 +7,7 @@ const MARGIN = 32; // space around the card
 // The card is drawn at this size, then scaled to fit the window
 export const CARD_WIDTH = 1335;
 export const CARD_HEIGHT = 784;
+export const CARD_CORNER_RADIUS = 24;
 
 // The parts that the screens outside the game share: a grey background, a header with the
 // game's name, and one big white card. A screen makes a Page, uses its group as its own
@@ -42,7 +43,7 @@ export class Page {
       fill: CARD_FILL,
       stroke: CARD_BORDER,
       strokeWidth: 2,
-      cornerRadius: 24,
+      cornerRadius: CARD_CORNER_RADIUS,
       // A solid shadow below the card, like the buttons have
       shadowColor: CARD_BORDER,
       shadowOffset: { x: 0, y: 8 },

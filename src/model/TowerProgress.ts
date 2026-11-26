@@ -6,8 +6,11 @@ export interface TowerProgressSave {
   levels: { [towerId: string]: number }; // level index of each unlocked tower, by tower id
 }
 
+// The shop coins a new game starts with
+const STARTING_SHOP_COINS = 200;
+
 export class TowerProgress {
-  shopCoins = 200; // coins to spend in the tower shop, kept in the browser by saveGame.ts
+  shopCoins = STARTING_SHOP_COINS; // coins to spend in the tower shop, kept in the browser by saveGame.ts
 
   // Stored values are array indexes:
   // 0 means Level 1.
@@ -17,6 +20,13 @@ export class TowerProgress {
 
   constructor() {
     // Circle is available from the beginning.
+    this.maxLevels.set("circle", 0);
+  }
+
+  // Back to a new game: the starting coins, and only the circle tower at Level 1
+  reset(): void {
+    this.shopCoins = STARTING_SHOP_COINS;
+    this.maxLevels.clear();
     this.maxLevels.set("circle", 0);
   }
 
