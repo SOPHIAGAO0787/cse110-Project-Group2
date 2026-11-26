@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TowerUpgradeHint } from "./TowerUpgradeHint";
 import { Tower } from "../../model/Tower";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
+import { BUTTON_FILL, LOCKED_BUTTON_FILL } from "../theme";
 
 const hint = new TowerUpgradeHint();
 const circle = SHOP_TOWERS.find((shop) => shop.def.id === "circle")!;
@@ -14,6 +15,19 @@ const text = () =>
     .find<Konva.Text>("Text")
     .map((node) => node.text())
     .join("\n");
+// The color of the Upgrade button's background
+function upgradeColor(): string {
+  const button = hint.group.findOne<Konva.Group>(".upgrade-tower-button");
+  if (button === undefined) {
+    throw new Error("The panel has no Upgrade button");
+  }
+  const background = button.findOne<Konva.Rect>("Rect");
+  if (background === undefined) {
+    throw new Error("The Upgrade button has no background");
+  }
+  return String(background.fill());
+}
+
 afterEach(() => hint.hide());
 
 function show(maxLevel: number, coins: number) {
@@ -72,6 +86,15 @@ describe("TowerUpgradeHint", () => {
     hint.show(tower, circle, 2, 200, { x: 200, y: 200 }, { x: 800, y: 600 });
     expect(text()).toContain("Maximum level reached");
     expect(text()).not.toContain("Spend 75 gameplay coins.");
+  });
+
+  it("draws the Upgrade button grey unless the upgrade can happen now", () => {
+    show(1, 75);
+    expect(upgradeColor()).toBe(BUTTON_FILL);
+    show(1, 50); // not enough coins
+    expect(upgradeColor()).toBe(LOCKED_BUTTON_FILL);
+    show(0, 200); // not unlocked in the Tower Shop
+    expect(upgradeColor()).toBe(LOCKED_BUTTON_FILL);
   });
 
   it("keeps the panel inside the viewport at a bottom-right tower", () => {
