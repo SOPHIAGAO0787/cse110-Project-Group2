@@ -2,6 +2,16 @@ import Konva from "konva";
 import type { Question, Vec } from "../../model/types";
 import type { PickedQuestion, QuestionService } from "../../model/questions/QuestionService";
 import { BUTTON_HEIGHT, makeButton, makeClickable, setHoverCursor } from "../button";
+import {
+  BUTTON_FILL,
+  CARD_BORDER,
+  CARD_FILL,
+  FONT,
+  LOSE_TEXT,
+  MUTED_TEXT,
+  TITLE_TEXT,
+  WIN_TEXT,
+} from "../theme";
 
 const PANEL_W = 320;
 const PAD = 16; // space around the edges of the panel
@@ -39,24 +49,26 @@ export class QuestionPrompt {
   private panelGroup = new Konva.Group();
   private panel = new Konva.Rect({
     width: PANEL_W,
-    fill: "#222",
-    stroke: "white",
+    fill: CARD_FILL,
+    stroke: CARD_BORDER,
     strokeWidth: 2,
     cornerRadius: 8,
   });
   private titleText = new Konva.Text({
+    fontFamily: FONT,
     x: TITLE_SIDE,
     width: PANEL_W - 2 * TITLE_SIDE, // same width as the question, clear of the 'X'
     fontSize: 14,
     fontStyle: "bold",
-    fill: "#ffd166",
+    fill: MUTED_TEXT,
     align: "center",
   });
   private promptText = new Konva.Text({
+    fontFamily: FONT,
     x: PAD,
     width: PANEL_W - 2 * PAD, // full width: it starts below the 'X'
     fontSize: 18,
-    fill: "white",
+    fill: TITLE_TEXT,
     align: "center",
   });
   private inputBox = new Konva.Rect({
@@ -65,49 +77,55 @@ export class QuestionPrompt {
     width: PANEL_W - 120,
     height: 40,
     fill: "white",
+    stroke: CARD_BORDER,
+    strokeWidth: 2,
     cornerRadius: 4,
   });
   private inputText = new Konva.Text({
+    fontFamily: FONT,
     x: 60,
     y: 90,
     width: PANEL_W - 120,
     height: 40,
     fontSize: 22,
-    fill: "black",
+    fill: TITLE_TEXT,
     align: "center",
     verticalAlign: "middle",
     wrap: "none",
   });
   // Tells the player which kinds of answers the box understands
   private formatText = new Konva.Text({
+    fontFamily: FONT,
     x: PAD,
     width: PANEL_W - 2 * PAD,
     text: "You can type π, fractions or decimals",
     fontSize: 12,
-    fill: "#aaa",
+    fill: MUTED_TEXT,
     align: "center",
   });
-  private cursorBar = new Konva.Rect({ y: 98, width: 2, height: 24, fill: "black" });
+  private cursorBar = new Konva.Rect({ y: 98, width: 2, height: 24, fill: TITLE_TEXT });
   private symbolRow = new Konva.Group({
     x: (PANEL_W - (SYMBOLS.length * SYMBOL_W + (SYMBOLS.length - 1) * SYMBOL_GAP)) / 2,
     y: 138,
   });
   private answerLabel = new Konva.Text({
+    fontFamily: FONT,
     x: PAD,
     width: PANEL_W - 2 * PAD,
     text: "↑ Correct answer",
     fontSize: 14,
     fontStyle: "bold",
-    fill: "#4ade80",
+    fill: WIN_TEXT,
     align: "center",
     visible: false,
   });
   private feedback = new Konva.Text({
+    fontFamily: FONT,
     x: 16,
     y: 174,
     width: PANEL_W - 32,
     fontSize: 14,
-    fill: "#ff6b6b",
+    fill: LOSE_TEXT,
     align: "center",
   });
   private submitButton: Konva.Group;
@@ -144,11 +162,11 @@ export class QuestionPrompt {
         new Konva.Rect({
           width: SYMBOL_W,
           height: SYMBOL_H,
-          fill: "#3a3a52",
-          stroke: "white",
+          fill: BUTTON_FILL,
           cornerRadius: 4,
         }),
         new Konva.Text({
+          fontFamily: FONT,
           text: symbol,
           width: SYMBOL_W,
           height: SYMBOL_H,
@@ -173,11 +191,11 @@ export class QuestionPrompt {
       new Konva.Rect({
         width: CLOSE_SIZE,
         height: CLOSE_SIZE,
-        fill: "#3a3a52",
-        stroke: "white",
+        fill: BUTTON_FILL,
         cornerRadius: 4,
       }),
       new Konva.Text({
+        fontFamily: FONT,
         text: "✕",
         width: CLOSE_SIZE,
         height: CLOSE_SIZE,
@@ -283,9 +301,10 @@ export class QuestionPrompt {
     this.symbolRow.visible(true);
     this.formatText.visible(true);
     this.answerLabel.visible(false);
-    this.inputText.fill("black");
-    this.feedback.fill("#ff6b6b");
-    this.inputBox.strokeWidth(0);
+    this.inputText.fill(TITLE_TEXT);
+    this.feedback.fill(LOSE_TEXT);
+    this.inputBox.stroke(CARD_BORDER);
+    this.inputBox.strokeWidth(2);
     this.cursorBar.visible(true);
     this.titleText.text(question.title);
     this.promptText.text(question.prompt);
@@ -331,7 +350,7 @@ export class QuestionPrompt {
 
   // Adds text at the cursor, unless the box is full
   private insert(text: string): void {
-    this.inputText.fill("black"); // editing a wrong answer clears the red
+    this.inputText.fill(TITLE_TEXT); // editing a wrong answer clears the red
     if (this.typed.length + text.length > MAX_TYPED) return;
     this.typed = this.typed.slice(0, this.cursor) + text + this.typed.slice(this.cursor);
     this.cursor += text.length;
@@ -339,7 +358,7 @@ export class QuestionPrompt {
 
   // Removes the character before the cursor
   private deleteBefore(): void {
-    this.inputText.fill("black"); // editing a wrong answer clears the red
+    this.inputText.fill(TITLE_TEXT); // editing a wrong answer clears the red
     if (this.cursor === 0) return;
     this.typed = this.typed.slice(0, this.cursor - 1) + this.typed.slice(this.cursor);
     this.cursor -= 1;
@@ -349,7 +368,7 @@ export class QuestionPrompt {
   private pressSymbol(symbol: string): void {
     if (this.question === null || this.phase !== "typing") return;
     if (symbol === "C") {
-      this.inputText.fill("black"); // editing a wrong answer clears the red
+      this.inputText.fill(TITLE_TEXT); // editing a wrong answer clears the red
       this.typed = "";
       this.cursor = 0;
     } else if (symbol === "⌫") {
@@ -435,10 +454,10 @@ export class QuestionPrompt {
       this.symbolRow.visible(false);
       this.cursorBar.visible(false);
       this.formatText.visible(false);
-      this.inputText.fill("#15803d");
-      this.inputBox.stroke("#4ade80");
+      this.inputText.fill(WIN_TEXT);
+      this.inputBox.stroke(WIN_TEXT);
       this.inputBox.strokeWidth(3);
-      this.feedback.fill("#4ade80");
+      this.feedback.fill(WIN_TEXT);
       this.feedback.text("Correct!");
       this.submitButton.visible(false);
       this.continueButton.visible(true);
@@ -448,7 +467,7 @@ export class QuestionPrompt {
       // wrong, but the player gets another try: keep their answer in red so they can fix it
       const left = this.attemptsLeft === 1 ? "1 try left" : `${this.attemptsLeft} tries left`;
       this.feedback.text(`Not quite. ${this.question.hint}\n(${left})`);
-      this.inputText.fill("#dc2626");
+      this.inputText.fill(LOSE_TEXT);
       this.cursor = this.typed.length; // ready to edit at the end
       this.refreshInput(); // also redraws
     } else {
@@ -460,8 +479,8 @@ export class QuestionPrompt {
       this.answerLabel.visible(true);
       this.feedback.text(this.lastTryText(this.typed, this.question.hint));
       this.inputText.text(formatAnswer(this.question.answer));
-      this.inputText.fill("#15803d");
-      this.inputBox.stroke("#4ade80");
+      this.inputText.fill(WIN_TEXT);
+      this.inputBox.stroke(WIN_TEXT);
       this.inputBox.strokeWidth(3);
       this.submitButton.visible(false);
       this.continueButton.visible(true);

@@ -4,6 +4,7 @@ import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { QuestionService, type PickedQuestion } from "../../model/questions/QuestionService";
+import { CARD_BORDER, FONT, LOSE_TEXT, TITLE_TEXT, WIN_TEXT } from "../theme";
 
 // Capture the button callbacks so tests can "click" Submit and Continue.
 // makeClickable and setHoverCursor are replaced with copies of the real behavior.
@@ -50,12 +51,6 @@ const anchor = { x: 100, y: 100 };
 
 // Long prompt to test adjustable question panel height
 const LONG_PROMPT = "What is the area of this shape? ".repeat(30);
-
-// Colors QuestionPrompt.ts uses
-const WRONG_RED = "#dc2626"; // a wrong answer kept in the box
-const ANSWER_GREEN = "#15803d"; // the right answer in the box
-const FEEDBACK_RED = "#ff6b6b";
-const FEEDBACK_GREEN = "#4ade80";
 
 const PANEL_W = 320;
 
@@ -653,9 +648,9 @@ describe("QuestionPrompt answer output", () => {
       type("5");
       press("Enter");
       expect(feedbackShown()).toBe("Correct!");
-      expect(parts().feedback.fill()).toBe(FEEDBACK_GREEN);
+      expect(parts().feedback.fill()).toBe(WIN_TEXT);
       expect(inputShown()).toBe("5");
-      expect(parts().inputText.fill()).toBe(ANSWER_GREEN);
+      expect(parts().inputText.fill()).toBe(WIN_TEXT);
     });
 
     it.each([
@@ -715,7 +710,7 @@ describe("QuestionPrompt answer output", () => {
       type("4");
       press("Enter");
       expect(inputShown()).toBe("4");
-      expect(parts().inputText.fill()).toBe(WRONG_RED);
+      expect(parts().inputText.fill()).toBe(LOSE_TEXT);
     });
 
     it.each([
@@ -728,7 +723,7 @@ describe("QuestionPrompt answer output", () => {
       type("4");
       press("Enter");
       edit();
-      expect(parts().inputText.fill()).toBe("black");
+      expect(parts().inputText.fill()).toBe(TITLE_TEXT);
     });
 
     it("keeps the answer red when only the cursor moves", () => {
@@ -736,7 +731,7 @@ describe("QuestionPrompt answer output", () => {
       type("4");
       press("Enter");
       press("ArrowLeft");
-      expect(parts().inputText.fill()).toBe(WRONG_RED);
+      expect(parts().inputText.fill()).toBe(LOSE_TEXT);
     });
 
     it("lets the player fix the kept answer instead of retyping it", async () => {
@@ -813,7 +808,7 @@ describe("QuestionPrompt answer output", () => {
       void prompt.ask(question, anchor);
       useAllTries();
       expect(inputShown()).toBe("5");
-      expect(parts().inputText.fill()).toBe(ANSWER_GREEN);
+      expect(parts().inputText.fill()).toBe(WIN_TEXT);
       expect(parts().answerLabel.visible()).toBe(true);
       expect(parts().answerLabel.getParent()).not.toBeNull();
     });
@@ -871,9 +866,9 @@ describe("QuestionPrompt answer output", () => {
       useAllTries();
       void prompt.ask(question, anchor);
       expect(inputShown()).toBe("");
-      expect(parts().inputText.fill()).toBe("black");
+      expect(parts().inputText.fill()).toBe(TITLE_TEXT);
       expect(parts().answerLabel.visible()).toBe(false);
-      expect(inputBox().strokeWidth()).toBe(0);
+      expect(inputBox().stroke()).toBe(CARD_BORDER);
     });
 
     it("after a correct answer", () => {
@@ -881,13 +876,13 @@ describe("QuestionPrompt answer output", () => {
       type("5");
       press("Enter");
       void prompt.ask(question, anchor);
-      expect(parts().inputText.fill()).toBe("black");
-      expect(parts().feedback.fill()).toBe(FEEDBACK_RED);
-      expect(inputBox().strokeWidth()).toBe(0);
+      expect(parts().inputText.fill()).toBe(TITLE_TEXT);
+      expect(parts().feedback.fill()).toBe(LOSE_TEXT);
+      expect(inputBox().stroke()).toBe(CARD_BORDER);
 
       type("4");
       press("Enter"); // the wrong-answer message is red again
-      expect(parts().feedback.fill()).toBe(FEEDBACK_RED);
+      expect(parts().feedback.fill()).toBe(LOSE_TEXT);
     });
   });
 
@@ -986,5 +981,14 @@ describe("QuestionPrompt answer output", () => {
       press("Enter");
       expect(await second).toBe(true);
     });
+  });
+});
+
+describe("QuestionPrompt look", () => {
+  it("writes every text in the shared font", () => {
+    const prompt = new QuestionPrompt(new QuestionService());
+    for (const text of prompt.group.find<Konva.Text>("Text")) {
+      expect(text.fontFamily()).toBe(FONT);
+    }
   });
 });
