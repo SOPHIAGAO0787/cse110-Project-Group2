@@ -123,6 +123,9 @@ export class QuestionPrompt {
   private cursor = 0;
   private phase: "typing" | "wrong" | "correct" = "typing";
   private resolve: ((correct: boolean) => void) | null = null;
+  // Runs after every submitted answer, right or wrong, so the controller can play a sound.
+  // Closing the popup without answering does not run it.
+  onAnswer: (correct: boolean) => void = () => {};
   private attemptsLeft = 0;
   private cost = 0; // coins a wrong answer costs, shown after the last try
   private width = 0;
@@ -428,7 +431,10 @@ export class QuestionPrompt {
 
     this.attemptsLeft -= 1;
 
-    if (this.service.check(this.question, this.typed)) {
+    const correct = this.service.check(this.question, this.typed);
+    this.onAnswer(correct);
+
+    if (correct) {
       // Keep the popup open to show it was right, but send the result now,
       // so the tower is placed (and its sound plays) right away, not when the popup closes
       this.phase = "correct";

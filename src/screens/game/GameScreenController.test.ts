@@ -1430,8 +1430,128 @@ describe("GameScreenController sound effects", () => {
     expect(playSound).toHaveBeenLastCalledWith("lose");
   });
 
-  it("plays nothing for a tower that fires", () => {
-    model.events.emit("towerFired", { towerId: 1 });
+  it("plays a firing sound when a tower shoots an enemy", () => {
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    playSound.mockClear();
+    model.spawnEnemy("tank"); // slow enough to still be in range when the first shot comes
+
+    model.tick(1 / model.towers[0].fireRate);
+
+    expect(playSound).toHaveBeenCalledWith("fire-circle");
+  });
+
+  it.each([
+    ["circle", "fire-circle"],
+    ["triangle", "fire-triangle"],
+    ["rectangle", "fire-square"],
+  ])("plays the %s's own sound (%s) when it fires", (defId, sound) => {
+    towerProgress.maxLevels.set(defId, 0);
+    model.wallet.add(500);
+    expect(model.tryPlaceTower(defId, { x: 0, y: 2 })).toBe("ok");
+    playSound.mockClear();
+
+    model.events.emit("towerFired", { towerId: model.towers[0].id });
+
+    expect(playSound).toHaveBeenCalledExactlyOnceWith(sound);
+  });
+
+  it("plays nothing for a shot from a tower that is not on the map", () => {
+    model.events.emit("towerFired", { towerId: 999 });
+
+    expect(playSound).not.toHaveBeenCalled();
+  });
+
+  it("plays the wrong sound for a wrong try and the correct sound for the right answer", async () => {
+    openPlacementQuestion();
+    playSound.mockClear();
+
+    press("4");
+    press("Enter");
+    expect(playSound).toHaveBeenLastCalledWith("wrong");
+
+    press("Backspace");
+    press("5");
+    press("Enter");
+    await settlePlacement();
+    expect(playSound).toHaveBeenCalledWith("correct");
+    expect(playSound.mock.calls.filter(([name]) => name === "wrong")).toHaveLength(1);
+  });
+
+  it("plays no answer sound when a question is closed without an answer", () => {
+    openPlacementQuestion();
+    playSound.mockClear();
+
+    press("Escape");
+
+    expect(playSound).not.toHaveBeenCalledWith("wrong");
+    expect(playSound).not.toHaveBeenCalledWith("correct");
+  });
+
+  it("plays the no-coins sound when the wallet cannot pay for a tower", () => {
+    vi.spyOn(GridView.prototype, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    model.wallet.spend(model.wallet.coins);
+    const card = controller.group
+      .find<Konva.Text>("Text")
+      .find((text) => text.text() === TOWERS.find((tower) => tower.id === "circle")!.name)!
+      .getParent()!;
+    card.fire("pointerdown");
+    window.dispatchEvent(new Event("pointerup"));
+    playSound.mockClear();
+
+    press("Enter");
+
+    expect(playSound).toHaveBeenCalledExactlyOnceWith("no-coins");
+  });
+
+  it("plays the no-coins sound when the coins run out while a question is open", async () => {
+    openPlacementQuestion();
+    model.wallet.spend(model.wallet.coins);
+    press("5");
+    press("Enter");
+    await settlePlacement();
+
+    expect(model.towers).toHaveLength(0);
+    expect(playSound).toHaveBeenCalledWith("no-coins");
+  });
+
+  it("plays the upgrade sound when a tower is upgraded", () => {
+    towerProgress.maxLevels.set("circle", 1);
+    model.wallet.add(200);
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    const grid = grids[grids.length - 1];
+    vi.spyOn(grid, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    playSound.mockClear();
+
+    grid.group.fire("click");
+
+    expect(model.towers[0].level).toBe(1);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith("upgrade");
+  });
+
+  it("plays the no-coins sound when an upgrade costs more than the wallet holds", () => {
+    towerProgress.maxLevels.set("circle", 1);
+    model.wallet.add(50);
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    model.wallet.spend(model.wallet.coins);
+    const grid = grids[grids.length - 1];
+    vi.spyOn(grid, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    playSound.mockClear();
+
+    grid.group.fire("click");
+
+    expect(model.towers[0].level).toBe(0);
+    expect(playSound).toHaveBeenCalledExactlyOnceWith("no-coins");
+  });
+
+  it("plays no upgrade or coin sound when the Tower Shop level blocks the upgrade", () => {
+    towerProgress.maxLevels.set("circle", 0);
+    model.wallet.add(200);
+    expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
+    const grid = grids[grids.length - 1];
+    vi.spyOn(grid, "tileUnderMouse").mockReturnValue({ x: 0, y: 2 });
+    playSound.mockClear();
+
+    grid.group.fire("click");
 
     expect(playSound).not.toHaveBeenCalled();
   });

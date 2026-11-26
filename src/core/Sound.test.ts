@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { Sound } from "./Sound";
+import { Sound, type EffectName } from "./Sound";
+
+// The gap Sound.ts keeps between two shots of one tower type, in milliseconds
+const FIRE_GAP_MS = 200;
+const SHOTS: EffectName[] = ["fire-circle", "fire-triangle", "fire-square"];
+const NEW_EFFECTS: EffectName[] = [...SHOTS, "correct", "wrong", "upgrade", "no-coins"];
+const EFFECTS: EffectName[] = ["wave", "pop", "leak", "place", "win", "lose", ...NEW_EFFECTS];
 
 // jsdom has no real audio, so play() and pause() are replaced and only counted
 let play: MockInstance<() => Promise<void>>;
@@ -63,6 +69,89 @@ describe("Sound effects", () => {
     sound.play("leak");
 
     expect(play).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(EFFECTS)("plays %s from its own file in public/audio", (name) => {
+    sound.play(name);
+
+    const audio = play.mock.contexts[0] as HTMLAudioElement;
+    expect(audio.src).toContain(`/audio/${name}.mp3`);
+  });
+
+  it.each(NEW_EFFECTS)("plays nothing for %s while effects are off", (name) => {
+    sound.toggleEffects();
+    sound.play(name);
+
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it("starts from the beginning when an effect plays again", () => {
+    sound.play("correct");
+    const audio = play.mock.contexts[0] as HTMLAudioElement;
+    audio.currentTime = 1.5;
+
+    sound.play("correct");
+
+    expect(audio.currentTime).toBe(0);
+  });
+});
+
+describe("Sound tower shots", () => {
+  it.each(SHOTS)("plays two %s shots in the same moment only once", (name) => {
+    sound.play(name);
+    vi.advanceTimersByTime(FIRE_GAP_MS - 1);
+    sound.play(name);
+
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(SHOTS)("plays the next %s shot once the gap has passed", (name) => {
+    sound.play(name);
+    vi.advanceTimersByTime(FIRE_GAP_MS);
+    sound.play(name);
+
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets ten towers of one type make one sound", () => {
+    for (let tower = 0; tower < 10; tower++) sound.play("fire-circle");
+
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a separate gap for each tower type", () => {
+    sound.play("fire-circle");
+    sound.play("fire-triangle");
+    sound.play("fire-square");
+
+    expect(play).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not let a shot hold back a pop or any other effect", () => {
+    sound.play("fire-circle");
+    sound.play("pop");
+    sound.play("correct");
+
+    expect(play).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not count a shot that was switched off", () => {
+    sound.toggleEffects();
+    sound.play("fire-square");
+    sound.toggleEffects();
+    sound.play("fire-square");
+
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(SHOTS)("plays %s quieter than the other effects", (name) => {
+    sound.play(name);
+    sound.play("place");
+
+    const shot = play.mock.contexts[0] as HTMLAudioElement;
+    const place = play.mock.contexts[1] as HTMLAudioElement;
+    expect(shot.volume).toBeGreaterThan(0);
+    expect(shot.volume).toBeLessThan(place.volume);
   });
 
   it("keeps going when the browser refuses to play", async () => {
