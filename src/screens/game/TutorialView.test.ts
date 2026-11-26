@@ -59,7 +59,7 @@ describe("TutorialView", () => {
     tutorial.advance("towerPlaced");
     tutorial.advance("waveStarted");
     expect(tutorial.stepText()).toBe(
-      "Each enemy you stop gives coins. Click a tower on the map to upgrade it.",
+      "Each enemy you stop gives coins. Click a tower on the map for upgrade and sell options.",
     );
   });
 

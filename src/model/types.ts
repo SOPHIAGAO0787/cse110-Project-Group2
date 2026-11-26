@@ -127,6 +127,7 @@ export interface GameEvents {
   waveStarted: { wave: number; totalWaves: number };
   waveCleared: { wave: number; bonus: number }; // bonus: coins for clearing it, 0 for none
   towerPlaced: { towerId: number; defId: string; tile: Vec };
+  towerSold: { towerId: number; tile: Vec; refund: number };
   towerFired: { towerId: number };
   gameOver: { won: boolean };
 }

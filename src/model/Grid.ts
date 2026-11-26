@@ -35,4 +35,8 @@ export class Grid {
   occupy(tile: Vec): void {
     this.occupied.push({ x: tile.x, y: tile.y });
   }
+
+  release(tile: Vec): void {
+    this.occupied = this.occupied.filter((t) => t.x !== tile.x || t.y !== tile.y);
+  }
 }

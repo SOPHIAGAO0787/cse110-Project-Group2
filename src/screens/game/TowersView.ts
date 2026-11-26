@@ -274,6 +274,10 @@ export class TowersView {
     this.sprites.set(tower.id, sprite);
   }
 
+  remove(towerId: number): void {
+    this.sprites.get(towerId)?.group.destroy();
+    this.sprites.delete(towerId);
+  }
   // Draws this tower's range: its circle, its aimed cone or its aimed block.
   // It reads the tower's range now, so after an upgrade it shows the new range.
   showRange(tower: Tower): void {

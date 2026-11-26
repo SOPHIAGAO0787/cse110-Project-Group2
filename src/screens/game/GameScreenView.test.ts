@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GameScreenView, TILE } from "./GameScreenView";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { Sound } from "../../core/Sound";
+import { Tower } from "../../model/Tower";
+import { TOWERS } from "../../model/loadContent";
 import { CARD_FILL, GOOD_TEXT, HUD_LIFE_FLASH, WARNING_TEXT } from "../theme";
 
 let view: GameScreenView;
@@ -28,6 +30,36 @@ beforeEach(() => {
 afterEach(() => {
   view.prompt.cancel();
   view.group.destroy();
+});
+
+it("keeps hover information reachable through the tile, gap, and panel only", () => {
+  view.resize(1280, 800);
+  const tower = new Tower(
+    1,
+    TOWERS.find((def) => def.id === "circle")!,
+    { x: 0, y: 2 },
+  );
+  view.showTowerUpgradeHint(tower, undefined, 0, 100);
+  const panel = view.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+  const tile = view.mapGroup.getTransform().point({ x: 0, y: 2 * TILE });
+  const tileRight = tile.x + TILE * view.mapGroup.scaleX();
+  const tileMiddleY = tile.y + (TILE * view.mapGroup.scaleY()) / 2;
+
+  expect(view.isPointerInTowerPanelArea(tower, { x: tile.x + 5, y: tileMiddleY })).toBe(true);
+  expect(
+    view.isPointerInTowerPanelArea(tower, {
+      x: (tileRight + panel.x()) / 2,
+      y: tileMiddleY,
+    }),
+  ).toBe(true);
+  expect(view.isPointerInTowerPanelArea(tower, { x: panel.x() + 100, y: panel.y() + 260 })).toBe(
+    true,
+  );
+  expect(view.isPointerInTowerPanelArea(tower, { x: view.shopGroup.x() + 100, y: 400 })).toBe(
+    false,
+  );
+  view.hideTowerUpgradeHint();
+  expect(view.isPointerInTowerPanelArea(tower, { x: tile.x + 5, y: tileMiddleY })).toBe(false);
 });
 
 describe("GameScreenView HUD", () => {

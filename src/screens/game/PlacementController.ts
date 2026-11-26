@@ -9,13 +9,12 @@ import { PlacementView } from "./PlacementView";
 import type { QuestionService } from "../../model/questions/QuestionService";
 import { wrongAnswerCost } from "../../model/questions/TowerQuestionsHandling";
 import { InGameTowerCard } from "./InGameTowerCard";
-import type { Tower } from "../../model/Tower";
 import type { TowerProgress } from "../../model/TowerProgress";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
 
 // Placing and upgrading towers during one game: the tower cards in the shop, dragging a tower onto
-// the map, aiming it, asking its question, and clicking a placed tower to upgrade it.
+// the map, aiming it, asking its question, and selecting placed towers for upgrade or sale.
 // GameScreenController makes a new one for every game and calls dispose() when the game ends.
 export class PlacementController {
   private view: GameScreenView;
@@ -83,15 +82,6 @@ export class PlacementController {
   // Removes the cards, the previews and every input listener
   dispose(): void {
     this.cleanup();
-  }
-
-  // True when the tower could be upgraded but the wallet is short, as opposed to a tower that is
-  // already at the level bought in the shop or at its top level
-  private lacksCoinsToUpgrade(tower: Tower): boolean {
-    if (tower.level >= this.towerProgress.getMaxLevel(tower.def.id)) return false;
-    const shopTower = SHOP_TOWERS.find((item) => item.def.id === tower.def.id);
-    const cost = shopTower?.levels[tower.level]?.upgradeCost;
-    return cost !== undefined && cost !== null && !this.model.wallet.canAfford(cost);
   }
 
   private wire(gridView: GridView, towersView: TowersView): void {
@@ -163,14 +153,13 @@ export class PlacementController {
       aimLocked = locked;
       pv.setLocked(locked);
     };
-    let hovering = false;
+    let hoveredTowerId: number | null = null;
+    let selectedTowerId: number | null = null;
     const refreshUpgradeHint = () => {
-      const tile = hovering ? gridView.tileUnderMouse() : null;
-      const tower = tile
-        ? model.towers.find((item) => item.tile.x === tile.x && item.tile.y === tile.y)
-        : undefined;
+      const tower =
+        model.towers.find((item) => item.id === selectedTowerId) ??
+        model.towers.find((item) => item.id === hoveredTowerId);
       const canShow =
-        hovering &&
         !pending &&
         !disposed &&
         this.isActive() &&
@@ -189,20 +178,76 @@ export class PlacementController {
         SHOP_TOWERS.find((item) => item.def.id === tower.def.id),
         this.towerProgress.getMaxLevel(tower.def.id),
         model.wallet.coins,
+        () => {
+          if (
+            (selectedTowerId !== tower.id && hoveredTowerId !== tower.id) ||
+            !canCommit() ||
+            pending ||
+            this.view.settings.isOpen() ||
+            placement.state.kind !== "idle"
+          )
+            return;
+          const refund = model.trySellTower(tower.id);
+          if (refund === null) return;
+          selectedTowerId = null;
+          hoveredTowerId = null;
+          this.view.hideTowerUpgradeHint();
+          this.view.showMessage(`${tower.def.name} sold for ${refund} coins.`, true);
+        },
+        () => {
+          if (
+            (selectedTowerId !== tower.id && hoveredTowerId !== tower.id) ||
+            !canCommit() ||
+            pending ||
+            this.view.settings.isOpen() ||
+            placement.state.kind !== "idle"
+          )
+            return;
+          const previousLevel = tower.level;
+          const result = model.tryUpgradeTower(tower.id);
+          if (tower.level > previousLevel) this.onUpgraded();
+          else if (result.startsWith("You need ")) this.onNotEnoughCoins();
+          this.view.showMessage(result);
+          refreshUpgradeHint();
+        },
       );
       towersView.showRange(tower);
       if (container) container.style.cursor = "pointer";
     };
     this.refreshHint = refreshUpgradeHint;
+    const dismissHoverOutsidePanel = () => {
+      if (selectedTowerId !== null || hoveredTowerId === null) return;
+      const tower = model.towers.find((item) => item.id === hoveredTowerId);
+      const pointer = this.view.group.getRelativePointerPosition();
+      if (tower && pointer && this.view.isPointerInTowerPanelArea(tower, pointer)) return;
+      hoveredTowerId = null;
+      refreshUpgradeHint();
+    };
     gridView.group.on("pointermove.upgrade pointerenter.upgrade", () => {
-      hovering = true;
+      const tile = gridView.tileUnderMouse();
+      const hoveredTower = model.towers.find(
+        (tower) => tower.tile.x === tile?.x && tower.tile.y === tile?.y,
+      );
+      if (hoveredTower) {
+        hoveredTowerId = hoveredTower.id;
+        refreshUpgradeHint();
+      } else {
+        dismissHoverOutsidePanel();
+      }
+    });
+    this.view.group.on("pointermove.selection", dismissHoverOutsidePanel);
+    this.view.group.on("pointerleave.selection", () => {
+      if (selectedTowerId === null) {
+        hoveredTowerId = null;
+        refreshUpgradeHint();
+      }
+    });
+    model.events.on("towerSold", ({ towerId }) => {
+      if (selectedTowerId === towerId) selectedTowerId = null;
+      if (hoveredTowerId === towerId) hoveredTowerId = null;
       refreshUpgradeHint();
     });
-    gridView.group.on("pointerleave.upgrade", () => {
-      hovering = false;
-      refreshUpgradeHint();
-    });
-    const onUpgrade = () => {
+    const onSelectTower = () => {
       if (
         pending ||
         disposed ||
@@ -214,26 +259,36 @@ export class PlacementController {
       }
 
       const tile = gridView.tileUnderMouse();
-      if (!tile) return;
+      if (!tile) {
+        selectedTowerId = null;
+        hoveredTowerId = null;
+        refreshUpgradeHint();
+        return;
+      }
 
       const tower = this.model.towers.find(
         (item) => item.tile.x === tile.x && item.tile.y === tile.y,
       );
-      if (!tower) return;
-
-      const levelBefore = tower.level;
-      const shortOfCoins = this.lacksCoinsToUpgrade(tower);
-      const message = this.model.tryUpgradeTower(tower.id);
-      this.view.showMessage(message);
-      if (tower.level > levelBefore) {
-        this.onUpgraded();
-      } else if (shortOfCoins) {
-        this.onNotEnoughCoins();
+      if (!tower) {
+        selectedTowerId = null;
+        hoveredTowerId = null;
+        refreshUpgradeHint();
+        return;
       }
+
+      selectedTowerId = tower.id;
       refreshUpgradeHint();
     };
 
-    gridView.group.on("click.upgrade tap.upgrade", onUpgrade);
+    gridView.group.on("click.upgrade tap.upgrade", onSelectTower);
+    this.view.group.on("click.selection tap.selection", (event) => {
+      const target = event.target;
+      if (target.getAncestors().includes(gridView.group) || this.view.isTowerPanelTarget(target))
+        return;
+      selectedTowerId = null;
+      hoveredTowerId = null;
+      refreshUpgradeHint();
+    });
 
     const requestPlace = async () => {
       const s = placement.state;
@@ -310,7 +365,8 @@ export class PlacementController {
 
     const onDown = () => {
       if (pending || !canCommit()) return;
-      hovering = false;
+      hoveredTowerId = null;
+      selectedTowerId = null;
       refreshUpgradeHint();
       const tile = gridView.tileUnderMouse();
       if (tile) placement.startDrag(tile);
@@ -369,6 +425,9 @@ export class PlacementController {
       if (e.key === "Enter") {
         void requestPlace();
       } else if (e.key === "Escape") {
+        selectedTowerId = null;
+        hoveredTowerId = null;
+        refreshUpgradeHint();
         placement.cancel();
         pv.hide();
       }
@@ -409,11 +468,14 @@ export class PlacementController {
     this.cleanup = () => {
       // Invalidate pending answers before removing input handlers.
       disposed = true;
+      selectedTowerId = null;
+      hoveredTowerId = null;
       refreshUpgradeHint();
       this.refreshHint = () => {};
       placement.cancel();
       pv.hide();
       stage?.off(".placement");
+      this.view.group.off(".selection");
       gridView.group.off(".upgrade");
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);

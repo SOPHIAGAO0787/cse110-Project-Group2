@@ -13,6 +13,11 @@ export class Tower {
 
   // 0 means Level 1.
   level = 0;
+  totalInvested: number;
+
+  get sellValue(): number {
+    return Math.floor(this.totalInvested * 0.5);
+  }
 
   // How much progress we have made toward the next shot.
   private shotProgress = 0;
@@ -20,6 +25,7 @@ export class Tower {
   constructor(id: number, def: TowerDef, tile: Vec, config?: TowerConfig) {
     this.id = id;
     this.tile = tile;
+    this.totalInvested = def.cost;
 
     // Make a separate copy for this tower.
     this.def = {

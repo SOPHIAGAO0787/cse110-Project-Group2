@@ -3,14 +3,16 @@ import type { Tower } from "../../model/Tower";
 import type { ShopTower } from "../../model/shop/types";
 import type { Vec } from "../../model/types";
 import { fireRateFor } from "../../model/towerConfig";
-import { FONT, TITLE_TEXT, WARNING_TEXT } from "../theme";
+import { BUTTON_FILL, FONT, TITLE_TEXT, WARNING_TEXT } from "../theme";
 
 const WIDTH = 280;
-const HEIGHT = 216;
+const HEIGHT = 300;
 
-// This overlay never takes pointer events away from the tower underneath it.
+// The panel catches clicks so its controls never fall through to the map.
 export class TowerUpgradeHint {
-  group = new Konva.Group({ name: "tower-upgrade-hint", visible: false, listening: false });
+  group = new Konva.Group({ name: "tower-upgrade-hint", visible: false });
+  onSell: () => void = () => {};
+  onUpgrade: () => void = () => {};
   private title: Konva.Text;
   private cost: Konva.Text;
   private stats: Konva.Text;
@@ -42,9 +44,37 @@ export class TowerUpgradeHint {
         height: 47,
         fill: "#edf2ff",
         cornerRadius: 8,
+        listening: false,
       }),
     );
     this.action = this.text(20, 165, 13, true);
+    this.group.add(
+      this.button("upgrade-tower-button", "upgrade-tower-label", 214, () => this.onUpgrade()),
+      this.button("sell-tower-button", "sell-tower-label", 254, () => this.onSell()),
+    );
+  }
+
+  private button(name: string, label: string, y: number, action: () => void): Konva.Group {
+    const button = new Konva.Group({ name, x: 18, y });
+    button.add(
+      new Konva.Rect({ width: WIDTH - 36, height: 34, fill: BUTTON_FILL, cornerRadius: 8 }),
+      new Konva.Text({
+        name: label,
+        width: WIDTH - 36,
+        y: 7,
+        align: "center",
+        fontFamily: FONT,
+        fontSize: 14,
+        fontStyle: "bold",
+        fill: "white",
+        listening: false,
+      }),
+    );
+    button.on("click tap", (event) => {
+      event.cancelBubble = true;
+      action();
+    });
+    return button;
   }
 
   show(
@@ -58,6 +88,10 @@ export class TowerUpgradeHint {
     const current = shop?.levels[tower.level];
     const next = shop?.levels[tower.level + 1];
     const price = current?.upgradeCost;
+    this.group
+      .findOne<Konva.Text>(".sell-tower-label")
+      ?.text(`Sell Tower (+${tower.sellValue} coins)`);
+    this.group.findOne<Konva.Text>(".upgrade-tower-label")?.text("Upgrade Tower");
     this.title.text(`${tower.def.name} · Level ${tower.level + 1}`);
     this.action.fill(TITLE_TEXT);
 
@@ -88,7 +122,7 @@ export class TowerUpgradeHint {
         this.action.fill(WARNING_TEXT);
         this.action.text(`Need ${price - coins} more coins.\nYou have ${coins} of ${price}.`);
       } else {
-        this.action.text(`Click this tower to upgrade.\nSpend ${price} gameplay coins.`);
+        this.action.text(`Use Upgrade below.\nSpend ${price} gameplay coins.`);
       }
     }
 
@@ -104,6 +138,42 @@ export class TowerUpgradeHint {
     this.group.visible(false);
   }
 
+  // The short gap between the tower tile and the panel stays interactive so a hover-only
+  // panel does not vanish before the pointer can reach its buttons.
+  containsPointer(
+    pointer: Vec,
+    tile: { x: number; y: number; width: number; height: number },
+  ): boolean {
+    if (!this.group.visible()) return false;
+    const panelX = this.group.x();
+    const panelY = this.group.y();
+    if (
+      pointer.x >= panelX &&
+      pointer.x <= panelX + WIDTH &&
+      pointer.y >= panelY &&
+      pointer.y <= panelY + HEIGHT
+    )
+      return true;
+    if (
+      pointer.x >= tile.x &&
+      pointer.x <= tile.x + tile.width &&
+      pointer.y >= tile.y &&
+      pointer.y <= tile.y + tile.height
+    )
+      return true;
+
+    const tileRight = tile.x + tile.width;
+    const panelRight = panelX + WIDTH;
+    const gapLeft = panelX >= tileRight ? tileRight : panelRight;
+    const gapRight = panelX >= tileRight ? panelX : tile.x;
+    return (
+      pointer.x >= gapLeft &&
+      pointer.x <= gapRight &&
+      pointer.y >= tile.y &&
+      pointer.y <= tile.y + tile.height
+    );
+  }
+
   private text(x: number, y: number, size: number, bold = false): Konva.Text {
     const text = new Konva.Text({
       x,
@@ -114,6 +184,7 @@ export class TowerUpgradeHint {
       fontStyle: bold ? "bold" : "normal",
       fill: TITLE_TEXT,
       lineHeight: 1.45,
+      listening: false,
     });
     this.group.add(text);
     return text;

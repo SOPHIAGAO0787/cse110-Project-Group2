@@ -523,7 +523,7 @@ describe("GameScreenController questions during gameplay", () => {
     const { answer } = openQuestion();
     answer(true);
     await settleAnswer();
-    expect(tutorialText()).toContain("Click a tower on the map to upgrade it");
+    expect(tutorialText()).toContain("Click a tower on the map for upgrade and sell options");
   });
 });
 
@@ -887,7 +887,7 @@ describe("GameScreenController tower upgrades", () => {
     return grid;
   }
 
-  it("shows upgrade information on hover and refreshes it after clicking", () => {
+  it("shows information on hover and keeps the selected tower open until an outside click", () => {
     const grid = prepareTower();
     const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
     const hintText = () =>
@@ -898,12 +898,105 @@ describe("GameScreenController tower upgrades", () => {
     grid.group.fire("pointermove");
     expect(hint.visible()).toBe(true);
     expect(hintText()).toContain("Upgrade to Level 2 · 75 coins");
-    expect(hintText()).toContain("Click this tower to upgrade.");
+    expect(hintText()).toContain("Use Upgrade below.");
+    expect(hint.findOne(".sell-tower-button")!.visible()).toBe(true);
     grid.group.fire("click");
+    expect(model.towers[0].level).toBe(0);
+    expect(hint.findOne(".sell-tower-button")!.visible()).toBe(true);
+    expect(hintText()).toContain("Use Upgrade below.");
+    hint.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
     expect(hintText()).toContain("Circle Tower · Level 2");
     expect(hintText()).toContain("Unlock Level 3 in the Tower Shop first.");
     grid.group.fire("pointerleave");
+    expect(hint.visible()).toBe(true); // selection stays open so its Sell button can be clicked
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("click");
     expect(hint.visible()).toBe(false);
+  });
+
+  it("sells from the tower panel without upgrading and removes its sprite", () => {
+    const grid = prepareTower();
+    const tower = model.towers[0];
+    const coinsBefore = model.wallet.coins;
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    const message = vi.spyOn(GameScreenView.prototype, "showMessage");
+    const upgrade = vi.spyOn(model, "tryUpgradeTower");
+    const remove = vi.spyOn(TowersView.prototype, "remove");
+    grid.group.fire("pointermove");
+    expect(hint.findOne<Konva.Text>(".sell-tower-label")!.text()).toBe("Sell Tower (+25 coins)");
+    vi.spyOn(controller.group, "getRelativePointerPosition").mockReturnValue({ x: 100, y: 100 });
+    vi.spyOn(GameScreenView.prototype, "isPointerInTowerPanelArea").mockReturnValue(true);
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("pointermove");
+    grid.group.fire("pointerleave");
+    expect(hint.visible()).toBe(true);
+    expect(hint.findOne(".sell-tower-button")!.visible()).toBe(true);
+    hint.findOne<Konva.Group>(".sell-tower-button")!.fire("click", {}, true);
+
+    expect(upgrade).not.toHaveBeenCalled();
+    expect(model.wallet.coins).toBe(coinsBefore + 25);
+    expect(model.towers).toHaveLength(0);
+    expect(model.grid.isBuildable(tower.tile)).toBe(true);
+    expect(hint.visible()).toBe(false);
+    expect(message).toHaveBeenCalledWith("Circle Tower sold for 25 coins.", true);
+    expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
+      `Coins: ${coinsBefore + 25}`,
+    );
+    expect(remove).toHaveBeenCalledWith(tower.id);
+    hint.findOne<Konva.Group>(".sell-tower-button")!.fire("click", {}, true);
+    expect(model.wallet.coins).toBe(coinsBefore + 25);
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes the selected tower's sell value after a paid upgrade", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("click");
+    hint.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
+    expect(hint.findOne<Konva.Text>(".sell-tower-label")!.text()).toBe("Sell Tower (+62 coins)");
+  });
+
+  it("keeps selection while moving across another tile and into the panel", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("click");
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("pointermove");
+    grid.group.fire("pointerleave");
+    expect(hint.visible()).toBe(true);
+    expect(hint.findOne<Konva.Text>(".sell-tower-label")!.text()).toBe("Sell Tower (+25 coins)");
+    hint.getChildren()[0].fire("click", {}, true);
+    expect(hint.visible()).toBe(true);
+  });
+
+  it("closes a selected panel on Escape or a click outside it", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("click");
+    grid.group.fire("pointerleave");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(hint.visible()).toBe(false);
+
+    grid.group.fire("click");
+    expect(hint.visible()).toBe(true);
+    controller.group.getChildren()[0].fire("click", {}, true);
+    expect(hint.visible()).toBe(false);
+  });
+
+  it("switches the selected panel to a different tower", () => {
+    const grid = prepareTower();
+    expect(model.tryPlaceTower("circle", { x: 1, y: 2 })).toBe("ok");
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    grid.group.fire("click");
+    hint.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
+    expect(hint.findOne<Konva.Text>(".sell-tower-label")!.text()).toBe("Sell Tower (+62 coins)");
+    vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
+    grid.group.fire("click");
+    expect(hint.findOne<Konva.Text>(".sell-tower-label")!.text()).toBe("Sell Tower (+25 coins)");
+    hint.findOne<Konva.Group>(".sell-tower-button")!.fire("click", {}, true);
+    expect(model.towers).toHaveLength(1);
+    expect(model.towers[0].tile).toEqual({ x: 0, y: 2 });
+    expect(model.grid.isBuildable({ x: 1, y: 2 })).toBe(true);
   });
 
   it("shows the hovered tower's range, and the bigger one after an upgrade", () => {
@@ -916,10 +1009,13 @@ describe("GameScreenController tower upgrades", () => {
     expect(radius()).toBe(model.towers[0].reach * TILE);
     const before = radius();
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
     expect(model.towers[0].level).toBe(1);
     expect(radius()).toBe(model.towers[0].reach * TILE);
     expect(radius()).toBeGreaterThan(before);
     grid.group.fire("pointerleave");
+    expect(range().getChildren().length).toBe(1); // clicked selection remains visible
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(range().getChildren().length).toBe(0);
   });
 
@@ -933,7 +1029,7 @@ describe("GameScreenController tower upgrades", () => {
     ).toBe(true);
   });
 
-  it("hides the upgrade hint on empty tiles, in settings, and when leaving the game", () => {
+  it("dismisses hover-only information on empty tiles, in settings, and after leaving", () => {
     const grid = prepareTower();
     const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
     grid.group.fire("pointermove");
@@ -950,12 +1046,44 @@ describe("GameScreenController tower upgrades", () => {
     expect(hint.visible()).toBe(false);
   });
 
-  it.each(["click", "tap"])("upgrades the clicked tower on %s and shows the result", (event) => {
+  it("dismisses a hover-only panel on the sidebar but keeps a clicked selection open", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    vi.spyOn(controller.group, "getRelativePointerPosition").mockReturnValue({ x: 1100, y: 400 });
+
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    controller.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+
+    grid.group.fire("click");
+    expect(hint.visible()).toBe(true);
+    controller.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+  });
+
+  it("closes a selected panel when its tower is removed externally", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    const towerId = model.towers[0].id;
+    grid.group.fire("click");
+    expect(hint.visible()).toBe(true);
+
+    expect(model.trySellTower(towerId)).toBe(25);
+    expect(hint.visible()).toBe(false);
+    hint.findOne<Konva.Group>(".sell-tower-button")!.fire("click", {}, true);
+    expect(model.trySellTower(towerId)).toBeNull();
+  });
+
+  it.each(["click", "tap"])("selects on %s, then upgrades with the panel button", (event) => {
     const grid = prepareTower();
     const message = vi.spyOn(GameScreenView.prototype, "showMessage");
     const coinsBefore = model.wallet.coins;
 
     grid.group.fire(event);
+    expect(model.towers[0].level).toBe(0);
+    expect(model.wallet.coins).toBe(coinsBefore);
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire(event, {}, true);
 
     expect(model.towers[0].level).toBe(1);
     expect(model.wallet.coins).toBe(coinsBefore - 75);
@@ -990,6 +1118,7 @@ describe("GameScreenController tower upgrades", () => {
     const coinsBefore = model.wallet.coins;
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(model.towers[0].level).toBe(0);
     expect(model.wallet.coins).toBe(coinsBefore);
@@ -1541,6 +1670,7 @@ describe("GameScreenController sound effects", () => {
     playSound.mockClear();
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(model.towers[0].level).toBe(1);
     expect(playSound).toHaveBeenCalledExactlyOnceWith("upgrade");
@@ -1556,6 +1686,7 @@ describe("GameScreenController sound effects", () => {
     playSound.mockClear();
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(model.towers[0].level).toBe(0);
     expect(playSound).toHaveBeenCalledExactlyOnceWith("no-coins");
@@ -1570,6 +1701,7 @@ describe("GameScreenController sound effects", () => {
     playSound.mockClear();
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(playSound).not.toHaveBeenCalled();
   });
