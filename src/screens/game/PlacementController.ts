@@ -3,6 +3,7 @@ import { MAPS, TOWERS } from "../../model/loadContent";
 import type { MapConfig, TowerConfig, Vec } from "../../model/types";
 import type { GameScreenView } from "./GameScreenView";
 import type { GridView } from "./GridView";
+import type { TowersView } from "./TowersView";
 import { PlacementModel } from "../../model/PlacementModel";
 import { PlacementView } from "./PlacementView";
 import type { QuestionService } from "../../model/questions/QuestionService";
@@ -37,6 +38,7 @@ export class PlacementController {
     towerProgress: TowerProgress,
     questions: QuestionService,
     gridView: GridView,
+    towersView: TowersView,
     isActive: () => boolean,
     screenHeight: number,
   ) {
@@ -58,7 +60,7 @@ export class PlacementController {
     this.layoutCards = () => {};
     this.refreshHint = () => {};
     this.cleanup = () => {};
-    this.wire(gridView);
+    this.wire(gridView, towersView);
   }
 
   // Fits the tower cards to the new screen height and moves the upgrade hint
@@ -78,7 +80,7 @@ export class PlacementController {
     this.cleanup();
   }
 
-  private wire(gridView: GridView): void {
+  private wire(gridView: GridView, towersView: TowersView): void {
     const model = this.model;
     let disposed = false;
     const canCommit = () => !disposed && this.isActive() && !model.isOver;
@@ -164,6 +166,7 @@ export class PlacementController {
       const container = stage?.container();
       if (!canShow || !tower) {
         this.view.hideTowerUpgradeHint();
+        towersView.hideRange();
         if (container) container.style.cursor = "default";
         return;
       }
@@ -173,6 +176,7 @@ export class PlacementController {
         this.towerProgress.getMaxLevel(tower.def.id),
         model.wallet.coins,
       );
+      towersView.showRange(tower);
       if (container) container.style.cursor = "pointer";
     };
     this.refreshHint = refreshUpgradeHint;
