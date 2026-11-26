@@ -2,6 +2,8 @@
 
 A tower defense game where you answer geometry questions to build your defenses. Every tower is a shape, and every question is about the shape you are placing: its radius, its area, its angle. Built by CSE 110 Group 2 with TypeScript, Vite, and Konva.
 
+**Play it online:** https://sophiagao0787.github.io/cse110-Project-Group2/
+
 ![Choosing a map, placing two circle towers by answering their questions, and clearing the first wave](assets/demo.gif)
 
 ## Features
