@@ -23,7 +23,7 @@ function setup(waves: WaveConfig[] = [{ groups: [group("basic", 3, 0.1)] }]) {
   return { manager, events, spawn };
 }
 
-describe("WaveManager (N1)", () => {
+describe("WaveManager", () => {
   it("spawns each group's count of enemies, intervalSec apart", () => {
     const { manager, spawn } = setup([
       { groups: [group("basic", 2, 0.5), group("fast", 2, 0.25)] },

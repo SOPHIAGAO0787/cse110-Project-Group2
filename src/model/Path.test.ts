@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Path } from "./Path";
 
-describe("Path (R1)", () => {
+describe("Path", () => {
   const path = new Path([
     { x: 0, y: 0 },
     { x: 4, y: 0 },

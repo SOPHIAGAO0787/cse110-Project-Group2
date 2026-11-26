@@ -527,7 +527,7 @@ describe("GameScreenController questions during gameplay", () => {
   });
 });
 
-describe("GameScreenController game over (So1)", () => {
+describe("GameScreenController game over", () => {
   it("sends the model's final result to the result screen", () => {
     expect(model.tryPlaceTower("circle", { x: 0, y: 2 })).toBe("ok");
     model.lives.remaining = 1;

@@ -39,7 +39,7 @@ describe("GameModel", () => {
   });
 });
 
-// B1: placing towers through the model (tryPlaceTower)
+// Placing towers through the model (tryPlaceTower)
 function findTile(rows: string[], ch: string): Vec {
   for (let y = 0; y < rows.length; y++) {
     const x = rows[y].indexOf(ch);
@@ -232,8 +232,8 @@ describe("GameModel.trySellTower", () => {
   });
 });
 
-// Test for R2: Remove dead enemies and enemies that reached the base
-describe("GameModel enemy cleanup (R2)", () => {
+// Removing dead enemies and enemies that reached the base
+describe("GameModel enemy cleanup", () => {
   it("removes dead enemies and awards coins", () => {
     const game = new GameModel(loadMap(map1));
     const startingCoins = game.wallet.coins;
@@ -342,8 +342,8 @@ describe("GameModel enemy cleanup (R2)", () => {
   });
 });
 
-// B2: towers shoot enemies in range
-describe("GameModel tower firing (B2)", () => {
+// Towers shoot enemies in range
+describe("GameModel tower firing", () => {
   const tile = { x: 0, y: 2 };
   // The first shot comes after one full firing interval.
   const circleInterval = 1 / TOWERS.find((d) => d.id === "circle")!.fireRatePerSec;
@@ -505,7 +505,7 @@ describe("GameModel with the square tower", () => {
   });
 });
 
-// So1: the game ends in victory or defeat and records its stats for the result screen.
+// The game ends in victory or defeat and records its stats for the result screen.
 // With no towers every enemy of every wave leaks, so one more life than map1 has enemies
 // survives with 1 left, and that many or fewer lose.
 const MAP1_ENEMIES = map1.waves.reduce(
@@ -513,7 +513,7 @@ const MAP1_ENEMIES = map1.waves.reduce(
   0,
 );
 
-describe("GameModel game result (So1)", () => {
+describe("GameModel game result", () => {
   function gameWithLives(startingLives: number): GameModel {
     return new GameModel(loadMap({ ...map1, startingLives }));
   }

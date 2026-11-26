@@ -8,6 +8,8 @@ import { TowerProgress } from "../../model/TowerProgress";
 import { GameModel } from "../../model/GameModel";
 import { loadMap } from "../../model/loadContent";
 import map1 from "../../data/maps/map1.json";
+import upgrades from "../../data/towerUpgrades.json";
+import { rangeReach } from "../../model/towerConfig";
 
 type ShopCallbacks = ConstructorParameters<typeof TowerShopView>[0];
 type ShopState = Parameters<TowerShopView["render"]>[0];
@@ -34,6 +36,17 @@ vi.mock("./TowerShopView", () => ({
   },
 }));
 
+// The price of the circle tower's first upgrade, read from towerUpgrades.json so these tests
+// keep passing when the upgrade prices change
+function circleUpgradeCost(): number {
+  for (const entry of upgrades) {
+    if (entry.towerId === "circle") {
+      return entry.upgrades[0].cost;
+    }
+  }
+  throw new Error("towerUpgrades.json has no circle tower");
+}
+
 function displayedState(): ShopState {
   return view.render.mock.lastCall![0];
 }
@@ -58,9 +71,9 @@ describe("Tower shop UI interactions", () => {
     expect(tower.def.name).toBe("Circle Tower");
     expect(tower.def.description).toBe("Hits enemies inside a circle around it.");
     expect(tower.unlockCost).toBe(tower.def.cost);
-    expect(tower.levels[0].damage).toBe(7);
-    expect(tower.levels[0].attackSpeed).toBe(0.8);
-    expect(tower.levels[0].radius).toBe(2);
+    expect(tower.levels[0].damage).toBe(tower.def.damage);
+    expect(tower.levels[0].attackSpeed).toBe(tower.def.fireRatePerSec);
+    expect(tower.levels[0].radius).toBe(rangeReach(tower.def));
   });
 
   it("provides the next upgrade's cost and improved abilities", () => {
@@ -69,36 +82,38 @@ describe("Tower shop UI interactions", () => {
     const current = tower.levels[0];
     const next = tower.levels[1];
 
-    expect(current.upgradeCost).toBe(75);
+    expect(current.upgradeCost).toBe(circleUpgradeCost());
     expect(next.damage).toBeGreaterThan(current.damage);
     expect(next.attackSpeed).toBeGreaterThan(current.attackSpeed);
     expect(next.radius).toBeGreaterThan(current.radius);
   });
 
   it("upgrades Circle and updates shared progress", () => {
+    const coinsLeft = progress.shopCoins - circleUpgradeCost();
     view.clickAction();
 
     const state = displayedState();
 
-    expect(state.coins).toBe(125);
+    expect(state.coins).toBe(coinsLeft);
     expect(state.levels.get("circle")).toBe(1);
-    expect(progress.shopCoins).toBe(125);
+    expect(progress.shopCoins).toBe(coinsLeft);
     expect(progress.getMaxLevel("circle")).toBe(1);
     expect(view.showPopup).not.toHaveBeenCalled();
     expect(onBuy).toHaveBeenCalledTimes(1);
   });
 
   it("requests a popup without changing coins or level when funds are insufficient", () => {
-    progress.shopCoins = 50;
+    const cost = circleUpgradeCost();
+    progress.shopCoins = cost - 25;
 
     const rendersBeforeAttempt = view.render.mock.calls.length;
 
-    view.clickAction(); // The first upgrade costs 75; only 50 are available.
+    view.clickAction(); // 25 coins short of the first upgrade
 
     expect(view.showPopup).toHaveBeenCalledWith(
-      "You need 75 coins, but have 50.\nEarn 25 more coins.",
+      `You need ${cost} coins, but have ${cost - 25}.\nEarn 25 more coins.`,
     );
-    expect(progress.shopCoins).toBe(50);
+    expect(progress.shopCoins).toBe(cost - 25);
     expect(progress.getMaxLevel("circle")).toBe(0);
     expect(view.render).toHaveBeenCalledTimes(rendersBeforeAttempt);
     expect(onBuy).not.toHaveBeenCalled();

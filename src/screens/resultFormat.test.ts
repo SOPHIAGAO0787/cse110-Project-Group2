@@ -16,7 +16,7 @@ const result: GameResult = {
   shopCoinsEarned: 0,
 };
 
-describe("formatTime (So1)", () => {
+describe("formatTime", () => {
   it.each([
     [0, "0:00"],
     [59.9, "0:59"], // partial seconds are dropped, never rounded up
@@ -31,7 +31,7 @@ describe("formatTime (So1)", () => {
   });
 });
 
-describe("formatStars (So1)", () => {
+describe("formatStars", () => {
   it.each([
     [0, "☆☆☆"],
     [2, "★★☆"],
@@ -46,7 +46,7 @@ describe("formatStars (So1)", () => {
   });
 });
 
-describe("result text (So1)", () => {
+describe("result text", () => {
   it("names the outcome", () => {
     expect(resultTitle(true)).toBe("Victory!");
     expect(resultTitle(false)).toBe("Defeat");
