@@ -74,7 +74,7 @@ Each square meter of shape area earns 10 points. Each triangle scores 2 m². Com
 
 The browser saves map stars, the tutorial flag, shop coins, tower upgrades, and unused mini-game bonus coins across reloads.
 
-**Coming next (Sprint 3):** Tower Shop coins for winning games, new music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+**Coming next (Sprint 3):** New music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 
