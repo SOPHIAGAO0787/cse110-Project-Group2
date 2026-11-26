@@ -80,8 +80,6 @@ Each square meter of shape area earns 10 points. Each triangle scores 2 m². Com
 
 The browser saves map stars, the tutorial flag, shop coins, tower upgrades, unused mini-game bonus coins, and the music and sound switches across reloads. **Reset progress** on the main menu starts over from map 1 with a new Tower Shop; it asks first and keeps the music and sound switches.
 
-**Coming next (Sprint 3):** New music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
-
 ## How the code is organized
 
 ```
