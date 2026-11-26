@@ -25,7 +25,7 @@ export class GeometryMiniGameScreen implements Screen {
   private panel = new Konva.Group();
   private title = new Konva.Text({
     y: 20,
-    text: "Geometry Practice",
+    text: "Geometry Quiz",
     fontSize: 30,
     fontFamily: FONT,
     fill: TITLE_TEXT,
