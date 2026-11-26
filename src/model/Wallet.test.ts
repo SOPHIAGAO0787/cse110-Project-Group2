@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { EventBus } from "../core/EventBus";
 import { Wallet } from "./Wallet";
 
-describe("Wallet (St1)", () => {
+describe("Wallet", () => {
   it("starts with startingCoins", () => {
     const wallet = new Wallet(100, new EventBus());
     expect(wallet.coins).toBe(100);

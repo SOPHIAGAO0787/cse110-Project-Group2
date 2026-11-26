@@ -3,7 +3,7 @@ import { Enemy } from "./Enemy";
 import { Path } from "./Path";
 import type { EnemyDef } from "./types";
 
-describe("Enemy (R1, R2)", () => {
+describe("Enemy", () => {
   const def: EnemyDef = {
     id: "basic",
     name: "Air Molecule",

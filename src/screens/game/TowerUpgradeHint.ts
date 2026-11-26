@@ -3,10 +3,12 @@ import type { Tower } from "../../model/Tower";
 import type { ShopTower } from "../../model/shop/types";
 import type { Vec } from "../../model/types";
 import { fireRateFor } from "../../model/towerConfig";
-import { BUTTON_FILL, FONT, TITLE_TEXT, WARNING_TEXT } from "../theme";
+import { BUTTON_FILL, FONT, LOCKED_BUTTON_FILL, TITLE_TEXT, WARNING_TEXT } from "../theme";
 
 const WIDTH = 280;
 const HEIGHT = 300;
+const BUTTON_WIDTH = WIDTH - 36;
+const BUTTON_HEIGHT = 34;
 
 // The panel catches clicks so its controls never fall through to the map.
 export class TowerUpgradeHint {
@@ -17,6 +19,8 @@ export class TowerUpgradeHint {
   private cost: Konva.Text;
   private stats: Konva.Text;
   private action: Konva.Text;
+  // The Upgrade button's background. It turns grey when the tower can't be upgraded right now.
+  private upgradeFill: Konva.Rect;
 
   constructor() {
     this.group.add(
@@ -48,19 +52,39 @@ export class TowerUpgradeHint {
       }),
     );
     this.action = this.text(20, 165, 13, true);
+    this.upgradeFill = this.buttonFill();
     this.group.add(
-      this.button("upgrade-tower-button", "upgrade-tower-label", 214, () => this.onUpgrade()),
-      this.button("sell-tower-button", "sell-tower-label", 254, () => this.onSell()),
+      this.button("upgrade-tower-button", "upgrade-tower-label", 214, this.upgradeFill, () =>
+        this.onUpgrade(),
+      ),
+      this.button("sell-tower-button", "sell-tower-label", 254, this.buttonFill(), () =>
+        this.onSell(),
+      ),
     );
   }
 
-  private button(name: string, label: string, y: number, action: () => void): Konva.Group {
+  private buttonFill(): Konva.Rect {
+    return new Konva.Rect({
+      width: BUTTON_WIDTH,
+      height: BUTTON_HEIGHT,
+      fill: BUTTON_FILL,
+      cornerRadius: 8,
+    });
+  }
+
+  private button(
+    name: string,
+    label: string,
+    y: number,
+    fill: Konva.Rect,
+    action: () => void,
+  ): Konva.Group {
     const button = new Konva.Group({ name, x: 18, y });
     button.add(
-      new Konva.Rect({ width: WIDTH - 36, height: 34, fill: BUTTON_FILL, cornerRadius: 8 }),
+      fill,
       new Konva.Text({
         name: label,
-        width: WIDTH - 36,
+        width: BUTTON_WIDTH,
         y: 7,
         align: "center",
         fontFamily: FONT,
@@ -94,6 +118,9 @@ export class TowerUpgradeHint {
     this.group.findOne<Konva.Text>(".upgrade-tower-label")?.text("Upgrade Tower");
     this.title.text(`${tower.def.name} · Level ${tower.level + 1}`);
     this.action.fill(TITLE_TEXT);
+    // Only the last case below can upgrade. The button still answers a click in the other
+    // cases, with a message that says why the upgrade didn't happen.
+    let canUpgrade = false;
 
     if (!next || price === null || price === undefined) {
       this.cost.text("Maximum level reached");
@@ -123,7 +150,13 @@ export class TowerUpgradeHint {
         this.action.text(`Need ${price - coins} more coins.\nYou have ${coins} of ${price}.`);
       } else {
         this.action.text(`Use Upgrade below.\nSpend ${price} gameplay coins.`);
+        canUpgrade = true;
       }
+    }
+    if (canUpgrade) {
+      this.upgradeFill.fill(BUTTON_FILL);
+    } else {
+      this.upgradeFill.fill(LOCKED_BUTTON_FILL);
     }
 
     const x = anchor.x + WIDTH + 12 <= bounds.x - 8 ? anchor.x + 12 : anchor.x - WIDTH - 12;

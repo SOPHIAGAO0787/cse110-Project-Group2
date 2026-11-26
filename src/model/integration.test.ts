@@ -60,7 +60,7 @@ function playUntilOver(game: GameModel, towerTiles: Vec[]): void {
 // These tests run a real game on map1 with no screen, to check that the parts work together.
 // Each one needs two tasks. Whichever of the two merges second turns its test on.
 describe("Integration: a game on map1", () => {
-  it("starting wave 1 spawns its enemies on the path (R1, N1)", () => {
+  it("starting wave 1 spawns its enemies on the path", () => {
     const game = new GameModel(loadMap(map1));
     game.startNextWave();
     game.tick(0);
@@ -84,7 +84,7 @@ describe("Integration: a game on map1", () => {
 
   // Verify that reaching the path endpoint removes the enemy,
   // deducts one life, and emits the livesChanged event.
-  it("an enemy that reaches the base costs one life (R2, N2)", () => {
+  it("an enemy that reaches the base costs one life", () => {
     const game = new GameModel(loadMap(map1));
     const livesChanged: number[] = [];
 
@@ -109,7 +109,7 @@ describe("Integration: a game on map1", () => {
 
   // Verify that killing an enemy removes it, awards its reward
   // through Wallet, and emits coinsChanged.
-  it("killing an enemy adds its reward to the coins (R2, St1)", () => {
+  it("killing an enemy adds its reward to the coins", () => {
     const game = new GameModel(loadMap(map1));
     const coinsChanged: number[] = [];
 
@@ -133,7 +133,7 @@ describe("Integration: a game on map1", () => {
     expect(game.lives.remaining).toBe(map1.startingLives);
   });
 
-  it("placing a tower spends its cost, and with too few coins nothing is placed (B1, St1)", () => {
+  it("placing a tower spends its cost, and with too few coins nothing is placed", () => {
     const game = new GameModel(loadMap(map1));
 
     // map1 starts with 100 coins, and a circle tower costs 50
@@ -147,7 +147,7 @@ describe("Integration: a game on map1", () => {
     expect(game.towers).toHaveLength(2);
   });
 
-  it("winning map1 unlocks map2, and losing does not (So1, #68)", () => {
+  it("winning map1 unlocks map2, and losing does not", () => {
     const progress = new Progress(MAPS);
 
     const lost = new GameModel(loadMap(map1));
@@ -164,7 +164,7 @@ describe("Integration: a game on map1", () => {
     expect(progress.starsFor("map1")).toBe(3);
   });
 
-  it("a tower next to the path kills a passing enemy (B1, R3)", () => {
+  it("a tower next to the path kills a passing enemy", () => {
     const game = new GameModel(loadMap(map1));
     const rewards: number[] = [];
     game.events.on("enemyKilled", ({ reward }) => {
@@ -194,7 +194,7 @@ describe("Integration: a game on map1", () => {
     expect(game.wallet.coins).toBe(map1.startingCoins - towerCost("circle") + enemy.def.reward);
   });
 
-  it("a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards (St3)", () => {
+  it("a full round ends in victory with towers placed and defeat with none, and final coins = start - spent + rewards", () => {
     const won = new GameModel(loadMap(map1));
     let spent = 0;
     let rewards = 0;
@@ -309,7 +309,7 @@ it("freezes preparation after defeat", () => {
 describe("Integration: every map", () => {
   // loadMap only checks the corners of the path, so walk an enemy over every map to check the road
   // between them too: every step stays on a 'P' tile and moves no farther than its speed allows.
-  it("an enemy walks smoothly along the road on every map, then costs one life (R1, R2, #68)", () => {
+  it("an enemy walks smoothly along the road on every map, then costs one life", () => {
     const step = 0.05; // seconds per tick, about 3 frames
     for (const map of MAPS) {
       const game = new GameModel(map);
