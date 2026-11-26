@@ -17,13 +17,16 @@ export class Sound {
   private music: HTMLAudioElement;
   private effects: { [name: string]: HTMLAudioElement } = {};
   private lastPopAt = 0; // time of the last pop, in milliseconds
+  // Called after the Music or Sound switch changes. The App uses it to save the settings.
+  onChange: () => void = () => {};
 
   constructor() {
-    this.music = new Audio("/audio/music.mp3");
+    // No leading "/": the files load from next to the page, which also works on GitHub Pages
+    this.music = new Audio("audio/music.mp3");
     this.music.loop = true;
     this.music.volume = 0.4; // quieter than the effects
     for (const name of EFFECT_NAMES) {
-      this.effects[name] = new Audio("/audio/" + name + ".mp3");
+      this.effects[name] = new Audio("audio/" + name + ".mp3");
     }
   }
 
@@ -41,10 +44,12 @@ export class Sound {
     } else {
       this.music.pause();
     }
+    this.onChange();
   }
 
   toggleEffects(): void {
     this.effectsOn = !this.effectsOn;
+    this.onChange();
   }
 
   play(name: EffectName): void {

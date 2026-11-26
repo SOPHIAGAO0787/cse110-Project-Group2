@@ -4,10 +4,10 @@ import "vitest-canvas-mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GameScreenView, TILE } from "./GameScreenView";
 import { QuestionService } from "../../model/questions/QuestionService";
-import { Sound } from "../../core/Sound";
-import { GOOD_TEXT, WARNING_TEXT } from "../theme";
+import { Sound } from "../../core/Sound"; 
 import { Tower } from "../../model/Tower";
 import { TOWERS } from "../../model/loadContent";
+import { CARD_FILL, GOOD_TEXT, HUD_LIFE_FLASH, WARNING_TEXT } from "../theme";
 
 let view: GameScreenView;
 
@@ -73,14 +73,11 @@ describe("GameScreenView HUD", () => {
   ])("renders coins=%i, lives=%i, wave=%i/%i, enemies=%i", (coins, lives, wave, total, enemies) => {
     view.setHud(coins, lives, wave, total, enemies);
 
-    const hud = view.group
-      .getChildren()
-      .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
+    const value = (name: string) => view.group.findOne<Konva.Text>(`.hud-${name}-value`)!.text();
     expect(view.shopGroup.findOne<Konva.Text>(".game-coins")!.text()).toBe(`Coins: ${coins}`);
-    expect(hud).toBeInstanceOf(Konva.Text);
-    expect((hud as Konva.Text).text()).toBe(
-      `Lives: ${lives}   ·   Wave: ${wave}/${total}   ·   Enemies Remaining: ${enemies}`,
-    );
+    expect(value("lives")).toBe(String(lives));
+    expect(value("wave")).toBe(`${wave}/${total}`);
+    expect(value("enemies")).toBe(String(enemies));
   });
 
   it("replaces previous values, including zeros, without adding HUD nodes", () => {
@@ -88,16 +85,30 @@ describe("GameScreenView HUD", () => {
     view.setHud(100, 20, 1, 2, 5);
     view.setHud(0, 0, 2, 2, 0);
 
-    const texts = view.group
-      .getChildren()
-      .filter((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
-    expect(texts).toHaveLength(1);
+    for (const name of ["lives", "wave", "enemies"]) {
+      expect(view.group.find<Konva.Group>(`.hud-${name}`)).toHaveLength(1);
+      expect(view.group.find<Konva.Text>(`.hud-${name}-value`)).toHaveLength(1);
+    }
     expect(view.shopGroup.find<Konva.Text>(".game-coins")).toHaveLength(1);
     expect(view.shopGroup.findOne<Konva.Text>(".game-coins")!.text()).toBe("Coins: 0");
-    expect((texts[0] as Konva.Text).text()).toBe(
-      "Lives: 0   ·   Wave: 2/2   ·   Enemies Remaining: 0",
-    );
+    expect(view.group.findOne<Konva.Text>(".hud-lives-value")!.text()).toBe("0");
+    expect(view.group.findOne<Konva.Text>(".hud-wave-value")!.text()).toBe("2/2");
+    expect(view.group.findOne<Konva.Text>(".hud-enemies-value")!.text()).toBe("0");
     expect(view.group.getChildren()).toHaveLength(childCount);
+  });
+
+  it("shows three themed boxes with distinct icons and keeps them clear of the controls", () => {
+    view.resize(900, 700);
+    const boxes = ["lives", "wave", "enemies"].map((name) =>
+      view.group.findOne<Konva.Group>(`.hud-${name}`)!,
+    );
+    expect(boxes.every((box) => box.findOne<Konva.Rect>("Rect")!.fill() === CARD_FILL)).toBe(true);
+    expect(boxes[0].findOne<Konva.Path>("Path")).toBeTruthy();
+    expect(boxes[1].findOne<Konva.Line>("Line")).toBeTruthy();
+    expect(boxes[2].findOne<Konva.RegularPolygon>("RegularPolygon")).toBeTruthy();
+    expect(boxes[2].getClientRect().x + boxes[2].getClientRect().width).toBeLessThanOrEqual(
+      view.speedButton.x() - 8,
+    );
   });
 });
 
@@ -207,6 +218,9 @@ describe("GameScreenView feedback", () => {
     expect(frame.position()).toEqual(view.mapGroup.position());
     expect(frame.width()).toBeCloseTo(16 * TILE * view.mapGroup.scaleX());
     expect(frame.height()).toBeCloseTo(10 * TILE * view.mapGroup.scaleY());
+    const livesFlash = view.group.findOne<Konva.Rect>(".hud-lives-flash")!;
+    expect(livesFlash.fill()).toBe(HUD_LIFE_FLASH);
+    expect(livesFlash.opacity()).toBeGreaterThan(0.9);
   });
 });
 

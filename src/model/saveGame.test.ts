@@ -2,7 +2,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MAPS } from "./loadContent";
 import { Progress } from "./Progress";
-import { loadGame, SAVE_KEY, saveGame } from "./saveGame";
+import {
+  loadGame,
+  loadSettings,
+  SAVE_KEY,
+  saveGame,
+  saveSettings,
+  SETTINGS_KEY,
+  type Settings,
+} from "./saveGame";
 import { SHOP_TOWERS } from "./shop/loadShopContent";
 import { TowerProgress } from "./TowerProgress";
 
@@ -159,5 +167,76 @@ describe("saveGame and loadGame", () => {
     expect(towerProgress.shopCoins).toBe(80);
     expect(towerProgress.getMaxLevel("circle")).toBe(0);
     expect(towerProgress.getMaxLevel("triangle")).toBe(1);
+  });
+});
+
+describe("saveSettings and loadSettings", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  // Loads whatever is in storage into switches that start on, like a new Sound
+  function loadedSettings(): Settings {
+    const settings = { musicOn: true, effectsOn: true };
+    loadSettings(settings);
+    return settings;
+  }
+
+  it("gives back the same switches", () => {
+    saveSettings({ musicOn: false, effectsOn: true });
+    expect(loadedSettings()).toEqual({ musicOn: false, effectsOn: true });
+
+    saveSettings({ musicOn: true, effectsOn: false });
+    expect(loadedSettings()).toEqual({ musicOn: true, effectsOn: false });
+  });
+
+  it("keeps the settings apart from the progress save", () => {
+    saveSettings({ musicOn: false, effectsOn: false });
+    expect(localStorage.getItem(SAVE_KEY)).toBeNull();
+    expect(localStorage.getItem(SETTINGS_KEY)).not.toBeNull();
+  });
+
+  it("keeps music and sound on when nothing is saved", () => {
+    expect(loadedSettings()).toEqual({ musicOn: true, effectsOn: true });
+  });
+
+  it("keeps music and sound on when the save is broken", () => {
+    localStorage.setItem(SETTINGS_KEY, "{not json");
+    expect(loadedSettings()).toEqual({ musicOn: true, effectsOn: true });
+
+    localStorage.setItem(SETTINGS_KEY, "null");
+    expect(loadedSettings()).toEqual({ musicOn: true, effectsOn: true });
+
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ musicOn: "no", effectsOn: 0 }));
+    expect(loadedSettings()).toEqual({ musicOn: true, effectsOn: true });
+  });
+});
+
+describe("resetting the progress", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("saves a fresh start and keeps the settings", () => {
+    const played = new Progress(MAPS);
+    played.recordResult("map1", 3);
+    played.addMiniGameReward(2);
+    played.tutorialDone = true;
+    const shop = new TowerProgress();
+    shop.shopCoins = 35;
+    shop.maxLevels.set("triangle", 1);
+    saveGame(played, shop);
+    saveSettings({ musicOn: false, effectsOn: false });
+
+    played.reset();
+    shop.reset();
+    saveGame(played, shop);
+
+    loadFresh();
+    expectFreshStart();
+    const settings = { musicOn: true, effectsOn: true };
+    loadSettings(settings);
+    expect(settings).toEqual({ musicOn: false, effectsOn: false });
   });
 });

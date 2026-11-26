@@ -138,6 +138,7 @@ export class GameScreenController implements Screen {
       this.towerProgress,
       this.questions,
       gridView,
+      towersView,
       () => this.active,
       this.screenHeight,
     );

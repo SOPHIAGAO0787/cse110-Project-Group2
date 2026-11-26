@@ -9,7 +9,7 @@ import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResult } from "../model/GameResult";
 import { MAPS } from "../model/loadContent";
 import { Progress } from "../model/Progress";
-import { loadGame, saveGame } from "../model/saveGame";
+import { loadGame, loadSettings, saveGame, saveSettings } from "../model/saveGame";
 import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 import { TowerProgress } from "../model/TowerProgress";
@@ -38,19 +38,22 @@ export class App implements ScreenSwitcher {
     this.stage.add(this.layer);
     // Pick up where the player left off, before the screens read the progress
     loadGame(this.progress, this.towerProgress);
+    loadSettings(this.sound);
+    this.sound.onChange = () => saveSettings(this.sound);
 
-    this.menu = new MenuScreen(this, this.progress, this.sound);
+    this.menu = new MenuScreen(this, this.progress, this.sound, () => this.resetProgress());
     this.maps = new MapSelectScreen(this, this.progress);
     this.game = new GameScreenController(this, this.progress, this.towerProgress, this.sound);
     this.result = new ResultScreen(this);
     this.shop = new TowerShopScreen(this, this.towerProgress, () => this.save(), this.sound);
     this.minigames = new MinigameSelectScreen(this);
     this.roomBuilder = new RoomBuilderScreen(
-      (areaUsed) => {
-        const awarded = this.progress.addRoomBuilderReward(areaUsed);
+      (earnedCoins) => {
+        const awarded = this.progress.addRoomBuilderReward(earnedCoins);
         this.save();
         return awarded;
       },
+      () => this.switchTo("minigame"),
       () => this.switchTo("menu"),
       (effect) => this.sound.play(effect),
     );
@@ -97,6 +100,13 @@ export class App implements ScreenSwitcher {
       this.save();
     }
     this.current.show(data);
+  }
+
+  // The menu's Reset progress button. The settings have their own save, so they stay.
+  private resetProgress(): void {
+    this.progress.reset();
+    this.towerProgress.reset();
+    this.save();
   }
 
   // Called after each finished game, shop purchase and mini-game round

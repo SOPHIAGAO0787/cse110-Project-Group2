@@ -7,19 +7,34 @@ import {
   type PieceKind,
   type RoomCell,
 } from "../../model/minigame/RoomBuilder";
+import { selectRoomPuzzle, type RoomDifficulty } from "../../model/minigame/RoomPuzzles";
 import type { EffectName } from "../../core/Sound";
 
 export class RoomBuilderController {
-  readonly room = new RoomBuilder();
+  private currentRoom: RoomBuilder | null = null;
   selected: { kind: PieceKind; index?: number } | null = null;
   feedback = "";
   bonus: number | null = null;
   private cardTurns = { bench: 0, square: 0, triangle: 0 };
 
   constructor(
-    private award: (areaUsed: number) => number,
+    private award: (earnedCoins: number) => number,
     private playEffect: (effect: EffectName) => void,
   ) {}
+
+  get room(): RoomBuilder {
+    if (!this.currentRoom) throw new Error("Select a Room Builder difficulty first.");
+    return this.currentRoom;
+  }
+
+  chooseDifficulty(difficulty: RoomDifficulty): void {
+    this.currentRoom = new RoomBuilder(selectRoomPuzzle(difficulty, this.currentRoom?.puzzle));
+    this.reset();
+  }
+
+  nextPuzzle(): void {
+    this.chooseDifficulty(this.room.puzzle.layout.difficulty);
+  }
 
   selectCard(kind: PieceKind): boolean {
     this.selected = { kind };
@@ -91,7 +106,7 @@ export class RoomBuilderController {
 
   finish(): void {
     if (!this.room.finish()) return;
-    this.bonus = this.award(this.room.stats.areaUsed);
+    this.bonus = this.award(this.room.stats.potentialReward);
     this.playEffect("win");
   }
 }

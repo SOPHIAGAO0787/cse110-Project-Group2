@@ -13,11 +13,16 @@ const toDegrees = (radians: number) => (radians * 180) / Math.PI;
 interface TowerSprite {
   group: Konva.Group; // the tower's visual, positioned at its tile
   fire(): void; // the animation when it shoots
+  rangeShape(): Konva.Shape; // the area it hits, centered on the tower, with no colors yet
   // Called every frame with where the tower's target is (null if none); dt is in seconds.
   update?(target: Vec | null, dt: number): void;
 }
 
 const FACING_DEGREES: Record<Facing, number> = { right: 0, down: 90, left: 180, up: 270 };
+
+// The hovered tower's range uses the same colors as the range shown while placing a tower
+const RANGE_STROKE = "#4a90d9";
+const RANGE_FILL = "#4a90d933";
 
 const TURN_SPEED = 10; // radians per second, how fast a triangle swings towards its target
 
@@ -93,6 +98,10 @@ class CircleSprite implements TowerSprite {
     pop(this.body);
     this.shake.play();
   }
+
+  rangeShape(): Konva.Shape {
+    return new Konva.Circle({ radius: this.tower.reach * TILE, listening: false });
+  }
 }
 
 class TriangleSprite implements TowerSprite {
@@ -143,15 +152,20 @@ class TriangleSprite implements TowerSprite {
     this.pointBody();
   }
 
-  fire(): void {
-    const flash = new Konva.Wedge({
+  // The cone. A Wedge starts at its rotation and sweeps clockwise, so it backs up half the angle.
+  rangeShape(): Konva.Shape {
+    return new Konva.Wedge({
       radius: this.tower.reach * TILE,
       angle: toDegrees(this.spread),
       rotation: toDegrees(this.facing) - toDegrees(this.spread) / 2,
-      fill: TRIANGLE_TOWER_COLOR,
-      opacity: 0.5,
       listening: false,
     });
+  }
+
+  fire(): void {
+    const flash = this.rangeShape();
+    flash.fill(TRIANGLE_TOWER_COLOR);
+    flash.opacity(0.5);
     this.group.add(flash);
     new Konva.Tween({
       node: flash,
@@ -199,7 +213,7 @@ class RectSprite implements TowerSprite {
   }
 
   // The block this tower hits, as a rectangle relative to the tower's centre (in pixels).
-  private zoneRect(): Konva.Rect {
+  rangeShape(): Konva.Shape {
     const cfg = this.tower.config;
     if (cfg.kind !== "rect") throw new Error("RectSprite needs a rect config");
     const { col, row, cols, rows } = rectZone(
@@ -214,14 +228,14 @@ class RectSprite implements TowerSprite {
       y: (row - 0.5 - this.tower.tile.y) * TILE,
       width: cols * TILE,
       height: rows * TILE,
-      fill: SQUARE_TOWER_COLOR,
-      opacity: 0.5,
       listening: false,
     });
   }
 
   fire(): void {
-    const flash = this.zoneRect();
+    const flash = this.rangeShape();
+    flash.fill(SQUARE_TOWER_COLOR);
+    flash.opacity(0.5);
     this.group.add(flash);
     new Konva.Tween({
       node: flash,
@@ -249,6 +263,9 @@ function makeSprite(tower: Tower): TowerSprite {
 export class TowersView {
   group = new Konva.Group({ listening: false }); // so GridView's hover still gets the mouse
   private sprites = new Map<number, TowerSprite>();
+  // The range of the tower under the mouse. Empty when no tower is hovered.
+  // It is named "tower-range" so tests can find it.
+  private range = new Konva.Group({ name: "tower-range", listening: false });
 
   add(tower: Tower): void {
     const sprite = makeSprite(tower);
@@ -260,6 +277,28 @@ export class TowersView {
   remove(towerId: number): void {
     this.sprites.get(towerId)?.group.destroy();
     this.sprites.delete(towerId);
+  }
+  // Draws this tower's range: its circle, its aimed cone or its aimed block.
+  // It reads the tower's range now, so after an upgrade it shows the new range.
+  showRange(tower: Tower): void {
+    this.range.destroyChildren();
+    const sprite = this.sprites.get(tower.id);
+    if (sprite === undefined) {
+      return;
+    }
+    const shape = sprite.rangeShape();
+    shape.fill(RANGE_FILL);
+    shape.stroke(RANGE_STROKE);
+    shape.strokeWidth(2);
+    this.range.add(shape);
+    this.range.position(tileToPixel(tower.tile, TILE));
+    this.group.add(this.range);
+    // Above every tower, including ones placed since the last hover
+    this.range.moveToTop();
+  }
+
+  hideRange(): void {
+    this.range.destroyChildren();
   }
 
   fire(towerId: number): void {

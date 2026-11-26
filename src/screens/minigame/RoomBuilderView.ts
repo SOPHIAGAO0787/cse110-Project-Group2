@@ -1,9 +1,6 @@
 import Konva from "konva";
 import {
   PIECES,
-  ROOM_AREA,
-  ROOM_HEIGHT,
-  ROOM_WIDTH,
   pieceArea,
   pieceCorners,
   roomPiece,
@@ -12,6 +9,12 @@ import {
   type RoomCell,
   type RoomPiece,
 } from "../../model/minigame/RoomBuilder";
+import {
+  ROOM_DIFFICULTIES,
+  ROOM_LAYOUTS,
+  type RoomDifficulty,
+  type RoomLayout,
+} from "../../model/minigame/RoomPuzzles";
 import { makeBackButton, makeButton, setHoverCursor } from "../button";
 import { Page } from "../Page";
 import {
@@ -21,6 +24,7 @@ import {
   CIRCLE_TOWER_COLOR,
   FONT,
   LOSE_TEXT,
+  PAGE_BACKGROUND,
   MUTED_TEXT,
   SQUARE_TOWER_COLOR,
   TITLE_TEXT,
@@ -30,8 +34,7 @@ import {
 import type { RoomBuilderController } from "./RoomBuilderController";
 
 const CELL = 64;
-const BOARD_WIDTH = ROOM_WIDTH * CELL;
-const BOARD_HEIGHT = ROOM_HEIGHT * CELL;
+const DIFFICULTY_COLORS = { Easy: WIN_TEXT, Medium: TRIANGLE_TOWER_COLOR, Hard: LOSE_TEXT };
 const COLORS = {
   bench: SQUARE_TOWER_COLOR,
   square: CIRCLE_TOWER_COLOR,
@@ -93,9 +96,18 @@ interface RoomDrag {
 
 export class RoomBuilderView {
   readonly page = new Page();
+  private difficulty = new Konva.Group();
   private play = new Konva.Group();
   private results = new Konva.Group();
-  private board = new Konva.Group({ x: 155, y: 230 });
+  private board = new Konva.Group();
+  private boardCells = new Konva.Group();
+  private grid = new Konva.Group({ listening: false });
+  private roomTitle = label("", 48, 88, 30, true);
+  private widthLabel = label("", 0, 0, 22, true).width(90).align("center");
+  private heightLabel = label("", 0, 0, 22, true).width(70).align("right");
+  private drawnLayout?: RoomLayout;
+  private showingDifficulty = true;
+  private resultTitle = label("", 367, 148, 36, true);
   private pieces = new Konva.Group();
   private preview = new Konva.Group({ listening: false });
   private cards = new Konva.Group({ x: 822, y: 208 });
@@ -110,12 +122,19 @@ export class RoomBuilderView {
   constructor(
     private controller: RoomBuilderController,
     onBack: () => void,
+    onReturnToMenu: () => void,
   ) {
-    const back = makeBackButton(onBack);
+    const back = makeBackButton(() => (this.showingDifficulty ? onBack() : this.showDifficulty()));
     back.position({ x: 40, y: 26 });
-    this.page.content.add(back, label("Room Builder", 100, 29, 32, true), this.play, this.results);
+    this.page.content.add(
+      back,
+      label("Room Builder", 100, 29, 32, true),
+      this.difficulty,
+      this.play,
+      this.results,
+    );
     this.play.add(
-      label("Make every space count!", 48, 88, 30, true),
+      this.roomTitle,
       label(
         "Drag pieces from the menu into the room. Drag placed pieces to move them, or click a piece and use Rotate.",
         48,
@@ -124,9 +143,10 @@ export class RoomBuilderView {
       ),
       panel(48, 163, 734, 493),
       panel(800, 163, 487, 493),
-      label("8 m", 397, 199, 22, true),
-      label("6 m", 102, 410, 22, true),
+      this.widthLabel,
+      this.heightLabel,
       label("Choose a piece", 822, 177, 24, true),
+      label("Coins are awarded on finish.", 1052, 183, 15).fill(MUTED_TEXT),
       this.board,
       this.cards,
       this.formula,
@@ -134,7 +154,7 @@ export class RoomBuilderView {
       this.statistics,
     );
     const rule = label(
-      "Each cell is 1 m². Two matching triangle halves can share a 2 × 2 space.",
+      "Each cell is 1 m². Shaded cells are blocked. Triangle halves can share a space.",
       76,
       178,
       17,
@@ -142,8 +162,9 @@ export class RoomBuilderView {
     rule.fill(MUTED_TEXT);
     this.play.add(rule);
 
-    this.buildBoard();
+    this.board.add(this.boardCells, this.pieces, this.grid);
     this.play.add(this.preview);
+    this.buildDifficultyCards();
 
     this.rotate = this.addButton(this.play, "Rotate", 822, 546, 140, () =>
       this.controller.rotate(),
@@ -152,45 +173,132 @@ export class RoomBuilderView {
     this.addButton(this.play, "Reset Room", 822, 601, 200, () => this.controller.reset());
     this.addButton(this.play, "Finish Room", 1064, 601, 200, () => this.controller.finish());
 
-    this.results.add(
-      panel(320, 142, 695, 460),
-      label("Room Complete!", 367, 180, 36, true),
-      this.resultSummary,
-    );
-    this.addButton(this.results, "Play Again", 367, 512, 245, () => this.controller.reset());
-    this.addButton(this.results, "Return to Menu", 720, 512, 245, onBack);
+    this.results.add(panel(320, 112, 695, 525), this.resultTitle, this.resultSummary);
+    this.addButton(this.results, "Try Again", 367, 486, 275, () => this.controller.reset());
+    this.addButton(this.results, "Next Puzzle", 693, 486, 275, () => this.controller.nextPuzzle());
+    this.addButton(this.results, "Change Difficulty", 367, 555, 275, () => this.showDifficulty());
+    this.addButton(this.results, "Return to Menu", 693, 555, 275, onReturnToMenu);
   }
 
-  private buildBoard(): void {
-    const grid = new Konva.Group({ listening: false });
-    for (let x = 1; x < ROOM_WIDTH; x++) {
-      grid.add(
-        new Konva.Line({
-          points: [x * CELL, 0, x * CELL, BOARD_HEIGHT],
-          stroke: TITLE_TEXT,
-          opacity: 0.18,
+  showDifficulty(): void {
+    this.cancelDrag();
+    this.showingDifficulty = true;
+    this.render();
+  }
+
+  private buildDifficultyCards(): void {
+    this.difficulty.add(
+      label("Select Difficulty", 48, 100, 34, true),
+      label(
+        "Choose a difficulty to receive a random room and set of shapes. Every puzzle can be completed to 100%.",
+        48,
+        149,
+        20,
+      ),
+    );
+    const levels: RoomDifficulty[] = ["Easy", "Medium", "Hard"];
+    for (const [index, difficulty] of levels.entries()) {
+      const x = 48 + index * 421;
+      const color = DIFFICULTY_COLORS[difficulty];
+      const { description, maxReward } = ROOM_DIFFICULTIES[difficulty];
+      const examples = ROOM_LAYOUTS.filter((layout) => layout.difficulty === difficulty);
+      const example = examples[index === 1 ? 2 : 0];
+      const cellSize = 18;
+      this.difficulty.add(
+        panel(x, 218, 398, 420),
+        label(difficulty, x + 26, 249, 30, true).fill(color),
+        label(description, x + 26, 468, 22)
+          .width(348)
+          .lineHeight(1.2),
+        label(`Maximum reward   ${maxReward} coins`, x + 26, 541, 20, true),
+      );
+      example.cells.forEach((row, rowIndex) =>
+        row.forEach((available, colIndex) => {
+          if (!available) return;
+          this.difficulty.add(
+            new Konva.Rect({
+              x: x + (398 - example.width * cellSize) / 2 + colIndex * cellSize,
+              y: 300 + rowIndex * cellSize,
+              width: cellSize,
+              height: cellSize,
+              fill: color,
+              stroke: CARD_FILL,
+              strokeWidth: 1,
+              listening: false,
+            }),
+          );
         }),
       );
+      this.addButton(this.difficulty, difficulty, x + 26, 574, 346, () => {
+        this.controller.chooseDifficulty(difficulty);
+        this.showingDifficulty = false;
+      });
     }
-    for (let y = 1; y < ROOM_HEIGHT; y++) {
-      grid.add(
-        new Konva.Line({
-          points: [0, y * CELL, BOARD_WIDTH, y * CELL],
-          stroke: TITLE_TEXT,
-          opacity: 0.18,
-        }),
-      );
-    }
+  }
+
+  private buildBoard(layout: RoomLayout): void {
+    this.drawnLayout = layout;
+    this.boardCells.destroyChildren();
+    this.grid.destroyChildren();
+    const width = layout.width * CELL;
+    const height = layout.height * CELL;
+    const scale = Math.min(1, 576 / width, 384 / height);
+    const x = 415 - (width * scale) / 2;
+    const y = 230 + (384 - height * scale) / 2;
+    this.board.position({ x, y }).scale({ x: scale, y: scale });
+    this.preview.position({ x, y }).scale({ x: scale, y: scale });
+    this.widthLabel.position({ x: 370, y: y - 27 }).text(`${layout.width} m`);
+    this.heightLabel
+      .position({ x: x - 80, y: y + (height * scale) / 2 - 11 })
+      .text(`${layout.height} m`);
+
     const surface = new Konva.Rect({
       name: "room-grid",
-      width: BOARD_WIDTH,
-      height: BOARD_HEIGHT,
+      width,
+      height,
       fill: "#f1f7fb",
       stroke: TITLE_TEXT,
       strokeWidth: 3,
-      cornerRadius: 4,
     });
-    this.board.add(surface, this.pieces, grid);
+    this.boardCells.add(surface);
+    layout.cells.forEach((row, rowIndex) =>
+      row.forEach((available, colIndex) => {
+        const cellX = colIndex * CELL;
+        const cellY = rowIndex * CELL;
+        this.boardCells.add(
+          new Konva.Rect({
+            x: cellX,
+            y: cellY,
+            width: CELL,
+            height: CELL,
+            fill: available ? undefined : PAGE_BACKGROUND,
+            listening: false,
+          }),
+        );
+        this.grid.add(
+          new Konva.Rect({
+            x: cellX,
+            y: cellY,
+            width: CELL,
+            height: CELL,
+            stroke: TITLE_TEXT,
+            strokeWidth: 1,
+            opacity: 0.24,
+          }),
+        );
+        if (!available) {
+          this.boardCells.add(
+            new Konva.Line({
+              points: [cellX + 9, cellY + CELL - 9, cellX + CELL - 9, cellY + 9],
+              stroke: MUTED_TEXT,
+              strokeWidth: 2,
+              opacity: 0.55,
+              listening: false,
+            }),
+          );
+        }
+      }),
+    );
     surface.on("pointerdown", () => {
       if (this.drag) return;
       this.controller.selected = null;
@@ -251,8 +359,9 @@ export class RoomBuilderView {
     this.board.getStage()?.setPointersPositions(event);
     const pointer = this.board.getRelativePointerPosition();
     if (!pointer) return null;
+    const { width, height } = this.controller.room.puzzle.layout;
     const inside =
-      pointer.x >= 0 && pointer.x < BOARD_WIDTH && pointer.y >= 0 && pointer.y < BOARD_HEIGHT;
+      pointer.x >= 0 && pointer.x < width * CELL && pointer.y >= 0 && pointer.y < height * CELL;
     const x = pointer.x - drag.offset.x;
     const y = pointer.y - drag.offset.y;
     return {
@@ -273,8 +382,8 @@ export class RoomBuilderView {
     const { cell, inside } = position;
     const next = this.controller.preview(cell);
     if (!next) return;
-    const x = this.board.x() + (inside ? cell.x * CELL : position.x);
-    const y = this.board.y() + (inside ? cell.y * CELL : position.y);
+    const x = inside ? cell.x * CELL : position.x;
+    const y = inside ? cell.y * CELL : position.y;
     const color = inside && next.valid ? WIN_TEXT : LOSE_TEXT;
     this.preview.destroyChildren();
     this.preview.add(shape(next.piece, x, y, CELL, color).stroke(color).dash([8, 5]).opacity(0.65));
@@ -370,24 +479,49 @@ export class RoomBuilderView {
   }
 
   render(): void {
-    const { room, selected, bonus } = this.controller;
-    this.play.visible(bonus === null);
-    this.results.visible(bonus !== null);
+    this.difficulty.visible(this.showingDifficulty);
+    const { bonus } = this.controller;
+    this.play.visible(!this.showingDifficulty && bonus === null);
+    this.results.visible(!this.showingDifficulty && bonus !== null);
+    if (this.showingDifficulty) return;
+
+    const { room, selected } = this.controller;
+    const { layout } = room.puzzle;
     const stats = room.stats;
+    const title = `${layout.difficulty} — ${layout.name}`;
     if (bonus !== null) {
+      this.resultTitle.text(
+        stats.areaRemaining === 0 ? "Perfect Room! 100% Utilization" : "Room Complete!",
+      );
       this.resultSummary.destroyChildren();
+      this.resultSummary.add(label(title, 369, 203, 24, true));
       const lines = [
         `Final score   ${stats.score} points`,
-        `Area filled   ${stats.areaUsed} / ${ROOM_AREA} m²`,
+        `Area filled   ${stats.areaUsed} / ${layout.area} m²`,
+        `Area remaining   ${stats.areaRemaining} m²`,
         `Room utilization   ${stats.utilization}%`,
         `Pieces placed   ${stats.count}`,
-        `Bonus coins earned   +${bonus}`,
+        `Maximum reward   ${room.maxReward} coins`,
+        `Performance reward   ${stats.potentialReward} coins`,
+        `Bonus coins awarded   +${bonus}`,
       ];
       lines.forEach((line, index) =>
-        this.resultSummary.add(label(line, 369, 241 + 48 * index, 25, true)),
+        this.resultSummary.add(
+          label(line, index < 4 ? 369 : 684, 251 + 41 * (index % 4), 21, true),
+        ),
       );
+      if (bonus < stats.potentialReward) {
+        this.resultSummary.add(
+          label("The shared 50-coin savings cap reduced your award.", 369, 432, 18).fill(
+            MUTED_TEXT,
+          ),
+        );
+      }
       return;
     }
+
+    if (this.drawnLayout !== layout) this.buildBoard(layout);
+    this.roomTitle.text(title);
     this.pieces.destroyChildren();
     room.pieces.forEach((piece, index) => this.drawPiece(piece, index));
     this.renderCards();
@@ -403,13 +537,14 @@ export class RoomBuilderView {
     this.statistics.add(panel(48, 673, 1239, 82));
     const items = [
       ["Score", `${stats.score} pts`],
-      ["Area used", `${stats.areaUsed} / ${ROOM_AREA} m²`],
+      ["Area used", `${stats.areaUsed} / ${layout.area} m²`],
       ["Geometric area left", `${stats.areaRemaining} m²`],
       ["Room utilization", `${stats.utilization}%`],
       ["Pieces placed", String(stats.count)],
+      ["Potential reward", `${stats.potentialReward} / ${room.maxReward} coins`],
     ];
     items.forEach(([title, value], index) => {
-      const x = 71 + 240 * index;
+      const x = 71 + 202 * index;
       this.statistics.add(label(title, x, 686, 18), label(value, x, 712, 28, true));
     });
   }

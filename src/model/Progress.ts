@@ -65,8 +65,8 @@ export class Progress {
     this.addBonusCoins(correctAnswers * COINS_PER_CORRECT_ANSWER);
   }
 
-  addRoomBuilderReward(areaUsed: number): number {
-    return this.addBonusCoins(Math.floor(areaUsed / 8) * 5);
+  addRoomBuilderReward(earnedCoins: number): number {
+    return this.addBonusCoins(earnedCoins);
   }
 
   private addBonusCoins(coins: number): number {
@@ -74,6 +74,16 @@ export class Progress {
     const awarded = Math.max(0, Math.min(coins, MAX_BONUS_COINS - this.bonusCoins));
     this.bonusCoins += awarded;
     return awarded;
+  }
+
+  // Back to a new game: no stars (so only map 1 is open), no bonus coins, and the tutorial again
+  reset(): void {
+    for (let i = 0; i < this.bestStars.length; i++) {
+      this.bestStars[i] = 0;
+    }
+    this.currentMapId = this.mapIds[0];
+    this.bonusCoins = 0;
+    this.tutorialDone = false;
   }
 
   // Called when a game ends: that game got the bonus coins, so they are gone now.

@@ -111,3 +111,24 @@ describe("Progress mini-game rewards", () => {
     expect(progress.bonusCoins).toBe(2 * COINS_PER_CORRECT_ANSWER);
   });
 });
+
+describe("Progress reset", () => {
+  it("goes back to a new game", () => {
+    const progress = new Progress(MAPS);
+    progress.recordResult("map1", 3);
+    progress.recordResult("map2", 2);
+    progress.currentMapId = "map3";
+    progress.addMiniGameReward(2);
+    progress.tutorialDone = true;
+
+    progress.reset();
+
+    for (const map of MAPS) {
+      expect(progress.starsFor(map.id)).toBe(0);
+    }
+    expect(progress.isUnlocked("map2")).toBe(false);
+    expect(progress.currentMapId).toBe("map1");
+    expect(progress.bonusCoins).toBe(0);
+    expect(progress.tutorialDone).toBe(false);
+  });
+});

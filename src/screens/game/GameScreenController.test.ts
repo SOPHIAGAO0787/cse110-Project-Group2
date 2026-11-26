@@ -11,7 +11,7 @@ import { GridView } from "./GridView";
 import { QuestionPrompt } from "./QuestionPrompt";
 import { QuestionService } from "../../model/questions/QuestionService";
 import { TOWERS } from "../../model/loadContent";
-import { GameScreenView } from "./GameScreenView";
+import { GameScreenView, TILE } from "./GameScreenView";
 import map from "../../data/maps/map1.json";
 import map2 from "../../data/maps/map2.json";
 import { MAPS } from "../../model/loadContent";
@@ -67,11 +67,14 @@ let towerProgress: TowerProgress;
 let playSound: Mock<(name: EffectName) => void>; // counts the effects instead of playing them
 
 function hud(): string {
-  const text = controller.group
-    .getChildren()
-    .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
-  if (!(text instanceof Konva.Text)) throw new Error("HUD text is missing from the screen");
-  return text.text();
+  const value = (name: string) =>
+    controller.group.findOne<Konva.Text>(`.hud-${name}-value`)?.text();
+  const lives = value("lives");
+  const wave = value("wave");
+  const enemies = value("enemies");
+  if (lives === undefined || wave === undefined || enemies === undefined)
+    throw new Error("HUD status boxes are missing from the screen");
+  return `Lives: ${lives}   ·   Wave: ${wave}   ·   Enemies Remaining: ${enemies}`;
 }
 
 function expectHud(coins: number, lives: number, wave: number, enemies: number): void {
@@ -994,6 +997,23 @@ describe("GameScreenController tower upgrades", () => {
     expect(model.towers).toHaveLength(1);
     expect(model.towers[0].tile).toEqual({ x: 0, y: 2 });
     expect(model.grid.isBuildable({ x: 1, y: 2 })).toBe(true);
+  });
+
+  it("shows the hovered tower's range, and the bigger one after an upgrade", () => {
+    const grid = prepareTower();
+    // The range group joins the map on the first hover
+    const range = () => controller.group.findOne<Konva.Group>(".tower-range")!;
+    const radius = () => range().findOne<Konva.Circle>("Circle")!.radius();
+
+    grid.group.fire("pointermove");
+    expect(radius()).toBe(model.towers[0].reach * TILE);
+    const before = radius();
+    grid.group.fire("click");
+    expect(model.towers[0].level).toBe(1);
+    expect(radius()).toBe(model.towers[0].reach * TILE);
+    expect(radius()).toBeGreaterThan(before);
+    grid.group.fire("pointerleave");
+    expect(range().getChildren().length).toBe(0);
   });
 
   it("refreshes hover affordability when the wallet changes", () => {

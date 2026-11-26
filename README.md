@@ -2,6 +2,8 @@
 
 A tower defense game where you answer geometry questions to build your defenses. Every tower is a shape, and every question is about the shape you are placing: its radius, its area, its angle. Built by CSE 110 Group 2 with TypeScript, Vite, and Konva.
 
+**Play it online:** https://sophiagao0787.github.io/cse110-Project-Group2/
+
 ![Choosing a map, placing two circle towers by answering their questions, and clearing the first wave](assets/demo.gif)
 
 ## Features
@@ -68,11 +70,11 @@ The **Tower Shop** unlocks the triangle and square towers and raises each tower'
 
 ![Answering the five mini-game questions and returning to the menu with a coin bonus](assets/mini-game.gif)
 
-From the main menu, select **Mini-game → Room Builder**. Drag benches, square towers, and triangle towers from the menu onto the 8 m × 6 m grid. A green preview means the piece fits. Drag placed pieces to reposition them. Select a bench or triangle and use **Rotate** to turn it. Use **Undo** to reverse the last placement, move, or rotation, or **Reset Room** to start over.
+From the main menu, select **Mini-game → Room Builder**, then choose **Easy**, **Medium**, or **Hard**. Each difficulty randomly picks from three predetermined full-cell layouts, each with four inventories verified to fill the room exactly. Drag benches, square towers, and triangle towers from the menu onto the room's grid. A green preview means the piece fits. Drag placed pieces to reposition them. Select a bench or triangle and use **Rotate** to turn it. Use **Undo** to reverse the last placement, move, or rotation, or **Reset Room** to start over.
 
-Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards 5 bonus coins for every full 8 m² placed, up to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game.
+Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards a share of the difficulty maximum based on the fraction of usable area filled, rounded down. A perfect room earns 20, 30, or 40 coins by difficulty, subject to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game. **Reset Room** and **Try Again** retain the current layout and inventory. **Next Puzzle** picks a different combination at the same difficulty.
 
-The browser saves map stars, the tutorial flag, shop coins, tower upgrades, and unused mini-game bonus coins across reloads.
+The browser saves map stars, the tutorial flag, shop coins, tower upgrades, unused mini-game bonus coins, and the music and sound switches across reloads. **Reset progress** on the main menu starts over from map 1 with a new Tower Shop; it asks first and keeps the music and sound switches.
 
 **Coming next (Sprint 3):** New music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 

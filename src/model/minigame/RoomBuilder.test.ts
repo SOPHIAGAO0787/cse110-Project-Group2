@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { ROOM_LAYOUTS } from "./RoomPuzzles";
 import { pieceCorners, roomPiece, RoomBuilder, type PieceKind } from "./RoomBuilder";
+
+const layout = ROOM_LAYOUTS[0];
+const originalPuzzle = { layout, inventory: layout.inventories[0] };
 
 describe("RoomBuilder", () => {
   it("starts with 48 m² remaining and the full inventory", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     expect(room.pieces).toHaveLength(0);
     expect(room.stats).toEqual({
       areaUsed: 0,
       areaRemaining: 48,
       utilization: 0,
+      potentialReward: 0,
       score: 0,
       count: 0,
     });
@@ -22,7 +27,7 @@ describe("RoomBuilder", () => {
     ["square", 4],
     ["triangle", 2],
   ])("places a %s and scores its geometric area", (kind, area) => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     expect(room.place(kind, { x: 0, y: 0 })).toBeNull();
     expect(room.stats).toMatchObject({
       areaUsed: area,
@@ -34,7 +39,7 @@ describe("RoomBuilder", () => {
   });
 
   it("rotates a bench to fit along the right and bottom boundaries", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     expect(room.place("bench", { x: 6, y: 2 })).toMatch(/fit/);
     expect(room.place("bench", { x: 6, y: 2 }, 1)).toBeNull();
     expect(room.pieces[0]).toMatchObject({ width: 2, height: 4 });
@@ -50,14 +55,14 @@ describe("RoomBuilder", () => {
     [0, NaN],
     [Infinity, 0],
   ])("rejects invalid coordinates (%s, %s) without changing the room", (x, y) => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     expect(room.place("square", { x, y })).toMatch(/fit/);
     expect(room.remaining("square")).toBe(4);
     expect(room.stats.score).toBe(0);
   });
 
   it("rejects overlap between a triangle and a square and allows edge contact", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("triangle", { x: 0, y: 0 });
     expect(room.place("square", { x: 1, y: 0 })).toMatch(/overlaps/);
     expect(room.place("square", { x: 2, y: 0 })).toBeNull();
@@ -66,7 +71,7 @@ describe("RoomBuilder", () => {
   });
 
   it("rejects a piece with exhausted inventory even when its footprint fits", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     for (let x = 0; x < 8; x += 2) room.place("square", { x, y: 0 });
     expect(room.remaining("square")).toBe(0);
     expect(room.place("square", { x: 0, y: 2 })).toMatch(/remaining/);
@@ -74,7 +79,7 @@ describe("RoomBuilder", () => {
   });
 
   it("undoes only the latest piece and restores its cells and inventory", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("bench", { x: 0, y: 0 });
     room.place("triangle", { x: 4, y: 0 });
     expect(room.undo()).toBe(true);
@@ -96,7 +101,7 @@ describe("RoomBuilder", () => {
     ];
     const piece = roomPiece("triangle", { x: 0, y: 0 }, turn);
     expect(pieceCorners(piece)).toEqual(corners.filter((_, index) => index !== (turn + 1) % 4));
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     expect(room.place("triangle", piece, turn)).toBeNull();
     expect(room.place("triangle", piece, turn + 1)).toMatch(/overlaps/);
     expect(room.place("triangle", piece, turn + 2)).toBeNull();
@@ -104,7 +109,7 @@ describe("RoomBuilder", () => {
   });
 
   it("checks the triangle interior against a rectangular bench even when its bounds meet the bench", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("triangle", { x: 3, y: 1 });
     expect(room.place("bench", { x: 4, y: 0 })).toBeNull();
     room.undo();
@@ -112,7 +117,7 @@ describe("RoomBuilder", () => {
   });
 
   it("moves a piece through its own old footprint without changing score or inventory", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     for (let x = 0; x < 8; x += 2) room.place("square", { x, y: 0 });
     const stats = room.stats;
     expect(room.move(0, { x: 0, y: 1 })).toBeNull();
@@ -128,7 +133,7 @@ describe("RoomBuilder", () => {
   });
 
   it("rotates and undoes a placed triangle without changing its score", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("triangle", { x: 0, y: 0 });
     expect(room.rotate(0)).toBeNull();
     expect(room.pieces[0].turn).toBe(1);
@@ -140,7 +145,7 @@ describe("RoomBuilder", () => {
   });
 
   it("keeps the original orientation when a rotation overlaps or runs out of room", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("bench", { x: 0, y: 4 });
     expect(room.rotate(0)).toMatch(/fit/);
     room.place("triangle", { x: 0, y: 0 });
@@ -152,7 +157,7 @@ describe("RoomBuilder", () => {
   });
 
   it("fills 100% of the room with complementary triangles and all other pieces", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     for (let y = 0; y < 6; y += 2) expect(room.place("bench", { x: 0, y })).toBeNull();
     for (const x of [4, 6]) {
       for (const y of [0, 2]) expect(room.place("square", { x, y })).toBeNull();
@@ -163,17 +168,51 @@ describe("RoomBuilder", () => {
       areaUsed: 48,
       areaRemaining: 0,
       utilization: 100,
+      potentialReward: 20,
       score: 480,
       count: 11,
     });
   });
 
+  it("checks blocked cells for placement, rotation, and repositioning", () => {
+    const layout = ROOM_LAYOUTS.find(({ id }) => id === "corner-room")!;
+    const room = new RoomBuilder({ layout, inventory: layout.inventories[0] });
+    expect(room.place("bench", { x: 2, y: 0 }, 1)).toBeNull();
+    expect(room.rotate(0)).toMatch(/blocked/);
+    expect(room.move(0, { x: 3, y: 1 })).toMatch(/blocked/);
+    expect(room.pieces[0]).toMatchObject({ x: 2, y: 0, turn: 1 });
+    expect(room.move(0, { x: 2, y: 2 })).toBeNull();
+    expect(room.undo()).toBe(true);
+    expect(room.pieces[0]).toMatchObject({ x: 2, y: 0, turn: 1 });
+    expect(room.place("square", { x: 4, y: 6 })).toBeNull();
+    expect(room.place("square", { x: 4, y: 5 })).toMatch(/blocked/);
+  });
+
+  it("allows touching a blocked cell along a triangle diagonal even inside the bounding box", () => {
+    const room = new RoomBuilder({
+      layout: {
+        ...layout,
+        width: 2,
+        height: 2,
+        area: 3,
+        cells: [
+          [true, false],
+          [true, true],
+        ],
+      },
+      inventory: originalPuzzle.inventory,
+    });
+    expect(room.place("triangle", { x: 0, y: 0 })).toBeNull();
+    expect(room.rotate(0)).toMatch(/blocked/);
+    expect(room.pieces[0].turn).toBe(0);
+  });
+
   it("can undo an empty room safely", () => {
-    expect(new RoomBuilder().undo()).toBe(false);
+    expect(new RoomBuilder(originalPuzzle).undo()).toBe(false);
   });
 
   it("resets a room and restores inventory", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("square", { x: 0, y: 0 });
     room.reset();
     expect(room.stats).toMatchObject({ count: 0, score: 0 });
@@ -181,7 +220,7 @@ describe("RoomBuilder", () => {
   });
 
   it("finishes once, prevents edits, and can restart", () => {
-    const room = new RoomBuilder();
+    const room = new RoomBuilder(originalPuzzle);
     room.place("bench", { x: 0, y: 0 });
     expect(room.finish()).toBe(true);
     expect(room.finish()).toBe(false);
