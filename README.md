@@ -11,10 +11,12 @@ A tower defense game where you answer geometry questions to build your defenses.
 - **Four maps** (Circle Grove, Angle Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
 - **Three towers, three shapes.** The circle tower hits everything in its circle. The triangle and square towers are aimed by the player.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
-- **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
+- **Three kinds of enemies** (a basic circle, a fast arrowhead, and a tank hexagon), with health bars, coin rewards, and a life lost for each one that gets through.
+- **A panel for every placed tower**: hover over or click it to see its range and stats, upgrade it, or sell it.
 - **Stars and stats** at the end of every game, and the best stars on each map are kept on the map screen.
 - **Tower Shop** to unlock towers and raise their upgrade level, and **two mini-games** that earn bonus coins.
 - **Double speed, music, and sound effects**, with a settings menu to pause the game or switch the sound off.
+- **Progress is saved** in the browser, with a **Reset progress** button on the main menu.
 
 ## Play it
 
@@ -50,9 +52,9 @@ During a game, the speed button (or **Space**) switches between normal and doubl
 
 The triangle and square towers are aimed after they are dropped: move the mouse to turn them, and move it closer or further to change the cone's angle or the block's size. Then press **Enter** for the question.
 
-**Triangle tower:** the question asks about the cone you aimed, here what fraction of a full circle a 46° cone is.
+**Triangle tower:** the question asks about the cone you aimed or about triangles, here the third angle of a triangle.
 
-![Aiming the triangle tower's cone, answering 46/360, and the tower firing during a wave](assets/triangle-tower.gif)
+![Aiming the triangle tower's cone along the road, answering the third angle of a triangle, and the tower firing during a wave](assets/triangle-tower.gif)
 
 **Square tower:** the block snaps to whole tiles, and the question asks about the block you chose.
 
@@ -74,9 +76,9 @@ From the main menu, select **Mini-game → Room Builder**, then choose **Easy**,
 
 Each square meter of shape area earns 10 points. Each triangle scores 2 m². Complementary triangles can share a 2 × 2 space. **Finish Room** awards a share of the difficulty maximum based on the fraction of usable area filled, rounded down. A perfect room earns 20, 30, or 40 coins by difficulty, subject to the shared 50-coin savings cap. Both mini-games share the balance, which goes into your next tower defense game. **Reset Room** and **Try Again** retain the current layout and inventory. **Next Puzzle** picks a different combination at the same difficulty.
 
-The browser saves map stars, the tutorial flag, shop coins, tower upgrades, unused mini-game bonus coins, and the music and sound switches across reloads. **Reset progress** on the main menu starts over from map 1 with a new Tower Shop; it asks first and keeps the music and sound switches.
+![A Medium L-shaped room with square and triangle towers placed, and the score and reward below](assets/room-builder.png)
 
-**Coming next (Sprint 3):** New music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+The browser saves map stars, the tutorial flag, shop coins, tower upgrades, unused mini-game bonus coins, and the music and sound switches across reloads. **Reset progress** on the main menu starts over from map 1 with a new Tower Shop; it asks first and keeps the music and sound switches.
 
 ## How the code is organized
 

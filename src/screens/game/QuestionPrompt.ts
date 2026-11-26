@@ -100,6 +100,7 @@ export class QuestionPrompt {
     width: PANEL_W - 2 * PAD,
     text: "You can type π, fractions or decimals",
     fontSize: 12,
+    lineHeight: 1.4, // room between this line and the "Skipping costs" line
     fill: MUTED_TEXT,
     align: "center",
   });
