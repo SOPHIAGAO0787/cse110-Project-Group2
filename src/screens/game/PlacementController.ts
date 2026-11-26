@@ -155,6 +155,16 @@ export class PlacementController {
     };
     let hoveredTowerId: number | null = null;
     let selectedTowerId: number | null = null;
+    // The panel's Sell and Upgrade buttons only work for the tower the panel shows,
+    // and only while nothing else (a question, the settings, a drag) is going on.
+    const canUsePanel = (towerId: number): boolean => {
+      if (selectedTowerId !== towerId && hoveredTowerId !== towerId) {
+        return false;
+      }
+      return (
+        canCommit() && !pending && !this.view.settings.isOpen() && placement.state.kind === "idle"
+      );
+    };
     const refreshUpgradeHint = () => {
       const tower =
         model.towers.find((item) => item.id === selectedTowerId) ??
@@ -179,14 +189,9 @@ export class PlacementController {
         this.towerProgress.getMaxLevel(tower.def.id),
         model.wallet.coins,
         () => {
-          if (
-            (selectedTowerId !== tower.id && hoveredTowerId !== tower.id) ||
-            !canCommit() ||
-            pending ||
-            this.view.settings.isOpen() ||
-            placement.state.kind !== "idle"
-          )
+          if (!canUsePanel(tower.id)) {
             return;
+          }
           const refund = model.trySellTower(tower.id);
           if (refund === null) return;
           selectedTowerId = null;
@@ -195,14 +200,9 @@ export class PlacementController {
           this.view.showMessage(`${tower.def.name} sold for ${refund} coins.`, true);
         },
         () => {
-          if (
-            (selectedTowerId !== tower.id && hoveredTowerId !== tower.id) ||
-            !canCommit() ||
-            pending ||
-            this.view.settings.isOpen() ||
-            placement.state.kind !== "idle"
-          )
+          if (!canUsePanel(tower.id)) {
             return;
+          }
           const previousLevel = tower.level;
           const result = model.tryUpgradeTower(tower.id);
           if (tower.level > previousLevel) this.onUpgraded();
