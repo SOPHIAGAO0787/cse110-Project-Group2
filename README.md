@@ -6,7 +6,7 @@ A tower defense game where you answer geometry questions to build your defenses.
 
 ## Features
 
-- **Four maps** (Circle Grove, s Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
+- **Four maps** (Circle Grove, Angle Canyon, Area Archipelago, Prism Peaks), each with its own path and waves. Winning a map unlocks the next one.
 - **Three towers, three shapes.** The circle tower hits everything in its circle. The triangle and square towers are aimed by the player.
 - **A geometry question for every tower.** Most questions use the numbers of the tower being placed, so aiming a tower changes its question.
 - **Three kinds of enemies** (basic, fast, and tank), with health bars, coin rewards, and a life lost for each one that gets through.
@@ -25,10 +25,10 @@ Then open the URL Vite prints (usually http://localhost:5173).
 
 ## How to play
 
-1. Click **Play** on the main menu and pick a map. Winning a map unlocks the next one.
+1. Click **Play** on the main menu and pick a map. Winning a map unlocks the next one. The first game on Circle Grove offers a short tour, which can be skipped.
 2. Drag a tower from the shop on the right onto a green tile. For a triangle or square tower, move the mouse to aim its cone or block. Then press **Enter**.
-3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. A correct answer places the tower and spends its coins.
-4. Click **Start Wave** to send enemies down the path. Defeating an enemy earns coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
+3. Answer the geometry question. It is about the tower you are placing or about general geometry, and you get two attempts. Questions get harder on later maps. A correct answer places the tower and spends its coins. A wrong answer, or skipping the question, costs a quarter of the tower's price.
+4. Click **Start Wave** to send enemies down the path. A white arrow shows where they come in, and a red flag shows where they leave. Defeating an enemy earns coins, clearing a wave earns bonus coins, and each enemy that reaches the end costs a life. After a wave, the next one starts when its countdown ends.
 5. Click a placed tower to upgrade it, up to the level bought in the Tower Shop.
 6. Clear the last wave with lives left to win. Losing every life ends the game in defeat. Either way, the result screen shows your stars, score, and stats.
 
@@ -40,11 +40,11 @@ During a game, the speed button (or **Space**) switches between normal and doubl
 
 ## Towers
 
-| Tower    | Cost | Range                                                                               |
-| -------- | ---- | ----------------------------------------------------------------------------------- |
-| Circle   | 50   | A circle of radius 2.5 tiles. Hits every enemy inside it.                           |
-| Triangle | 75   | A cone with a fixed area. A wider cone reaches less far. Hits the front-most enemy. |
-| Square   | 100  | A block of up to 6 tiles next to the tower. A smaller block fires faster.           |
+| Tower    | Cost | Range                                                                                                 |
+| -------- | ---- | ----------------------------------------------------------------------------------------------------- |
+| Circle   | 50   | A circle of radius 2 tiles. Hits every enemy inside it.                                               |
+| Triangle | 70   | A cone with a fixed area. A wider cone reaches less far. Hits the front-most enemy.                   |
+| Square   | 75   | A block of up to 6 tiles next to the tower. Hits every enemy inside it. A smaller block fires faster. |
 
 The triangle and square towers are aimed after they are dropped: move the mouse to turn them, and move it closer or further to change the cone's angle or the block's size. Then press **Enter** for the question.
 
@@ -56,7 +56,7 @@ The triangle and square towers are aimed after they are dropped: move the mouse 
 
 ![Aiming the square tower's block, answering its perimeter, and the tower firing during a wave](assets/square-tower.gif)
 
-Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols.
+Answers can be numbers, fractions, or expressions such as `2.5*2`, `46/360`, or `6.25π`. The **π** and **√** buttons under the answer box type those symbols, and a line under the box reminds you which formats work.
 
 ## Tower Shop and mini-games
 
@@ -64,7 +64,7 @@ The **Tower Shop** unlocks the triangle and square towers and raises each tower'
 
 ![The Tower Shop showing the circle tower's stats and next upgrade](assets/tower-shop.png)
 
-**Geometry Quiz** is a five-question round with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50.
+**Geometry Quiz** is a five-question round with 25 seconds per question. Each correct answer adds 5 bonus coins to your next game, up to 50. After each answer, the next question shows by itself.
 
 ![Answering the five mini-game questions and returning to the menu with a coin bonus](assets/mini-game.gif)
 
@@ -74,7 +74,7 @@ Each square meter of shape area earns 10 points. Each triangle scores 2 m². Com
 
 The browser saves map stars, the tutorial flag, shop coins, tower upgrades, and unused mini-game bonus coins across reloads.
 
-**Coming next (Sprint 3):** balancing the maps and a leaderboard. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
+**Coming next (Sprint 3):** Tower Shop coins for winning games, new music and sound effects, and more settings. The full list is in the [Sprint 3 backlog](https://github.com/SOPHIAGAO0787/cse110-Project-Group2/issues/103).
 
 ## How the code is organized
 
