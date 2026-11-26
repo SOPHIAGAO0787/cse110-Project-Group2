@@ -921,6 +921,8 @@ describe("GameScreenController tower upgrades", () => {
     const remove = vi.spyOn(TowersView.prototype, "remove");
     grid.group.fire("pointermove");
     expect(hint.findOne<Konva.Text>(".sell-tower-label")!.text()).toBe("Sell Tower (+25 coins)");
+    vi.spyOn(controller.group, "getRelativePointerPosition").mockReturnValue({ x: 100, y: 100 });
+    vi.spyOn(GameScreenView.prototype, "isPointerInTowerPanelArea").mockReturnValue(true);
     vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
     grid.group.fire("pointermove");
     grid.group.fire("pointerleave");
@@ -933,7 +935,7 @@ describe("GameScreenController tower upgrades", () => {
     expect(model.towers).toHaveLength(0);
     expect(model.grid.isBuildable(tower.tile)).toBe(true);
     expect(hint.visible()).toBe(false);
-    expect(message).toHaveBeenCalledWith("Circle Tower sold for 25 coins.");
+    expect(message).toHaveBeenCalledWith("Circle Tower sold for 25 coins.", true);
     expect(controller.group.findOne<Konva.Text>(".game-coins")!.text()).toBe(
       `Coins: ${coinsBefore + 25}`,
     );
@@ -1004,14 +1006,14 @@ describe("GameScreenController tower upgrades", () => {
     ).toBe(true);
   });
 
-  it("keeps the preview across empty tiles but hides it in settings and after leaving", () => {
+  it("dismisses hover-only information on empty tiles, in settings, and after leaving", () => {
     const grid = prepareTower();
     const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
     grid.group.fire("pointermove");
     expect(hint.visible()).toBe(true);
     vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 1, y: 2 });
     grid.group.fire("pointermove");
-    expect(hint.visible()).toBe(true);
+    expect(hint.visible()).toBe(false);
     vi.mocked(grid.tileUnderMouse).mockReturnValue({ x: 0, y: 2 });
     grid.group.fire("pointermove");
     clickIcon("settings");
@@ -1019,6 +1021,35 @@ describe("GameScreenController tower upgrades", () => {
     controller.hide();
     grid.group.fire("pointermove");
     expect(hint.visible()).toBe(false);
+  });
+
+  it("dismisses a hover-only panel on the sidebar but keeps a clicked selection open", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    vi.spyOn(controller.group, "getRelativePointerPosition").mockReturnValue({ x: 1100, y: 400 });
+
+    grid.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+    controller.group.fire("pointermove");
+    expect(hint.visible()).toBe(false);
+
+    grid.group.fire("click");
+    expect(hint.visible()).toBe(true);
+    controller.group.fire("pointermove");
+    expect(hint.visible()).toBe(true);
+  });
+
+  it("closes a selected panel when its tower is removed externally", () => {
+    const grid = prepareTower();
+    const hint = controller.group.findOne<Konva.Group>(".tower-upgrade-hint")!;
+    const towerId = model.towers[0].id;
+    grid.group.fire("click");
+    expect(hint.visible()).toBe(true);
+
+    expect(model.trySellTower(towerId)).toBe(25);
+    expect(hint.visible()).toBe(false);
+    hint.findOne<Konva.Group>(".sell-tower-button")!.fire("click", {}, true);
+    expect(model.trySellTower(towerId)).toBeNull();
   });
 
   it.each(["click", "tap"])("selects on %s, then upgrades with the panel button", (event) => {

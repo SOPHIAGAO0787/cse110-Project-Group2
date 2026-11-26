@@ -138,6 +138,42 @@ export class TowerUpgradeHint {
     this.group.visible(false);
   }
 
+  // The short gap between the tower tile and the panel stays interactive so a hover-only
+  // panel does not vanish before the pointer can reach its buttons.
+  containsPointer(
+    pointer: Vec,
+    tile: { x: number; y: number; width: number; height: number },
+  ): boolean {
+    if (!this.group.visible()) return false;
+    const panelX = this.group.x();
+    const panelY = this.group.y();
+    if (
+      pointer.x >= panelX &&
+      pointer.x <= panelX + WIDTH &&
+      pointer.y >= panelY &&
+      pointer.y <= panelY + HEIGHT
+    )
+      return true;
+    if (
+      pointer.x >= tile.x &&
+      pointer.x <= tile.x + tile.width &&
+      pointer.y >= tile.y &&
+      pointer.y <= tile.y + tile.height
+    )
+      return true;
+
+    const tileRight = tile.x + tile.width;
+    const panelRight = panelX + WIDTH;
+    const gapLeft = panelX >= tileRight ? tileRight : panelRight;
+    const gapRight = panelX >= tileRight ? panelX : tile.x;
+    return (
+      pointer.x >= gapLeft &&
+      pointer.x <= gapRight &&
+      pointer.y >= tile.y &&
+      pointer.y <= tile.y + tile.height
+    );
+  }
+
   private text(x: number, y: number, size: number, bold = false): Konva.Text {
     const text = new Konva.Text({
       x,

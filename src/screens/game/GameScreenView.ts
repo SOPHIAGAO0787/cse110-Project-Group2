@@ -270,6 +270,21 @@ export class GameScreenView {
     );
   }
 
+  isPointerInTowerPanelArea(tower: Tower, pointer: Vec): boolean {
+    const transform = this.mapGroup.getTransform();
+    const topLeft = transform.point({ x: tower.tile.x * TILE, y: tower.tile.y * TILE });
+    const bottomRight = transform.point({
+      x: (tower.tile.x + 1) * TILE,
+      y: (tower.tile.y + 1) * TILE,
+    });
+    return this.upgradeHint.containsPointer(pointer, {
+      x: topLeft.x,
+      y: topLeft.y,
+      width: bottomRight.x - topLeft.x,
+      height: bottomRight.y - topLeft.y,
+    });
+  }
+
   // Rewrites the HUD text. The controller calls this whenever one of these values changes.
   setHud(
     coins: number,

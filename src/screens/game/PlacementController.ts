@@ -147,8 +147,6 @@ export class PlacementController {
       aimLocked = locked;
       pv.setLocked(locked);
     };
-    // Keep the last hover preview while the pointer crosses empty tiles to reach the panel.
-    // It is cleared by an outside click, Escape, a sale, or disposal.
     let hoveredTowerId: number | null = null;
     let selectedTowerId: number | null = null;
     const refreshUpgradeHint = () => {
@@ -187,7 +185,7 @@ export class PlacementController {
           selectedTowerId = null;
           hoveredTowerId = null;
           this.view.hideTowerUpgradeHint();
-          this.view.showMessage(`${tower.def.name} sold for ${refund} coins.`);
+          this.view.showMessage(`${tower.def.name} sold for ${refund} coins.`, true);
         },
         () => {
           if (
@@ -205,12 +203,36 @@ export class PlacementController {
       if (container) container.style.cursor = "pointer";
     };
     this.refreshHint = refreshUpgradeHint;
+    const dismissHoverOutsidePanel = () => {
+      if (selectedTowerId !== null || hoveredTowerId === null) return;
+      const tower = model.towers.find((item) => item.id === hoveredTowerId);
+      const pointer = this.view.group.getRelativePointerPosition();
+      if (tower && pointer && this.view.isPointerInTowerPanelArea(tower, pointer)) return;
+      hoveredTowerId = null;
+      refreshUpgradeHint();
+    };
     gridView.group.on("pointermove.upgrade pointerenter.upgrade", () => {
       const tile = gridView.tileUnderMouse();
       const hoveredTower = model.towers.find(
         (tower) => tower.tile.x === tile?.x && tower.tile.y === tile?.y,
       );
-      if (hoveredTower) hoveredTowerId = hoveredTower.id;
+      if (hoveredTower) {
+        hoveredTowerId = hoveredTower.id;
+        refreshUpgradeHint();
+      } else {
+        dismissHoverOutsidePanel();
+      }
+    });
+    this.view.group.on("pointermove.selection", dismissHoverOutsidePanel);
+    this.view.group.on("pointerleave.selection", () => {
+      if (selectedTowerId === null) {
+        hoveredTowerId = null;
+        refreshUpgradeHint();
+      }
+    });
+    model.events.on("towerSold", ({ towerId }) => {
+      if (selectedTowerId === towerId) selectedTowerId = null;
+      if (hoveredTowerId === towerId) hoveredTowerId = null;
       refreshUpgradeHint();
     });
     const onSelectTower = () => {
