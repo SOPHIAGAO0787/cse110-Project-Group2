@@ -9,7 +9,6 @@ import { PlacementView } from "./PlacementView";
 import type { QuestionService } from "../../model/questions/QuestionService";
 import { wrongAnswerCost } from "../../model/questions/TowerQuestionsHandling";
 import { InGameTowerCard } from "./InGameTowerCard";
-import type { Tower } from "../../model/Tower";
 import type { TowerProgress } from "../../model/TowerProgress";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
@@ -83,15 +82,6 @@ export class PlacementController {
   // Removes the cards, the previews and every input listener
   dispose(): void {
     this.cleanup();
-  }
-
-  // True when the tower could be upgraded but the wallet is short, as opposed to a tower that is
-  // already at the level bought in the shop or at its top level
-  private lacksCoinsToUpgrade(tower: Tower): boolean {
-    if (tower.level >= this.towerProgress.getMaxLevel(tower.def.id)) return false;
-    const shopTower = SHOP_TOWERS.find((item) => item.def.id === tower.def.id);
-    const cost = shopTower?.levels[tower.level]?.upgradeCost;
-    return cost !== undefined && cost !== null && !this.model.wallet.canAfford(cost);
   }
 
   private wire(gridView: GridView, towersView: TowersView): void {
@@ -213,7 +203,11 @@ export class PlacementController {
             placement.state.kind !== "idle"
           )
             return;
-          this.view.showMessage(model.tryUpgradeTower(tower.id));
+          const previousLevel = tower.level;
+          const result = model.tryUpgradeTower(tower.id);
+          if (tower.level > previousLevel) this.onUpgraded();
+          else if (result.startsWith("You need ")) this.onNotEnoughCoins();
+          this.view.showMessage(result);
           refreshUpgradeHint();
         },
       );

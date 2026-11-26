@@ -1009,10 +1009,13 @@ describe("GameScreenController tower upgrades", () => {
     expect(radius()).toBe(model.towers[0].reach * TILE);
     const before = radius();
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
     expect(model.towers[0].level).toBe(1);
     expect(radius()).toBe(model.towers[0].reach * TILE);
     expect(radius()).toBeGreaterThan(before);
     grid.group.fire("pointerleave");
+    expect(range().getChildren().length).toBe(1); // clicked selection remains visible
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(range().getChildren().length).toBe(0);
   });
 
@@ -1667,6 +1670,7 @@ describe("GameScreenController sound effects", () => {
     playSound.mockClear();
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(model.towers[0].level).toBe(1);
     expect(playSound).toHaveBeenCalledExactlyOnceWith("upgrade");
@@ -1682,6 +1686,7 @@ describe("GameScreenController sound effects", () => {
     playSound.mockClear();
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(model.towers[0].level).toBe(0);
     expect(playSound).toHaveBeenCalledExactlyOnceWith("no-coins");
@@ -1696,6 +1701,7 @@ describe("GameScreenController sound effects", () => {
     playSound.mockClear();
 
     grid.group.fire("click");
+    controller.group.findOne<Konva.Group>(".upgrade-tower-button")!.fire("click", {}, true);
 
     expect(playSound).not.toHaveBeenCalled();
   });
