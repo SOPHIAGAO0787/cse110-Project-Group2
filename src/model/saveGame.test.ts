@@ -212,3 +212,31 @@ describe("saveSettings and loadSettings", () => {
     expect(loadedSettings()).toEqual({ musicOn: true, effectsOn: true });
   });
 });
+
+describe("resetting the progress", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("saves a fresh start and keeps the settings", () => {
+    const played = new Progress(MAPS);
+    played.recordResult("map1", 3);
+    played.addMiniGameReward(2);
+    played.tutorialDone = true;
+    const shop = new TowerProgress();
+    shop.shopCoins = 35;
+    shop.maxLevels.set("triangle", 1);
+    saveGame(played, shop);
+    saveSettings({ musicOn: false, effectsOn: false });
+
+    played.reset();
+    shop.reset();
+    saveGame(played, shop);
+
+    loadFresh();
+    expectFreshStart();
+    const settings = { musicOn: true, effectsOn: true };
+    loadSettings(settings);
+    expect(settings).toEqual({ musicOn: false, effectsOn: false });
+  });
+});
