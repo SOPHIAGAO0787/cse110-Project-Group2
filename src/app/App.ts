@@ -9,7 +9,7 @@ import { ResultScreen } from "../screens/ResultScreen";
 import type { GameResult } from "../model/GameResult";
 import { MAPS } from "../model/loadContent";
 import { Progress } from "../model/Progress";
-import { loadGame, saveGame } from "../model/saveGame";
+import { loadGame, loadSettings, saveGame, saveSettings } from "../model/saveGame";
 import type { Screen, ScreenName, ScreenSwitcher } from "./types";
 import { TowerShopScreen } from "../screens/shop/TowerShopScreen";
 import { TowerProgress } from "../model/TowerProgress";
@@ -38,6 +38,8 @@ export class App implements ScreenSwitcher {
     this.stage.add(this.layer);
     // Pick up where the player left off, before the screens read the progress
     loadGame(this.progress, this.towerProgress);
+    loadSettings(this.sound);
+    this.sound.onChange = () => saveSettings(this.sound);
 
     this.menu = new MenuScreen(this, this.progress, this.sound);
     this.maps = new MapSelectScreen(this, this.progress);
