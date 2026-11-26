@@ -93,7 +93,7 @@ export class GameScreenController implements Screen {
     // Coins earned in the mini-game are added to the map's starting coins
     this.model.wallet.add(this.progress.bonusCoins);
 
-    // R1: create the enemy view
+    // The views for the enemies and the towers
     const enemiesView = new EnemiesView();
     const towersView = new TowersView();
     const effectsView = new EffectsView();
@@ -119,7 +119,7 @@ export class GameScreenController implements Screen {
         this.model.tick(stepTime);
       }
       if (this.active) this.refreshWaveTimers();
-      enemiesView.sync(this.model.enemies); // R1: update the enemy view with the current model state
+      enemiesView.sync(this.model.enemies); // move the enemy shapes to where the model has them
       // towers turn towards their targets, and turn faster when the game runs faster
       towersView.update(this.model.towers, this.model.enemies, stepTime * steps);
       effectsView.syncHealthBars(this.model.enemies);
@@ -135,7 +135,7 @@ export class GameScreenController implements Screen {
     //Draw the grid and render enemies over it
     this.view.mapGroup.add(gridView.group);
     this.view.mapGroup.add(towersView.group);
-    this.view.mapGroup.add(enemiesView.group); // R1: add the enemy view to the map group
+    this.view.mapGroup.add(enemiesView.group);
     this.view.mapGroup.add(effectsView.group); // on top, so the bars and popups are never covered
 
     this.placement = new PlacementController(
@@ -172,7 +172,7 @@ export class GameScreenController implements Screen {
 
     refreshHud();
     const events = this.model.events;
-    // So1: the model builds the final stats; the result screen only displays them
+    // The model builds the final stats; the result screen only displays them
     events.on("gameOver", () => {
       this.loop.stop();
       this.view.prompt.cancel();

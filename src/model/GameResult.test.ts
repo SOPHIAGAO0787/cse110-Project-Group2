@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MAX_STARS, starRating } from "./GameResult";
 
-describe("starRating (So1)", () => {
+describe("starRating", () => {
   it("gives 0 stars for a defeat, whatever the lives", () => {
     expect(starRating(false, 0, 20)).toBe(0);
     expect(starRating(false, 20, 20)).toBe(0);

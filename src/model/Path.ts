@@ -1,7 +1,6 @@
 import type { Vec } from "./types";
 
 /**
- * R1 - Path and Enemy Movement
  * Represents the route enemies follow as a list of corner points
  * Provides methods to calculate the total path length and determine
  * an enemy's position based on the distance traveled along the path

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { EventBus } from "../core/EventBus";
 import { Lives } from "./Lives";
 
-describe("Lives (N2)", () => {
+describe("Lives", () => {
   it("starts with startingLives", () => {
     const lives = new Lives(20, new EventBus());
     expect(lives.remaining).toBe(20);

@@ -21,7 +21,7 @@ const map: MapConfig = {
   waves: [],
 };
 
-describe("Grid (St2)", () => {
+describe("Grid", () => {
   it("'#' tiles are buildable", () => {
     const grid = new Grid(map);
     expect(grid.isBuildable({ x: 0, y: 0 })).toBe(true);

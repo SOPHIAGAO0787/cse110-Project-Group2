@@ -53,7 +53,7 @@ beforeEach(() => {
   screen = new ResultScreen({ switchTo });
 });
 
-describe("ResultScreen (So1)", () => {
+describe("ResultScreen", () => {
   it("shows a defeat with its stars and stats", () => {
     screen.show(defeat);
 
