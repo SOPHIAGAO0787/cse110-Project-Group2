@@ -69,10 +69,9 @@ export class Sound {
     this.music.loop = true;
     this.music.volume = 0.4; // quieter than the effects
     for (const name of EFFECT_NAMES) {
-      const effect = new Audio("/audio/" + name + ".mp3");
+      const effect = new Audio("audio/" + name + ".mp3");
       effect.volume = EFFECT_VOLUME[name] ?? 1;
       this.effects[name] = effect;
-      this.effects[name] = new Audio("audio/" + name + ".mp3");
     }
   }
 
