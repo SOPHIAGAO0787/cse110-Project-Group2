@@ -9,6 +9,7 @@ import { PlacementView } from "./PlacementView";
 import type { QuestionService } from "../../model/questions/QuestionService";
 import { wrongAnswerCost } from "../../model/questions/TowerQuestionsHandling";
 import { InGameTowerCard } from "./InGameTowerCard";
+import type { Tower } from "../../model/Tower";
 import type { TowerProgress } from "../../model/TowerProgress";
 import { configFromPointer, defaultConfig } from "../../model/towerConfig";
 import { SHOP_TOWERS } from "../../model/shop/loadShopContent";
@@ -30,6 +31,10 @@ export class PlacementController {
   private cleanup: () => void;
   // Runs when a tower's question opens. The controller sets it, for the tutorial.
   onQuestionOpened: () => void = () => {};
+  // Run when a tower is upgraded, and when a purchase or upgrade fails for lack of coins.
+  // The controller sets them, for the sounds.
+  onUpgraded: () => void = () => {};
+  onNotEnoughCoins: () => void = () => {};
 
   constructor(
     view: GameScreenView,
@@ -78,6 +83,15 @@ export class PlacementController {
   // Removes the cards, the previews and every input listener
   dispose(): void {
     this.cleanup();
+  }
+
+  // True when the tower could be upgraded but the wallet is short, as opposed to a tower that is
+  // already at the level bought in the shop or at its top level
+  private lacksCoinsToUpgrade(tower: Tower): boolean {
+    if (tower.level >= this.towerProgress.getMaxLevel(tower.def.id)) return false;
+    const shopTower = SHOP_TOWERS.find((item) => item.def.id === tower.def.id);
+    const cost = shopTower?.levels[tower.level]?.upgradeCost;
+    return cost !== undefined && cost !== null && !this.model.wallet.canAfford(cost);
   }
 
   private wire(gridView: GridView, towersView: TowersView): void {
@@ -294,6 +308,7 @@ export class PlacementController {
         placement.cancel();
         pv.hide();
         this.view.showMessage("Not enough coins");
+        this.onNotEnoughCoins();
         return;
       }
 
@@ -344,6 +359,7 @@ export class PlacementController {
 
       if (result === "funds") {
         this.view.showMessage("Not enough coins");
+        this.onNotEnoughCoins();
       } else if (result === "locked") {
         this.view.showMessage("Unlock this tower in the Tower Shop first");
       } else if (result === "occupied") {

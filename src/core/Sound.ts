@@ -1,10 +1,51 @@
 // The sound effects that play() accepts. Each one is a file in public/audio.
-export type EffectName = "wave" | "pop" | "leak" | "place" | "win" | "lose";
+export type EffectName =
+  | "wave"
+  | "pop"
+  | "leak"
+  | "place"
+  | "win"
+  | "lose"
+  | "fire-circle"
+  | "fire-triangle"
+  | "fire-square"
+  | "wrong"
+  | "upgrade"
+  | "no-coins";
 
-const EFFECT_NAMES: EffectName[] = ["wave", "pop", "leak", "place", "win", "lose"];
+const EFFECT_NAMES: EffectName[] = [
+  "wave",
+  "pop",
+  "leak",
+  "place",
+  "win",
+  "lose",
+  "fire-circle",
+  "fire-triangle",
+  "fire-square",
+  "wrong",
+  "upgrade",
+  "no-coins",
+];
 
-// Many enemies can die at almost the same moment. Pops closer together than this play once.
-const POP_GAP_MS = 80;
+// Many enemies can die, and many towers of one kind can fire, at almost the same moment.
+// Two of these effects closer together than their gap play once. Each effect keeps its own
+// gap, so a circle shot never holds back a triangle shot.
+const FIRE_GAP_MS = 200;
+const MIN_GAP_MS: { [name: string]: number } = {
+  pop: 80,
+  "fire-circle": FIRE_GAP_MS,
+  "fire-triangle": FIRE_GAP_MS,
+  "fire-square": FIRE_GAP_MS,
+};
+
+// Shots are heard all the time, so they are quieter than the other effects (which play at 1).
+const SHOT_VOLUME = 0.3;
+const EFFECT_VOLUME: { [name: string]: number } = {
+  "fire-circle": SHOT_VOLUME,
+  "fire-triangle": SHOT_VOLUME,
+  "fire-square": SHOT_VOLUME,
+};
 
 // Plays the music and the sound effects, and remembers whether each one is switched on.
 //
@@ -16,7 +57,7 @@ export class Sound {
   effectsOn = true;
   private music: HTMLAudioElement;
   private effects: { [name: string]: HTMLAudioElement } = {};
-  private lastPopAt = 0; // time of the last pop, in milliseconds
+  private lastPlayedAt: { [name: string]: number } = {}; // when each effect last played, in ms
   // Called after the Music or Sound switch changes. The App uses it to save the settings.
   onChange: () => void = () => {};
 
@@ -26,7 +67,9 @@ export class Sound {
     this.music.loop = true;
     this.music.volume = 0.4; // quieter than the effects
     for (const name of EFFECT_NAMES) {
-      this.effects[name] = new Audio("audio/" + name + ".mp3");
+      const effect = new Audio("audio/" + name + ".mp3");
+      effect.volume = EFFECT_VOLUME[name] ?? 1;
+      this.effects[name] = effect;
     }
   }
 
@@ -56,12 +99,14 @@ export class Sound {
     if (!this.effectsOn) {
       return;
     }
-    if (name === "pop") {
+    const gap = MIN_GAP_MS[name];
+    if (gap !== undefined) {
       const now = Date.now();
-      if (now - this.lastPopAt < POP_GAP_MS) {
+      const last = this.lastPlayedAt[name];
+      if (last !== undefined && now - last < gap) {
         return;
       }
-      this.lastPopAt = now;
+      this.lastPlayedAt[name] = now;
     }
     const effect = this.effects[name];
     effect.currentTime = 0; // start over if this effect is still playing
