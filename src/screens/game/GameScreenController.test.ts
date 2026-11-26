@@ -662,13 +662,13 @@ describe("GameScreenController Tower Shop coins", () => {
   // Wins the current game with this many lives left
   function win(lives: number): void {
     model.lives.remaining = lives;
-    model.events.emit("waveCleared", { wave: map.waves.length });
+    model.events.emit("waveCleared", { wave: map.waves.length, bonus: 0 });
     model.tick(0);
   }
 
   it.each([
-    [20, 3, 75],
-    [10, 2, 50],
+    [map.startingLives, 3, 75],
+    [map.startingLives / 2, 2, 50],
     [1, 1, 25],
   ])("pays a win with %i lives left (%i stars) %i coins", (lives, stars, reward) => {
     win(lives);
@@ -681,7 +681,7 @@ describe("GameScreenController Tower Shop coins", () => {
     controller.hide();
     controller.show();
     model = models[models.length - 1];
-    win(20);
+    win(map.startingLives);
     expect(model.result).toMatchObject({ won: true, stars: 3, shopCoinsEarned: 75 });
     expect(towerProgress.shopCoins).toBe(300);
   });
