@@ -9,6 +9,13 @@ import {
 import {
   FONT,
   HEADER_BACKGROUND,
+  CARD_FILL,
+  CARD_BORDER,
+  MUTED_TEXT,
+  LOSE_TEXT,
+  BUTTON_FILL,
+  TRIANGLE_TOWER_COLOR,
+  HUD_LIFE_FLASH,
   PAGE_BACKGROUND,
   SIDEBAR_BORDER,
   SIDEBAR_FILL,
@@ -33,11 +40,14 @@ const MARGIN = 24;
 const MESSAGE_MS = 2000; // how long showMessage() keeps a message on screen
 const SPEED_BUTTON_WIDTH = 72; // wider than the other icon buttons: it has a label too
 const FAST_SPEED_COLOR = "#ffd53d"; // the speed button's sign and label at double speed
+const STATUS_WIDTHS = [150, 155, 215];
+const STATUS_GAP = 8;
+const STATUS_TOTAL_WIDTH = STATUS_WIDTHS.reduce((sum, width) => sum + width, 0) + 2 * STATUS_GAP;
 
 // The HUD shows match status; the shop sidebar shows the gameplay coin balance.
 //
 //   ┌─────────────────────────────────────┬────────┐
-//   │ [←] lives · wave [▶▶1x] [⚙]         │ Shop $ │
+//   │ [←] [♥ Lives] [≈ Wave] [▲ Enemies] [▶▶1x] [⚙] │ Shop $ │
 //   ├─────────────────────────────────────┤        │
 //   │                 map                 │        │
 //   └─────────────────────────────────────┴────────┘
@@ -64,15 +74,19 @@ export class GameScreenView {
   // The same grey page and blue bar as the screens outside the game
   private background = new Konva.Rect({ fill: PAGE_BACKGROUND });
   private hudBar = new Konva.Rect({ height: HUD_HEIGHT, fill: HEADER_BACKGROUND });
-  // Starts right of the back arrow
-  private hudText = new Konva.Text({
-    x: 72,
-    y: 14,
-    fontSize: 20,
-    fontFamily: FONT,
-    fontStyle: "bold",
-    fill: "white",
+  private statusGroup = new Konva.Group({ x: 72, listening: false });
+  private livesValue = new Konva.Text({ name: "hud-lives-value" });
+  private waveValue = new Konva.Text({ name: "hud-wave-value" });
+  private enemiesValue = new Konva.Text({ name: "hud-enemies-value" });
+  private livesFlash = new Konva.Rect({
+    name: "hud-lives-flash",
+    width: STATUS_WIDTHS[0],
+    height: 38,
+    cornerRadius: 9,
+    fill: HUD_LIFE_FLASH,
+    opacity: 0,
   });
+  private livesFlashTween: Konva.Tween | null = null;
   private timerText = new Konva.Text({
     x: 20,
     width: SHOP_WIDTH - 40,
@@ -191,6 +205,48 @@ export class GameScreenView {
     this.speedButton = makeIconButton("speed", speedIcon, onChangeSpeed, SPEED_BUTTON_WIDTH);
     this.prompt = new QuestionPrompt(questions);
     this.settings = new SettingsPanel(onResume, onRestart, onBack, onMainMenu, sound);
+    const lives = this.statusBox("hud-lives", "Lives", STATUS_WIDTHS[0], this.livesValue);
+    lives.add(this.livesFlash);
+    this.livesFlash.moveToBottom();
+    this.livesFlash.moveUp();
+    lives.add(
+      new Konva.Path({
+        x: 12,
+        y: 9,
+        scaleX: 0.8,
+        scaleY: 0.8,
+        fill: LOSE_TEXT,
+        data: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",
+      }),
+    );
+    const wave = this.statusBox("hud-wave", "Wave", STATUS_WIDTHS[1], this.waveValue);
+    wave.x(STATUS_WIDTHS[0] + STATUS_GAP);
+    wave.add(
+      new Konva.Line({
+        points: [12, 24, 17, 19, 22, 24, 27, 19, 32, 24],
+        stroke: BUTTON_FILL,
+        strokeWidth: 3,
+        lineCap: "round",
+        lineJoin: "round",
+      }),
+    );
+    const enemies = this.statusBox(
+      "hud-enemies",
+      "Enemies Remaining",
+      STATUS_WIDTHS[2],
+      this.enemiesValue,
+    );
+    enemies.x(STATUS_WIDTHS[0] + STATUS_WIDTHS[1] + 2 * STATUS_GAP);
+    enemies.add(
+      new Konva.RegularPolygon({
+        x: 22,
+        y: 22,
+        sides: 3,
+        radius: 11,
+        fill: TRIANGLE_TOWER_COLOR,
+      }),
+    );
+    this.statusGroup.add(lives, wave, enemies);
     this.shopGroup.add(
       this.shopBackground,
       this.shopTitle,
@@ -228,7 +284,7 @@ export class GameScreenView {
       this.background,
       this.mapGroup,
       this.hudBar,
-      this.hudText,
+      this.statusGroup,
       this.shopGroup,
       this.startWaveButton,
       this.backButton,
@@ -268,10 +324,38 @@ export class GameScreenView {
     totalWaves: number,
     enemiesRemaining: number,
   ): void {
-    this.hudText.text(
-      `Lives: ${lives}   ·   Wave: ${wave}/${totalWaves}   ·   Enemies Remaining: ${enemiesRemaining}`,
-    );
+    this.livesValue.text(String(lives));
+    this.waveValue.text(`${wave}/${totalWaves}`);
+    this.enemiesValue.text(String(enemiesRemaining));
     this.coinsText.text(`Coins: ${coins}`);
+  }
+
+  private statusBox(name: string, label: string, width: number, value: Konva.Text): Konva.Group {
+    const box = new Konva.Group({ name });
+    box.add(
+      new Konva.Rect({ width, height: 38, cornerRadius: 9, fill: CARD_FILL, stroke: CARD_BORDER }),
+      new Konva.Text({
+        x: 40,
+        y: 3,
+        width: width - 48,
+        text: label,
+        fontFamily: FONT,
+        fontSize: 11,
+        fontStyle: "bold",
+        fill: MUTED_TEXT,
+      }),
+    );
+    value.setAttrs({
+      x: 40,
+      y: 16,
+      width: width - 48,
+      fontFamily: FONT,
+      fontSize: 18,
+      fontStyle: "bold",
+      fill: TITLE_TEXT,
+    });
+    box.add(value);
+    return box;
   }
 
   // Shows the game speed on the speed button, e.g. "2x" for speed 2.
@@ -323,6 +407,10 @@ export class GameScreenView {
   flashLeak(): void {
     this.leakFrame.opacity(1);
     new Konva.Tween({ node: this.leakFrame, duration: 0.4, opacity: 0 }).play();
+    this.livesFlashTween?.destroy();
+    this.livesFlash.opacity(1);
+    this.livesFlashTween = new Konva.Tween({ node: this.livesFlash, duration: 0.4, opacity: 0 });
+    this.livesFlashTween.play();
   }
 
   /* Converts a tile to a screen position (right edge, vertical middle),
@@ -345,6 +433,12 @@ export class GameScreenView {
     this.settingsButton.position({ x: width - SHOP_WIDTH - 56, y: 4 });
     // The speed button sits left of the gear, with an 8 pixel gap
     this.speedButton.position({ x: width - SHOP_WIDTH - 56 - SPEED_BUTTON_WIDTH - 8, y: 4 });
+    const statusScale = Math.max(
+      0,
+      Math.min(1, (this.speedButton.x() - 10 - 72) / STATUS_TOTAL_WIDTH),
+    );
+    this.statusGroup.scale({ x: statusScale, y: statusScale });
+    this.statusGroup.y((HUD_HEIGHT - 38 * statusScale) / 2);
 
     // Fit the map into the space left of the shop and below the HUD
     const areaWidth = width - SHOP_WIDTH - 2 * MARGIN;

@@ -67,11 +67,14 @@ let towerProgress: TowerProgress;
 let playSound: Mock<(name: EffectName) => void>; // counts the effects instead of playing them
 
 function hud(): string {
-  const text = controller.group
-    .getChildren()
-    .find((node) => node instanceof Konva.Text && node.text().startsWith("Lives:"));
-  if (!(text instanceof Konva.Text)) throw new Error("HUD text is missing from the screen");
-  return text.text();
+  const value = (name: string) =>
+    controller.group.findOne<Konva.Text>(`.hud-${name}-value`)?.text();
+  const lives = value("lives");
+  const wave = value("wave");
+  const enemies = value("enemies");
+  if (lives === undefined || wave === undefined || enemies === undefined)
+    throw new Error("HUD status boxes are missing from the screen");
+  return `Lives: ${lives}   ·   Wave: ${wave}   ·   Enemies Remaining: ${enemies}`;
 }
 
 function expectHud(coins: number, lives: number, wave: number, enemies: number): void {
