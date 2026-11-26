@@ -12,6 +12,7 @@ let switchTo: Mock<ScreenSwitcher["switchTo"]>;
 let progress: Progress;
 let sound: Sound;
 let screen: MenuScreen;
+let onReset: Mock<() => void>;
 
 // The bonus line, or null if it is hidden
 function bonusLine(): string | null {
@@ -52,7 +53,8 @@ beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
   sound = new Sound();
-  screen = new MenuScreen({ switchTo }, progress, sound);
+  onReset = vi.fn<() => void>();
+  screen = new MenuScreen({ switchTo }, progress, sound, onReset);
 });
 
 afterEach(() => {
@@ -120,5 +122,53 @@ describe("MenuScreen music switch", () => {
     sound.toggleMusic();
     screen.show();
     expect(hasText("Music: Off")).toBe(true);
+  });
+});
+
+describe("MenuScreen Reset progress", () => {
+  // True if the "Reset all progress?" panel is showing
+  function confirmShowing(): boolean {
+    for (const node of screen.group.find<Konva.Text>("Text")) {
+      if (node.text() === "Reset all progress?") {
+        return node.isVisible();
+      }
+    }
+    return false;
+  }
+
+  it("asks first instead of resetting right away", () => {
+    clickButton("Reset progress");
+    expect(confirmShowing()).toBe(true);
+    expect(onReset).not.toHaveBeenCalled();
+  });
+
+  it("resets and closes the panel with Reset", () => {
+    clickButton("Reset progress");
+    clickButton("Reset");
+    expect(onReset).toHaveBeenCalledTimes(1);
+    expect(confirmShowing()).toBe(false);
+  });
+
+  it("closes the panel without resetting on Cancel", () => {
+    clickButton("Reset progress");
+    clickButton("Cancel");
+    expect(onReset).not.toHaveBeenCalled();
+    expect(confirmShowing()).toBe(false);
+  });
+
+  it("hides the bonus line once the reset clears the bonus coins", () => {
+    progress.addMiniGameReward(2);
+    screen.show();
+    onReset.mockImplementation(() => progress.reset());
+    clickButton("Reset progress");
+    clickButton("Reset");
+    expect(bonusLine()).toBeNull();
+  });
+
+  it("closes the panel when the player leaves the menu", () => {
+    clickButton("Reset progress");
+    screen.hide();
+    screen.show();
+    expect(confirmShowing()).toBe(false);
   });
 });

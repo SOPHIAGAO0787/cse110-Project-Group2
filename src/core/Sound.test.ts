@@ -197,3 +197,15 @@ describe("Sound music", () => {
     expect(play).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Sound onChange", () => {
+  it("is called after each switch changes", () => {
+    const onChange = vi.fn();
+    sound.onChange = onChange;
+
+    sound.toggleMusic();
+    sound.toggleEffects();
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+});
