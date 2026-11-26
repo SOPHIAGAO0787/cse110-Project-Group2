@@ -1,6 +1,6 @@
 import type Konva from "konva";
 import { GameLoop } from "../../core/GameLoop";
-import { Sound } from "../../core/Sound";
+import { Sound, type EffectName } from "../../core/Sound";
 import { GameModel } from "../../model/GameModel";
 import { findMap, MAPS } from "../../model/loadContent";
 import type { MapConfig } from "../../model/types";
@@ -15,6 +15,13 @@ import { TowerProgress } from "../../model/TowerProgress";
 import type { Progress } from "../../model/Progress";
 import { TowersView } from "./TowersView";
 import { PlacementController } from "./PlacementController";
+
+// The sound a tower makes when it fires, by tower id
+const FIRE_SOUNDS: { [towerDefId: string]: EffectName } = {
+  circle: "fire-circle",
+  triangle: "fire-triangle",
+  rectangle: "fire-square",
+};
 
 // Connects the game model to the screen: input → model, model events → views.
 export class GameScreenController implements Screen {
@@ -143,6 +150,13 @@ export class GameScreenController implements Screen {
       this.screenHeight,
     );
     this.placement.onQuestionOpened = () => this.view.tutorial.advance("question");
+    this.placement.onUpgraded = () => this.sound.play("upgrade");
+    this.placement.onNotEnoughCoins = () => this.sound.play("no-coins");
+    // Every wrong try is heard, the last one too. A right answer has no sound of its own: the
+    // tower it places is heard through the place sound, so the two never play on top of each other.
+    this.view.prompt.onAnswer = (correct) => {
+      if (!correct) this.sound.play("wrong");
+    };
 
     const refreshHud = () => {
       this.refreshUpgradeHint();
@@ -207,11 +221,17 @@ export class GameScreenController implements Screen {
     events.on("waveStarted", ({ wave }) => this.view.showWaveBanner(wave));
     events.on("enemyLeaked", () => this.view.flashLeak());
 
-    // Sound effects. Towers firing make no sound: with many towers it would never stop.
+    // Sound effects. Shots of one tower type closer together than a short gap play once (see Sound),
+    // so many towers do not make the sound run on.
     events.on("waveStarted", () => this.sound.play("wave"));
     events.on("enemyKilled", () => this.sound.play("pop"));
     events.on("enemyLeaked", () => this.sound.play("leak"));
     events.on("towerPlaced", () => this.sound.play("place"));
+    events.on("towerFired", ({ towerId }) => {
+      const tower = this.model.towers.find((t) => t.id === towerId);
+      const effect = tower ? FIRE_SOUNDS[tower.def.id] : undefined;
+      if (effect) this.sound.play(effect);
+    });
     events.on("gameOver", ({ won }) => {
       if (won) {
         this.sound.play("win");

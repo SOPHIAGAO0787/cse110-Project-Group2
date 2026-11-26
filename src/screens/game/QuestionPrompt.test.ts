@@ -922,6 +922,44 @@ describe("QuestionPrompt answer output", () => {
     });
   });
 
+  describe("onAnswer", () => {
+    it("reports a wrong try as false and the right answer as true", () => {
+      const answers: boolean[] = [];
+      prompt.onAnswer = (correct) => answers.push(correct);
+      void prompt.ask(question, anchor);
+
+      type("4");
+      press("Enter");
+      expect(answers).toEqual([false]);
+
+      press("Backspace");
+      type("5");
+      press("Enter");
+      expect(answers).toEqual([false, true]);
+    });
+
+    it("reports both wrong tries", () => {
+      const answers: boolean[] = [];
+      prompt.onAnswer = (correct) => answers.push(correct);
+      void prompt.ask(question, anchor);
+
+      useAllTries();
+
+      expect(answers).toEqual([false, false]);
+    });
+
+    it("is not called for a blank answer, Continue or Escape", () => {
+      const onAnswer = vi.fn();
+      prompt.onAnswer = onAnswer;
+      void prompt.ask(question, anchor);
+
+      press("Enter"); // nothing typed
+      press("Escape");
+
+      expect(onAnswer).not.toHaveBeenCalled();
+    });
+  });
+
   describe("closing without answering resolves false", () => {
     it("Escape closes the popup and resolves false", async () => {
       const result = prompt.ask(question, anchor);

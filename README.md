@@ -102,7 +102,7 @@ src/
     minigame/         the minigame picker, quiz, and Room Builder
     shop/             the Tower Shop screen
 assets/               images for this README
-public/audio/         the music loop and the sound effects, made for this game
+public/audio/         the music loop and the sound effects (see Sound credits)
 public/tilesets/      the picture sheets that textured maps are drawn from
 ```
 
@@ -130,6 +130,16 @@ A map is drawn in plain colors unless it names a **tileset**. A tileset is one p
 - A legend entry with several `cells` picks one for each tile, always the same one, so grass does not repeat. Give it a single cell to choose by hand.
 - `rotation` turns a cell, so one drawing can stand in for a corner you have not drawn yet. `inset` shaves pixels off every cell edge if the export left a thin line there.
 - Maps without a `tileset` keep working, and so does a map whose sheet fails to load.
+
+## Sound credits
+
+The music and the effects for waves, pops, lost lives, placing towers, winning, losing, wrong answers, upgrades, and not enough coins were made for this game. The three tower shots are from [Freesound](https://freesound.org), converted to MP3 for the game:
+
+| Tower shot               | File                             | Original sound                                            | Author                                                     | License                                                   |
+| ------------------------ | -------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| Circle tower             | `public/audio/fire-circle.mp3`   | [toy_drum_light_hit.wav](https://freesound.org/s/332389/) | [felisleopard](https://freesound.org/people/felisleopard/) | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Triangle tower           | `public/audio/fire-triangle.mp3` | [ELECLASER.wav](https://freesound.org/s/441640/)          | [xtrgamr](https://freesound.org/people/xtrgamr/)           | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Square (rectangle) tower | `public/audio/fire-square.mp3`   | [kick12](https://freesound.org/s/332363/)                 | [soneproject](https://freesound.org/people/soneproject/)   | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 ## Scripts
 
