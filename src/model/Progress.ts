@@ -65,8 +65,8 @@ export class Progress {
     this.addBonusCoins(correctAnswers * COINS_PER_CORRECT_ANSWER);
   }
 
-  addRoomBuilderReward(areaUsed: number): number {
-    return this.addBonusCoins(Math.floor(areaUsed / 8) * 5);
+  addRoomBuilderReward(earnedCoins: number): number {
+    return this.addBonusCoins(earnedCoins);
   }
 
   private addBonusCoins(coins: number): number {

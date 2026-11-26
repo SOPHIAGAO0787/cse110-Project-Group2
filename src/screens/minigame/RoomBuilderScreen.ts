@@ -9,18 +9,18 @@ export class RoomBuilderScreen implements Screen {
   private view: RoomBuilderView;
 
   constructor(
-    award: (areaUsed: number) => number,
+    award: (earnedCoins: number) => number,
     onBack: () => void,
+    onReturnToMenu: () => void,
     playEffect: (effect: EffectName) => void,
   ) {
     this.controller = new RoomBuilderController(award, playEffect);
-    this.view = new RoomBuilderView(this.controller, onBack);
+    this.view = new RoomBuilderView(this.controller, onBack, onReturnToMenu);
     this.group = this.view.page.group;
   }
 
   show(): void {
-    this.controller.reset();
-    this.view.render();
+    this.view.showDifficulty();
     this.group.show();
   }
 
